@@ -1,0 +1,9 @@
+{
+  "enabled": false,
+  "provider": "stub",
+  "endpoint_url": "",
+  "api_key": "",
+  "max_tokens": 800,
+  "temperature": 0.3,
+  "mask_personal_data": true
+}

@@ -8,7 +8,7 @@ $currentLicense = get_current_office_license();
 $officeReadOnly = office_is_read_only($currentLicense);
 $primaryColor = $officeConfig['theme']['primary_color'] ?? '#0f5aa5';
 $secondaryColor = $officeConfig['theme']['secondary_color'] ?? '#f5f7fb';
-$hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup') || user_has_permission('manage_office_config') || user_has_permission('view_mis_reports') || user_has_permission('view_all_records') || user_has_permission('manage_housekeeping');
+$hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup') || user_has_permission('manage_office_config') || user_has_permission('view_mis_reports') || user_has_permission('view_all_records') || user_has_permission('manage_housekeeping') || user_has_permission('manage_ai_settings') || user_has_permission('manage_reply_templates');
 $isSuperAdmin = get_current_user_role() === 'superadmin';
 $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['username'])) : 0;
 $menuConfig = get_office_menu_config();
@@ -119,6 +119,8 @@ if (!empty($viewFile) && file_exists($viewFile)) {
                         'admin_master_data' => 'manage_office_config',
                         'admin_hierarchy' => 'manage_office_config',
                         'admin_routes' => 'manage_office_config',
+                        'admin_ai' => 'manage_ai_settings',
+                        'admin_replies' => 'manage_reply_templates',
                         'admin_repository' => 'manage_documents_repository',
                         'admin_logs' => 'view_logs',
                         'admin_housekeeping' => 'manage_housekeeping',

@@ -81,6 +81,16 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_inspection.php',
             'permission' => 'manage_inspection',
         ],
+        'admin_ai' => [
+            'title' => 'AI & Assistance Settings',
+            'view' => __DIR__ . '/views/admin_ai.php',
+            'permission' => 'manage_ai_settings',
+        ],
+        'admin_replies' => [
+            'title' => 'Reply Templates',
+            'view' => __DIR__ . '/views/admin_replies.php',
+            'permission' => 'manage_reply_templates',
+        ],
         'admin_backup' => [
             'title' => 'Backup & Export',
             'view' => __DIR__ . '/views/admin_backup.php',

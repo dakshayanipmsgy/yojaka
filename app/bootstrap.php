@@ -66,6 +66,9 @@ function bootstrap_ensure_base_directories(): void
         YOJAKA_DATA_PATH . '/portal',
         YOJAKA_DATA_PATH . '/qr',
         YOJAKA_DATA_PATH . '/org',
+        YOJAKA_DATA_PATH . '/ai',
+        YOJAKA_DATA_PATH . '/analytics',
+        YOJAKA_DATA_PATH . '/replies',
     ];
 
     foreach ($directories as $dir) {
@@ -85,6 +88,8 @@ function bootstrap_seed_permissions(): void
                 'manage_routes',
                 'manage_master_data',
                 'manage_templates',
+                'manage_ai_settings',
+                'manage_reply_templates',
                 'view_all_files',
                 'manage_departments',
                 'view_logs',
@@ -212,6 +217,8 @@ function bootstrap_seed_default_i18n(array $config): void
         'nav.admin_rti' => 'RTI Management',
         'nav.admin_dak' => 'Dak Management',
         'nav.admin_inspection' => 'Inspection Management',
+        'nav.admin_ai' => 'AI & Assistance Settings',
+        'nav.admin_replies' => 'Reply Templates',
         'btn.save' => 'Save',
         'btn.cancel' => 'Cancel',
         'btn.search' => 'Search',
@@ -245,6 +252,10 @@ function bootstrap_seed_default_i18n(array $config): void
         'users.password_changed' => 'Password changed successfully.',
         'users.password_reset_success' => 'Password has been reset. Please note the new password.',
         'users.force_password_change_message' => 'You must change your password before continuing.',
+        'ai.draft_with_assistant' => 'Draft with Assistant',
+        'ai.generate_summary' => 'Generate Summary',
+        'ai.suggested_reply' => 'Suggested Reply',
+        'ai.settings' => 'AI & Assistance Settings',
     ];
 
     bootstrap_seed_json($langFile, $seed);
@@ -258,6 +269,17 @@ bootstrap_ensure_base_directories();
 bootstrap_seed_default_i18n($config);
 bootstrap_seed_permissions();
 bootstrap_seed_default_users($config);
+bootstrap_seed_json(YOJAKA_DATA_PATH . '/ai/config.json', [
+    'enabled' => false,
+    'provider' => 'stub',
+    'endpoint_url' => '',
+    'api_key' => '',
+    'max_tokens' => 800,
+    'temperature' => 0.3,
+    'mask_personal_data' => true,
+]);
+bootstrap_seed_json(YOJAKA_DATA_PATH . '/analytics/route_stats.json', new stdClass());
+bootstrap_seed_json(YOJAKA_DATA_PATH . '/replies/templates.json', []);
 
 // Control error display for production safety
 $shouldDisplayErrors = $debug || !empty($config['display_errors']);
@@ -308,6 +330,10 @@ require_once __DIR__ . '/search.php';
 require_once __DIR__ . '/dashboard_config.php';
 require_once __DIR__ . '/org_hierarchy.php';
 require_once __DIR__ . '/file_flow.php';
+require_once __DIR__ . '/ai_assistant.php';
+require_once __DIR__ . '/ai_prompts.php';
+require_once __DIR__ . '/file_flow_ai.php';
+require_once __DIR__ . '/reply_templates.php';
 
 // Ensure logs directory exists early
 ensure_logs_directory();
