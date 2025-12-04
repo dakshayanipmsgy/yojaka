@@ -12,6 +12,8 @@ $templates = load_inspection_templates();
 $reports = load_inspection_reports();
 $mode = $_GET['mode'] ?? 'list';
 $mode = in_array($mode, ['list', 'create', 'view'], true) ? $mode : 'list';
+$action = $_GET['action'] ?? null;
+$downloadRequested = ($action === 'download_html') || (isset($_GET['download']) && $_GET['download'] === '1');
 $errors = [];
 $notice = '';
 $attachmentErrors = [];
@@ -433,7 +435,7 @@ if ($selectedTemplate && !($selectedTemplate['active'] ?? false)) {
         $wrappedReport = render_with_letterhead($wrappedReport, $reportDepartment, true);
     }
 
-    if (isset($_GET['download']) && $_GET['download'] == '1') {
+    if ($downloadRequested) {
         $html = $wrappedReport;
         header('Content-Type: text/html');
         header('Content-Disposition: attachment; filename="' . ($report['id'] ?? 'inspection') . '.html"');

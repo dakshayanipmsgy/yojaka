@@ -8,6 +8,8 @@ $officeConfig = load_office_config();
 $bills = load_bills();
 $contractors = load_contractors();
 $mode = $_GET['mode'] ?? 'list';
+$action = $_GET['action'] ?? null;
+$downloadRequested = ($action === 'download_html') || (isset($_GET['download']) && $_GET['download'] === '1');
 $csrf_token = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(16));
 $_SESSION['csrf_token'] = $csrf_token;
 $attachmentErrors = [];
@@ -290,7 +292,7 @@ if ($mode === 'view') {
     $billBody = ob_get_clean();
     $wrapped = render_with_letterhead($billBody, $department ?? []);
 
-    if (isset($_GET['download'])) {
+    if ($downloadRequested) {
         header('Content-Type: text/html');
         header('Content-Disposition: attachment; filename="bill_' . $bill['id'] . '.html"');
         echo $wrapped;

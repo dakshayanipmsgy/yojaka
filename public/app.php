@@ -13,6 +13,8 @@ $viewFile = $route['view'] ?? null;
 $activePage = $page;
 $requiresAuth = $route['requires_auth'] ?? true;
 $useLayout = $route['layout'] ?? true;
+$action = $_GET['action'] ?? null;
+$downloadFlag = isset($_GET['download']) && $_GET['download'] === '1';
 
 if (!$route) {
     http_response_code(404);
@@ -79,6 +81,11 @@ if ($page === 'admin_mis' && isset($_GET['export']) && $_GET['export'] === 'csv'
         include $viewFile;
     }
     exit;
+}
+
+// Bypass layout for download-style actions to avoid header issues
+if ($downloadFlag || $action === 'download_html') {
+    $useLayout = false;
 }
 
 if ($page === 'dashboard' && isset($_SESSION['username'])) {
