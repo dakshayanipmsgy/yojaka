@@ -69,10 +69,7 @@ function default_office_config(): array
             'documents' => [],
         ],
         'ui' => [
-            'menus' => function_exists('default_menu_config') ? default_menu_config() : [
-                'main' => [],
-                'admin' => [],
-            ],
+            'menus' => new stdClass(),
             'dashboard_widgets' => function_exists('default_dashboard_widgets') ? default_dashboard_widgets() : [],
         ],
         'portal' => [

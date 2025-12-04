@@ -67,34 +67,23 @@ $currentLanguage = i18n_current_language();
     <div class="body">
         <nav class="sidebar">
             <div class="nav-section">Main</div>
-            <?php foreach ($menuConfig['main'] as $item): ?>
-                <?php
+            <?php
+            $moduleRequirements = [
+                'rti' => 'rti',
+                'dak' => 'dak',
+                'inspection' => 'inspection',
+                'meeting_minutes' => 'meeting_minutes',
+                'work_orders' => 'work_orders',
+                'guc' => 'guc',
+                'bills' => 'bills',
+            ];
+            foreach ($menuConfig['main'] as $item):
                 if (empty($item['visible'])) { continue; }
                 $pageKey = $item['page'] ?? '';
-                $allowed = true;
-                switch ($pageKey) {
-                    case 'rti':
-                        $allowed = is_module_enabled('rti') && (user_has_permission('manage_rti') || user_has_permission('view_reports_basic'));
-                        break;
-                    case 'dak':
-                        $allowed = is_module_enabled('dak') && (user_has_permission('manage_dak') || user_has_permission('view_reports_basic'));
-                        break;
-                    case 'inspection':
-                        $allowed = is_module_enabled('inspection') && (user_has_permission('manage_inspection') || user_has_permission('view_reports_basic') || user_has_permission('create_documents'));
-                        break;
-                    case 'letters':
-                        $allowed = user_has_permission('create_documents');
-                        break;
-                    case 'meeting_minutes':
-                    case 'work_orders':
-                    case 'guc':
-                    case 'bills':
-                        $allowed = user_has_permission('create_documents') && is_module_enabled($pageKey);
-                        break;
-                    default:
-                        $allowed = true;
-                }
-                if (!$allowed) { continue; }
+                $permissionKey = $item['permission'] ?? null;
+                $requiresModule = $moduleRequirements[$pageKey] ?? null;
+                if ($requiresModule && !is_module_enabled($requiresModule)) { continue; }
+                if (!user_has_permission($permissionKey)) { continue; }
                 $label = i18n_get($item['label_key'] ?? $pageKey);
                 ?>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=<?= htmlspecialchars($pageKey); ?>" class="nav-item<?= ($activePage ?? '') === $pageKey ? ' active' : ''; ?>"><?= htmlspecialchars($label); ?></a>

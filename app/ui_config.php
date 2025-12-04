@@ -1,22 +1,30 @@
 <?php
 // UI customization helper
 
+function default_main_menu_items(): array
+{
+    return [
+        ['page' => 'dashboard', 'label_key' => 'nav.dashboard', 'permission' => null],
+        ['page' => 'my_tasks', 'label_key' => 'nav.my_tasks', 'permission' => null],
+        ['page' => 'letters', 'label_key' => 'nav.letters_notices', 'permission' => 'view_letters'],
+        ['page' => 'global_search', 'label_key' => 'nav.global_search', 'permission' => 'view_global_search'],
+        ['page' => 'rti', 'label_key' => 'nav.rti_cases', 'permission' => 'view_rti'],
+        ['page' => 'dak', 'label_key' => 'nav.dak_file_movement', 'permission' => 'view_dak'],
+        ['page' => 'inspection', 'label_key' => 'nav.inspection_reports', 'permission' => 'view_inspection'],
+        ['page' => 'meeting_minutes', 'label_key' => 'nav.meeting_minutes', 'permission' => 'view_meeting_minutes'],
+        ['page' => 'work_orders', 'label_key' => 'nav.work_orders', 'permission' => 'view_work_orders'],
+        ['page' => 'guc', 'label_key' => 'nav.guc', 'permission' => 'view_guc'],
+        ['page' => 'bills', 'label_key' => 'nav.contractor_bills', 'permission' => 'view_bills'],
+    ];
+}
+
 function default_menu_config(): array
 {
     return [
-        'main' => [
-            ['page' => 'dashboard', 'visible' => true, 'label_key' => 'nav.dashboard'],
-            ['page' => 'my_tasks', 'visible' => true, 'label_key' => 'nav.my_tasks'],
-            ['page' => 'letters', 'visible' => true, 'label_key' => 'nav.letters'],
-            ['page' => 'global_search', 'visible' => true, 'label_key' => 'nav.global_search'],
-            ['page' => 'rti', 'visible' => true, 'label_key' => 'nav.rti'],
-            ['page' => 'dak', 'visible' => true, 'label_key' => 'nav.dak'],
-            ['page' => 'inspection', 'visible' => true, 'label_key' => 'nav.inspection'],
-            ['page' => 'meeting_minutes', 'visible' => true, 'label_key' => 'nav.meeting_minutes'],
-            ['page' => 'work_orders', 'visible' => true, 'label_key' => 'nav.work_orders'],
-            ['page' => 'guc', 'visible' => true, 'label_key' => 'nav.guc'],
-            ['page' => 'bills', 'visible' => true, 'label_key' => 'nav.bills'],
-        ],
+        'main' => array_map(function ($item) {
+            $item['visible'] = $item['visible'] ?? true;
+            return $item;
+        }, default_main_menu_items()),
         'admin' => [
             ['page' => 'admin_users', 'visible' => true, 'label_key' => 'nav.admin_users'],
             ['page' => 'admin_departments', 'visible' => true, 'label_key' => 'nav.admin_departments'],
@@ -58,6 +66,10 @@ function get_office_menu_config(): array
     $office = get_current_office_config();
     $ui = $office['ui']['menus'] ?? [];
     $defaults = default_menu_config();
+    if (!is_array($ui) || empty($ui)) {
+        return $defaults;
+    }
+
     return array_replace_recursive($defaults, $ui);
 }
 

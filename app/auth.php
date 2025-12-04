@@ -237,8 +237,12 @@ function get_user_role_permissions(?string $username = null): array
     return array_values(array_unique($rolePermissions));
 }
 
-function user_has_permission(string $permission): bool
+function user_has_permission(?string $permission, ?bool $strictMode = null): bool
 {
+    if ($permission === null || $permission === '') {
+        return true;
+    }
+
     if (!is_logged_in()) {
         return false;
     }
@@ -248,7 +252,13 @@ function user_has_permission(string $permission): bool
         return true;
     }
 
-    return in_array($permission, $permissions, true);
+    if (in_array($permission, $permissions, true)) {
+        return true;
+    }
+
+    global $config;
+    $strictMode = $strictMode ?? (bool) ($config['permissions_strict'] ?? false);
+    return !$strictMode;
 }
 
 function require_login(): void
