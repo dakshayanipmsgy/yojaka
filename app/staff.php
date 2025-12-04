@@ -3,8 +3,8 @@ require_once __DIR__ . '/master_data.php';
 
 function staff_data_path(?string $departmentId = null): string
 {
-    // Department is the outer folder (legacy office). Staff entries carry
-    // office_id for the unit within that department.
+    // Department is the outer folder (legacy office). Staff entries are stored
+    // by department only after the refactor.
     $base = rtrim(YOJAKA_DATA_PATH, DIRECTORY_SEPARATOR);
     if ($departmentId !== null && $departmentId !== '') {
         return $base . '/' . trim($departmentId, '/ ') . '/staff.json';
@@ -97,7 +97,7 @@ function upsert_staff(array $existing, array $staff): array
     return $existing;
 }
 
-function import_staff_from_csv(string $fileTmpPath, ?string $departmentId = null, ?string $officeId = null): int
+function import_staff_from_csv(string $fileTmpPath, ?string $departmentId = null): int
 {
     $imported = 0;
     if (!is_readable($fileTmpPath)) {
@@ -136,8 +136,7 @@ function import_staff_from_csv(string $fileTmpPath, ?string $departmentId = null
                 'full_name' => trim($data['full_name'] ?? ($data['name'] ?? '')),
                 'designation' => trim($data['designation'] ?? ''),
                 'role' => trim($data['role'] ?? ''),
-                'department_id' => trim($data['department_id'] ?? $departmentId),
-                'office_id' => trim($data['office_id'] ?? $officeId),
+                'department_id' => trim($data['department_id'] ?? ($data['office_id'] ?? $departmentId)),
                 'phone' => trim($data['phone'] ?? ''),
                 'email' => trim($data['email'] ?? ''),
                 'active' => strtolower(trim($data['active'] ?? 'true')) !== 'false',
@@ -159,8 +158,13 @@ function standardize_staff_record(array $record, ?string $departmentId = null): 
     $record['id'] = $record['id'] ?? $record['staff_id'];
     $record['full_name'] = $record['full_name'] ?? ($record['name'] ?? '');
     $record['designation'] = $record['designation'] ?? ($record['title'] ?? '');
-    $record['department_id'] = $record['department_id'] ?? ($record['department'] ?? $departmentId);
-    $record['office_id'] = $record['office_id'] ?? null;
+    $legacyDepartment = $record['department_id'] ?? ($record['department'] ?? null);
+    $primaryDepartment = $record['office_id'] ?? $legacyDepartment ?? $departmentId;
+    $record['department_id'] = $primaryDepartment;
+    if (!empty($legacyDepartment) && $legacyDepartment !== $primaryDepartment) {
+        $record['subunit_id'] = $record['subunit_id'] ?? $legacyDepartment;
+    }
+    $record['office_id'] = $record['office_id'] ?? $primaryDepartment; // legacy mirror only
     $record['phone'] = $record['phone'] ?? null;
     $record['email'] = $record['email'] ?? null;
     $record['active'] = array_key_exists('active', $record) ? (bool) $record['active'] : true;

@@ -3,13 +3,12 @@ require_login();
 require_permission('manage_people');
 require_once __DIR__ . '/../staff.php';
 
-// Department is the larger unit (legacy office folder). Positions/staff files
-// remain stored per department directory for backward compatibility.
-$currentOfficeId = get_current_department_id();
-$staffList = load_staff($currentOfficeId);
+// Department is the single organizational unit (legacy office folder path).
+$currentDepartmentId = get_current_department_id();
+$staffList = load_staff($currentDepartmentId);
 $users = load_users();
-$positions = load_positions($currentOfficeId);
-$positionHistory = load_position_history($currentOfficeId);
+$positions = load_positions($currentDepartmentId);
+$positionHistory = load_position_history($currentDepartmentId);
 $errors = [];
 $success = '';
 
@@ -50,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = 'Missing staff_id in one of the rows.';
                     break;
                 }
-                $existing = find_staff_by_id($currentOfficeId, $staffId);
+                $existing = find_staff_by_id($currentDepartmentId, $staffId);
                 if ($existing) {
                     foreach ($staffList as &$staff) {
                         if ($staff['staff_id'] === $staffId) {
@@ -62,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $staffList[] = $row;
                 }
             }
-            if (empty($errors) && save_staff($currentOfficeId, $staffList)) {
+            if (empty($errors) && save_staff($currentDepartmentId, $staffList)) {
                 $success = 'Staff imported successfully.';
             }
         }
@@ -75,9 +74,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($positionId === '') {
             $errors[] = 'Position is required for assignment.';
         } else {
-            if (assign_staff_to_position($currentOfficeId, $positionId, $staffId, $username, $from)) {
+            if (assign_staff_to_position($currentDepartmentId, $positionId, $staffId, $username, $from)) {
                 $success = 'Assignment updated.';
-                $positionHistory = load_position_history($currentOfficeId);
+                $positionHistory = load_position_history($currentDepartmentId);
             } else {
                 $errors[] = 'Failed to save assignment.';
             }
@@ -96,12 +95,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $errors[] = 'Missing username in one of the rows.';
                     break;
                 }
-                if ($staffId !== '' && !find_staff_by_id($currentOfficeId, $staffId)) {
+                if ($staffId !== '' && !find_staff_by_id($currentDepartmentId, $staffId)) {
                     $newStaff = [
                         'staff_id' => $staffId,
                         'full_name' => $row['full_name'] ?? $username,
                         'designation' => $row['designation'] ?? ($row['role'] ?? ''),
-                        'department_id' => $row['department_id'] ?? null,
+                        'department_id' => $row['department_id'] ?? ($row['office_id'] ?? $currentDepartmentId),
                         'active' => true,
                     ];
                     $staffList[] = $newStaff;
@@ -110,14 +109,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'username' => $username,
                     'full_name' => $row['full_name'] ?? $username,
                     'role' => $role,
-                    'office_id' => $row['office_id'] ?? $currentOfficeId,
-                    'department_id' => $row['department_id'] ?? null,
+                    'department_id' => $row['department_id'] ?? ($row['office_id'] ?? $currentDepartmentId),
                     'staff_id' => $staffId !== '' ? $staffId : null,
                     'password' => $row['password'] ?? bin2hex(random_bytes(4)),
                     'active' => ($row['active'] ?? 'true') !== 'false',
                 ]);
             }
-            save_staff($currentOfficeId, $staffList);
+            save_staff($currentDepartmentId, $staffList);
             if (empty($errors)) {
                 $success = 'Users imported successfully.';
             }
@@ -136,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $positions[] = [
                     'position_id' => $positionId,
-                    'office_id' => $row['office_id'] ?? $currentOfficeId,
+                    'office_id' => $row['department_id'] ?? ($row['office_id'] ?? $currentDepartmentId),
                     'department_id' => $row['department_id'] ?? null,
                     'post_id' => $row['post_id'] ?? null,
                     'title' => $row['title'] ?? $positionId,
@@ -144,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'active' => true,
                 ];
             }
-            if (empty($errors) && save_positions($currentOfficeId, $positions)) {
+            if (empty($errors) && save_positions($currentDepartmentId, $positions)) {
                 $success = 'Positions imported successfully.';
             }
         }

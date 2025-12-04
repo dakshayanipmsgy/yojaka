@@ -32,8 +32,8 @@ function office_config_path_by_file(string $file): string
 
 function default_print_config(array $officeDefaults = []): array
 {
-    $officeName = $officeDefaults['office_name'] ?? 'Yojaka Office';
-    $officeAddress = $officeDefaults['office_address'] ?? 'Add office address here';
+    $officeName = $officeDefaults['office_name'] ?? 'Yojaka Department';
+    $officeAddress = $officeDefaults['office_address'] ?? 'Add department address here';
 
     return [
         'page_size' => 'A4',
@@ -50,7 +50,7 @@ function default_print_config(array $officeDefaults = []): array
 function default_office_config(): array
 {
     return [
-        'office_name' => 'Yojaka Office',
+        'office_name' => 'Yojaka Department',
         'office_short_name' => 'YOJAKA',
         'base_url' => YOJAKA_BASE_URL,
         'date_format_php' => 'd-m-Y',
@@ -102,7 +102,7 @@ function default_office_config(): array
                 'idle_timeout_seconds' => 300,
             ],
         ],
-        'print' => default_print_config(['office_name' => 'Yojaka Office']),
+        'print' => default_print_config(['office_name' => 'Yojaka Department']),
     ];
 }
 
@@ -324,49 +324,56 @@ function get_default_office_id(): string
     return 'office_001';
 }
 
+function get_default_department_id(): string
+{
+    return get_default_office_id();
+}
+
 function get_current_department_id(): string
 {
-    // Department (big unit) maps to the legacy office identifier used for
-    // folder naming. We preserve the stored value but clarify semantics.
     if (!empty($GLOBALS['current_department_id_override'])) {
         return $GLOBALS['current_department_id_override'];
     }
+
     $user = current_user();
-    if ($user && !empty($user['office_id'])) {
-        return $user['office_id'];
+    if ($user) {
+        if (!empty($user['department_id'])) {
+            return $user['department_id'];
+        }
+        if (!empty($user['office_id'])) {
+            return $user['office_id'];
+        }
     }
-    return get_default_office_id();
+
+    return get_default_department_id();
 }
 
 function get_current_office_id(): string
 {
-    // Office (smaller unit within a department) now maps to what was
-    // previously stored as department_id. We fall back to the department id to
-    // remain compatible with older data where no inner office was captured.
+    // Backward compatibility wrapper. The primary organizational unit is the
+    // department (previously office_id), so we return the current department
+    // identifier.
     if (!empty($GLOBALS['current_office_id_override'])) {
         return $GLOBALS['current_office_id_override'];
     }
-    $user = current_user();
-    if ($user && !empty($user['department_id'])) {
-        return $user['department_id'];
-    }
-    if ($user && !empty($user['office_id'])) {
-        return $user['office_id'];
-    }
-    return get_default_office_id();
+    return get_current_department_id();
 }
 
 function filter_records_by_office(array $records, string $officeId): array
 {
     return array_values(array_filter($records, function ($item) use ($officeId) {
-        return ($item['office_id'] ?? $officeId) === $officeId;
+        $department = $item['department_id'] ?? ($item['office_id'] ?? $officeId);
+        return $department === $officeId;
     }));
 }
 
 function ensure_record_office(array $record, string $officeId): array
 {
+    if (empty($record['department_id'])) {
+        $record['department_id'] = $officeId;
+    }
     if (empty($record['office_id'])) {
-        $record['office_id'] = $officeId;
+        $record['office_id'] = $record['department_id'];
     }
     return $record;
 }
