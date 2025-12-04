@@ -2,6 +2,11 @@
 require_once __DIR__ . '/../app/bootstrap.php';
 require_once __DIR__ . '/../app/routes.php';
 
+if (!YOJAKA_INSTALLED) {
+    header('Location: ' . YOJAKA_BASE_URL . '/install.php');
+    exit;
+}
+
 require_login();
 
 $page = $_GET['page'] ?? 'dashboard';

@@ -16,6 +16,8 @@ $inspectionReports = load_inspection_reports();
 $meetingMinutesDocs = load_document_records('meeting_minutes');
 $workOrdersDocs = load_document_records('work_order');
 $gucDocs = load_document_records('guc');
+$bills = load_bills();
+$officeConfig = load_office_config();
 
 $yourPendingRtis = 0;
 $yourOverdueRtis = 0;
@@ -40,6 +42,8 @@ $yourGucs = 0;
 $totalMeetingMinutes = count($meetingMinutesDocs);
 $totalWorkOrders = count($workOrdersDocs);
 $totalGucs = count($gucDocs);
+$totalBills = count($bills);
+$yourBills = 0;
 
 foreach ($rtiCases as $case) {
     $isPending = ($case['status'] ?? '') === 'Pending';
@@ -119,12 +123,23 @@ foreach ($gucDocs as $doc) {
         $yourGucs++;
     }
 }
+
+foreach ($bills as $bill) {
+    if (($bill['created_by'] ?? null) === ($user['username'] ?? null)) {
+        $yourBills++;
+    }
+}
 ?>
 <div class="grid">
     <div class="card highlight">
         <h2>Welcome, <?= htmlspecialchars($user['full_name'] ?? ''); ?>!</h2>
         <p>You are logged in as <strong><?= htmlspecialchars($user['role'] ?? ''); ?></strong>.</p>
         <p>This is the starting point for Yojaka modules.</p>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Office</div>
+        <div class="stat-value" style="font-size:1.2rem;"><?= htmlspecialchars($officeConfig['office_name'] ?? ''); ?></div>
+        <div class="muted">Timezone: <?= htmlspecialchars($officeConfig['timezone'] ?? ''); ?></div>
     </div>
     <div class="card stat">
         <div class="stat-label">Registered Users</div>
@@ -149,6 +164,14 @@ foreach ($gucDocs as $doc) {
     <div class="card stat">
         <div class="stat-label">Your Letters Generated</div>
         <div class="stat-value"><?= (int) $userLettersGenerated; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Contractor Bills (Total)</div>
+        <div class="stat-value"><?= (int) $totalBills; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Your Bills</div>
+        <div class="stat-value"><?= (int) $yourBills; ?></div>
     </div>
     <div class="card stat">
         <div class="stat-label">Your Meeting Minutes</div>

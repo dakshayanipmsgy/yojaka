@@ -130,7 +130,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-field">
                     <label for="var_<?= htmlspecialchars($name); ?>"><?= htmlspecialchars($label); ?><?= $required ? ' *' : ''; ?></label>
                     <?php if ($type === 'textarea'): ?>
-                        <textarea id="var_<?= htmlspecialchars($name); ?>" name="var[<?= htmlspecialchars($name); ?>]" <?= $required ? 'required' : ''; ?>><?= htmlspecialchars($value); ?></textarea>
+                        <textarea id="var_<?= htmlspecialchars($name); ?>" name="var[<?= htmlspecialchars($name); ?>]" <?= $required ? 'required' : ''; ?> data-ai-suggest="true"><?= htmlspecialchars($value); ?></textarea>
+                        <button type="button" class="button ai-suggest-btn" data-target="var_<?= htmlspecialchars($name); ?>">Get Suggestion (Coming Soon)</button>
                     <?php else: ?>
                         <input id="var_<?= htmlspecialchars($name); ?>" type="<?= htmlspecialchars($type); ?>" name="var[<?= htmlspecialchars($name); ?>]" value="<?= htmlspecialchars($value); ?>" <?= $required ? 'required' : ''; ?> />
                     <?php endif; ?>

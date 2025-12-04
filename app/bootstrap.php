@@ -2,6 +2,7 @@
 // Bootstrap file to initialize configuration, sessions, and dependencies.
 
 $config = require __DIR__ . '/../config/config.php';
+$installedFlag = !empty($config['installed']);
 
 // Control error display for production safety
 ini_set('display_errors', $config['display_errors'] ? '1' : '0');
@@ -25,11 +26,16 @@ if (!defined('YOJAKA_LOGS_PATH')) {
 if (!defined('YOJAKA_BASE_URL')) {
     define('YOJAKA_BASE_URL', rtrim($config['base_url'], '/'));
 }
+if (!defined('YOJAKA_INSTALLED')) {
+    define('YOJAKA_INSTALLED', $installedFlag);
+}
 
 require_once __DIR__ . '/logging.php';
 require_once __DIR__ . '/list_helpers.php';
 require_once __DIR__ . '/departments.php';
 require_once __DIR__ . '/rendering.php';
+require_once __DIR__ . '/office.php';
+require_once __DIR__ . '/bills.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/templates.php';
 require_once __DIR__ . '/document_templates.php';
@@ -41,35 +47,39 @@ require_once __DIR__ . '/backup.php';
 // Ensure logs directory exists early
 ensure_logs_directory();
 
-// Ensure backup directory exists
-ensure_backup_directory_exists();
+if (YOJAKA_INSTALLED) {
+    // Ensure backup directory exists
+    ensure_backup_directory_exists();
 
-// Ensure departments storage exists
-ensure_departments_storage();
+    // Ensure office configuration exists
+    ensure_office_storage();
 
-// Ensure RTI storage exists
-ensure_rti_storage();
+    // Update timezone from office config if available
+    $officeConfig = load_office_config();
+    if (!empty($officeConfig['timezone'])) {
+        @date_default_timezone_set($officeConfig['timezone']);
+    }
 
-// Ensure Dak storage exists
-ensure_dak_storage();
+    // Ensure module storages exist
+    ensure_departments_storage();
+    ensure_rti_storage();
+    ensure_dak_storage();
+    ensure_inspection_storage();
+    ensure_documents_storage();
+    ensure_bills_storage();
 
-// Ensure Inspection storage exists
-ensure_inspection_storage();
+    // Seed default admin user if necessary
+    create_default_admin_if_needed($config);
 
-// Ensure document storage exists
-ensure_documents_storage();
+    // Normalize user departments if missing
+    ensure_users_have_departments();
 
-// Seed default admin user if necessary
-create_default_admin_if_needed($config);
+    // Seed default letter templates if necessary
+    ensure_default_letter_templates();
 
-// Normalize user departments if missing
-ensure_users_have_departments();
+    // Seed default inspection templates if necessary
+    ensure_default_inspection_templates();
 
-// Seed default letter templates if necessary
-ensure_default_letter_templates();
-
-// Seed default inspection templates if necessary
-ensure_default_inspection_templates();
-
-// Seed default document templates if necessary
-ensure_default_document_templates();
+    // Seed default document templates if necessary
+    ensure_default_document_templates();
+}

@@ -1,0 +1,30 @@
+{
+  "office_name": "Yojaka Office",
+  "office_short_name": "YOJAKA",
+  "base_url": "/yojaka/public",
+  "date_format_php": "d-m-Y",
+  "timezone": "Asia/Kolkata",
+  "id_prefixes": {
+    "rti": "RTI",
+    "dak": "DAK",
+    "inspection": "INSP",
+    "bill": "BILL",
+    "meeting_minutes": "MM",
+    "work_order": "WO",
+    "guc": "GUC"
+  },
+  "theme": {
+    "primary_color": "#0f5aa5",
+    "secondary_color": "#f5f7fb",
+    "logo_path": ""
+  },
+  "modules": {
+    "enable_rti": true,
+    "enable_dak": true,
+    "enable_inspection": true,
+    "enable_bills": true,
+    "enable_meeting_minutes": true,
+    "enable_work_orders": true,
+    "enable_guc": true
+  }
+}

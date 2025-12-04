@@ -192,7 +192,8 @@ if ($mode === 'create') {
                     <div class="form-field">
                         <label for="field_<?= htmlspecialchars($name); ?>"><?= htmlspecialchars($label); ?><?= $required ? ' *' : ''; ?></label>
                         <?php if ($type === 'textarea'): ?>
-                            <textarea id="field_<?= htmlspecialchars($name); ?>" name="field[<?= htmlspecialchars($name); ?>]" <?= $required ? 'required' : ''; ?>><?= htmlspecialchars($value); ?></textarea>
+                            <textarea id="field_<?= htmlspecialchars($name); ?>" name="field[<?= htmlspecialchars($name); ?>]" <?= $required ? 'required' : ''; ?> data-ai-suggest="true"><?= htmlspecialchars($value); ?></textarea>
+                            <button type="button" class="button ai-suggest-btn" data-target="field_<?= htmlspecialchars($name); ?>">Get Suggestion (Coming Soon)</button>
                         <?php else: ?>
                             <input id="field_<?= htmlspecialchars($name); ?>" type="<?= htmlspecialchars($type); ?>" name="field[<?= htmlspecialchars($name); ?>]" value="<?= htmlspecialchars($value); ?>" <?= $required ? 'required' : ''; ?> />
                         <?php endif; ?>
@@ -211,7 +212,8 @@ if ($mode === 'create') {
                         <div class="form-field">
                             <label for="extra_<?= htmlspecialchars($name); ?>"><?= htmlspecialchars($label); ?><?= $required ? ' *' : ''; ?></label>
                             <?php if ($type === 'textarea'): ?>
-                                <textarea id="extra_<?= htmlspecialchars($name); ?>" name="extra[<?= htmlspecialchars($name); ?>]" <?= $required ? 'required' : ''; ?>><?= htmlspecialchars($value); ?></textarea>
+                                <textarea id="extra_<?= htmlspecialchars($name); ?>" name="extra[<?= htmlspecialchars($name); ?>]" <?= $required ? 'required' : ''; ?> data-ai-suggest="true"><?= htmlspecialchars($value); ?></textarea>
+                                <button type="button" class="button ai-suggest-btn" data-target="extra_<?= htmlspecialchars($name); ?>">Get Suggestion (Coming Soon)</button>
                             <?php else: ?>
                                 <input id="extra_<?= htmlspecialchars($name); ?>" type="<?= htmlspecialchars($type); ?>" name="extra[<?= htmlspecialchars($name); ?>]" value="<?= htmlspecialchars($value); ?>" <?= $required ? 'required' : ''; ?> />
                             <?php endif; ?>
