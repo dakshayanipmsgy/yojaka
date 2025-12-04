@@ -18,6 +18,8 @@ if (!user_has_permission('view_all_records')) {
 }
 
 $mode = $_GET['mode'] ?? 'list';
+$action = $_GET['action'] ?? null;
+$downloadRequested = ($action === 'download_html') || (isset($_GET['download']) && $_GET['download'] === '1');
 $errors = [];
 $csrfToken = $_SESSION['meeting_minutes_csrf'] ?? bin2hex(random_bytes(16));
 $_SESSION['meeting_minutes_csrf'] = $csrfToken;
@@ -27,7 +29,6 @@ $attachmentToken = '';
 
 if ($mode === 'view') {
     $id = $_GET['id'] ?? '';
-    $download = isset($_GET['download']) && $_GET['download'] === '1';
     $record = null;
     foreach ($allRecords as $rec) {
         if (($rec['id'] ?? '') === $id) {
@@ -53,7 +54,7 @@ if ($mode === 'view') {
     }
     $recordAttachments = find_attachments_for_entity('documents', $record['id']);
 
-    if ($download) {
+    if ($downloadRequested) {
         $filename = preg_replace('/[^a-zA-Z0-9_-]+/', '_', strtolower($record['id'] ?? 'meeting_minutes')) ?: 'meeting_minutes';
         header('Content-Type: text/html; charset=UTF-8');
         header('Content-Disposition: attachment; filename="' . $filename . '.html"');
