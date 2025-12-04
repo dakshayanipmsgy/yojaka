@@ -122,6 +122,10 @@ function resolve_route(string $page): array
             'title' => 'Notifications',
             'view' => __DIR__ . '/views/notifications.php',
         ],
+        'change_language' => [
+            'title' => 'Change Language',
+            'view' => __DIR__ . '/views/change_language.php',
+        ],
         'case_export' => [
             'title' => 'Case Bundle Export',
             'view' => __DIR__ . '/views/case_export.php',

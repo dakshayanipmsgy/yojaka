@@ -43,6 +43,7 @@ function default_office_config(): array
         'base_url' => YOJAKA_BASE_URL,
         'date_format_php' => 'd-m-Y',
         'timezone' => 'Asia/Kolkata',
+        'default_language' => 'en',
         'id_prefixes' => [
             'rti' => 'RTI',
             'dak' => 'DAK',
@@ -65,6 +66,19 @@ function default_office_config(): array
             'enable_meeting_minutes' => true,
             'enable_work_orders' => true,
             'enable_guc' => true,
+        ],
+        'custom_fields' => [
+            'rti' => [],
+            'dak' => [],
+            'bills' => [],
+            'documents' => [],
+        ],
+        'ui' => [
+            'menus' => function_exists('default_menu_config') ? default_menu_config() : [
+                'main' => [],
+                'admin' => [],
+            ],
+            'dashboard_widgets' => function_exists('default_dashboard_widgets') ? default_dashboard_widgets() : [],
         ],
     ];
 }

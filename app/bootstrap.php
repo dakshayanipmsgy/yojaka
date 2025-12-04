@@ -53,11 +53,57 @@ require_once __DIR__ . '/notifications.php';
 require_once __DIR__ . '/sla.php';
 require_once __DIR__ . '/indexes.php';
 require_once __DIR__ . '/export.php';
+require_once __DIR__ . '/i18n.php';
+require_once __DIR__ . '/custom_fields.php';
+require_once __DIR__ . '/ui_config.php';
 
 // Ensure logs directory exists early
 ensure_logs_directory();
 
 if (YOJAKA_INSTALLED) {
+    $i18nDir = i18n_data_path();
+    if (!is_dir($i18nDir)) {
+        @mkdir($i18nDir, 0755, true);
+    }
+    $defaultLangPath = $i18nDir . DIRECTORY_SEPARATOR . ($config['i18n_default_lang'] ?? 'en') . '.json';
+    if (!file_exists($defaultLangPath)) {
+        $seed = [
+            'app.title' => 'Yojaka',
+            'nav.dashboard' => 'Dashboard',
+            'nav.rti' => 'RTI Cases',
+            'nav.dak' => 'Dak & File Movement',
+            'nav.inspection' => 'Inspection Reports',
+            'nav.documents' => 'Documents',
+            'nav.bills' => 'Contractor Bills',
+            'nav.my_tasks' => 'My Tasks',
+            'nav.notifications' => 'Notifications',
+            'nav.mis' => 'Reports & Analytics (MIS)',
+            'nav.global_search' => 'Global Search',
+            'nav.repository' => 'Documents Repository',
+            'nav.housekeeping' => 'Housekeeping & Retention',
+            'nav.license' => 'License & Trial Status',
+            'nav.admin_users' => 'User List',
+            'nav.admin_departments' => 'Department Profiles',
+            'nav.admin_office' => 'Office Settings',
+            'nav.templates_letters' => 'Letter Templates',
+            'nav.documents_templates' => 'Document Templates',
+            'nav.admin_rti' => 'RTI Management',
+            'nav.admin_dak' => 'Dak Management',
+            'nav.admin_inspection' => 'Inspection Management',
+            'btn.save' => 'Save',
+            'btn.cancel' => 'Cancel',
+            'btn.search' => 'Search',
+            'btn.create_new' => 'Create New',
+            'label.language' => 'Language',
+            'label.office' => 'Office',
+            'label.custom_fields' => 'Custom Fields',
+            'banner.trial' => 'Trial version – not for production use.',
+            'banner.expired' => 'Trial expired on {date}. System is read-only.',
+            'validation.required' => '{field} is required.',
+        ];
+        @file_put_contents($defaultLangPath, json_encode($seed, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    }
+
     // Ensure backup directory exists
     ensure_backup_directory_exists();
 
@@ -77,6 +123,8 @@ if (YOJAKA_INSTALLED) {
     $GLOBALS['current_office_config'] = $officeConfig;
     $GLOBALS['current_office_id'] = $currentOfficeId;
     $GLOBALS['current_office_license'] = load_office_license($currentOfficeId);
+    $langToUse = i18n_determine_language();
+    i18n_set_current_language($langToUse);
 
     // Ensure module storages exist
     ensure_departments_storage();
