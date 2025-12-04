@@ -45,6 +45,15 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_dak.php',
             'role' => 'admin',
         ],
+        'inspection' => [
+            'title' => 'Inspection Reports',
+            'view' => __DIR__ . '/views/inspection.php',
+        ],
+        'admin_inspection' => [
+            'title' => 'Inspection Management',
+            'view' => __DIR__ . '/views/admin_inspection.php',
+            'role' => 'admin',
+        ],
     ];
 
     if (isset($routes[$page])) {

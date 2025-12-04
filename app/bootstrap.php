@@ -31,6 +31,7 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/templates.php';
 require_once __DIR__ . '/rti.php';
 require_once __DIR__ . '/dak.php';
+require_once __DIR__ . '/inspection.php';
 
 // Ensure logs directory exists early
 ensure_logs_directory();
@@ -41,8 +42,14 @@ ensure_rti_storage();
 // Ensure Dak storage exists
 ensure_dak_storage();
 
+// Ensure Inspection storage exists
+ensure_inspection_storage();
+
 // Seed default admin user if necessary
 create_default_admin_if_needed($config);
 
 // Seed default letter templates if necessary
 ensure_default_letter_templates();
+
+// Seed default inspection templates if necessary
+ensure_default_inspection_templates();
