@@ -17,7 +17,7 @@ $csrf_token = $csrf_token ?? '';
         <?php if (!empty($error)): ?>
             <div class="alert alert-danger">Invalid credentials or inactive account.</div>
         <?php endif; ?>
-        <form method="post" action="<?= htmlspecialchars($_SERVER['PHP_SELF']); ?>">
+        <form method="post" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=login">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
             <label for="username">Username</label>
             <input type="text" name="username" id="username" required autofocus>
