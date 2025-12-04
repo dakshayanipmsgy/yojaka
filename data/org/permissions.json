@@ -19,7 +19,15 @@
       "manage_office_config",
       "manage_bills",
       "manage_documents_repository",
-      "manage_housekeeping"
+      "manage_housekeeping",
+      "view_letters",
+      "view_meeting_minutes",
+      "view_work_orders",
+      "view_guc",
+      "view_bills",
+      "view_global_search",
+      "view_inspection",
+      "view_dak"
     ],
     "officer": [
       "view_assigned_files",
@@ -31,7 +39,15 @@
       "view_reports_basic",
       "create_documents",
       "manage_bills",
-      "manage_documents_repository"
+      "manage_documents_repository",
+      "view_letters",
+      "view_meeting_minutes",
+      "view_work_orders",
+      "view_guc",
+      "view_bills",
+      "view_global_search",
+      "view_inspection",
+      "view_dak"
     ],
     "clerk": [
       "create_dak",
@@ -40,7 +56,15 @@
       "create_documents",
       "manage_dak",
       "view_reports_basic",
-      "manage_bills"
+      "manage_bills",
+      "view_letters",
+      "view_meeting_minutes",
+      "view_work_orders",
+      "view_guc",
+      "view_bills",
+      "view_global_search",
+      "view_inspection",
+      "view_dak"
     ]
   },
   "custom_roles": {}

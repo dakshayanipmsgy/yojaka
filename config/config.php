@@ -114,6 +114,7 @@ $config = [
     ],
 
     // Roles and permissions
+    'permissions_strict' => false,
     'roles_permissions' => [
         'admin' => [
             'manage_users',
@@ -132,6 +133,14 @@ $config = [
             'manage_bills',
             'manage_documents_repository',
             'manage_housekeeping',
+            'view_letters',
+            'view_meeting_minutes',
+            'view_work_orders',
+            'view_guc',
+            'view_bills',
+            'view_global_search',
+            'view_inspection',
+            'view_dak',
         ],
         'officer' => [
             'create_documents',
@@ -141,12 +150,28 @@ $config = [
             'view_reports_basic',
             'manage_bills',
             'manage_documents_repository',
+            'view_letters',
+            'view_meeting_minutes',
+            'view_work_orders',
+            'view_guc',
+            'view_bills',
+            'view_global_search',
+            'view_inspection',
+            'view_dak',
         ],
         'clerk' => [
             'create_documents',
             'manage_dak',
             'view_reports_basic',
             'manage_bills',
+            'view_letters',
+            'view_meeting_minutes',
+            'view_work_orders',
+            'view_guc',
+            'view_bills',
+            'view_global_search',
+            'view_inspection',
+            'view_dak',
         ],
         'viewer' => [
             'view_reports_basic',
