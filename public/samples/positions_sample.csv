@@ -1,3 +1,3 @@
-position_id,office_id,department_id,post_id,title,reports_to
-POS-CLRK-001,office_001,dept_civil,POST-CLERK,"Dak Clerk, Civil",POS-AE-001
-POS-AE-001,office_001,dept_civil,POST-AE,"Assistant Engineer, Civil",POS-EE-001
+position_id,department_id,subunit_id,post_id,title,reports_to
+POS-CLRK-001,dept_pwd,dept_civil,POST-CLERK,"Dak Clerk, Civil",POS-AE-001
+POS-AE-001,dept_pwd,dept_civil,POST-AE,"Assistant Engineer, Civil",POS-EE-001

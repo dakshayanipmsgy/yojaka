@@ -51,14 +51,15 @@ function save_json_list(string $path, array $list): bool
     return $result;
 }
 
-function standardize_contractor(array $record, ?string $departmentId = null, ?string $officeId = null): array
+function standardize_contractor(array $record, ?string $departmentId = null): array
 {
     $record['contractor_id'] = $record['contractor_id'] ?? ($record['id'] ?? null);
     $record['id'] = $record['id'] ?? $record['contractor_id'];
     $record['name'] = $record['name'] ?? '';
     $record['category'] = $record['category'] ?? '';
-    $record['department_id'] = $record['department_id'] ?? $departmentId;
-    $record['office_id'] = $record['office_id'] ?? $officeId;
+    $primaryDepartment = $record['department_id'] ?? ($record['office_id'] ?? $departmentId);
+    $record['department_id'] = $primaryDepartment;
+    $record['office_id'] = $record['office_id'] ?? $primaryDepartment; // legacy mirror only
     $record['address'] = $record['address'] ?? '';
     $record['gstin'] = $record['gstin'] ?? ($record['gst_no'] ?? '');
     $record['pan'] = $record['pan'] ?? '';
@@ -68,7 +69,7 @@ function standardize_contractor(array $record, ?string $departmentId = null, ?st
     return $record;
 }
 
-function load_contractors(?string $departmentId = null, ?string $officeId = null): array
+function load_contractors(?string $departmentId = null): array
 {
     $paths = [];
     if ($departmentId !== null && $departmentId !== '') {
@@ -85,8 +86,8 @@ function load_contractors(?string $departmentId = null, ?string $officeId = null
         }
         $data = load_json_list($path);
         if (!empty($data)) {
-            return array_map(static function ($row) use ($departmentId, $officeId) {
-                return standardize_contractor(is_array($row) ? $row : [], $departmentId, $officeId);
+            return array_map(static function ($row) use ($departmentId) {
+                return standardize_contractor(is_array($row) ? $row : [], $departmentId);
             }, $data);
         }
     }
@@ -98,7 +99,7 @@ function save_contractors(?string $departmentId, array $list): bool
 {
     $path = contractors_data_path($departmentId);
     $payload = array_values(array_map(function ($row) use ($departmentId) {
-        return standardize_contractor($row, $departmentId, $row['office_id'] ?? null);
+        return standardize_contractor($row, $departmentId);
     }, $list));
 
     $saved = save_json_list($path, $payload);
@@ -154,13 +155,13 @@ function upsert_contractor(array $existing, array $contractor): array
     return $existing;
 }
 
-function import_contractors_from_csv(string $fileTmpPath, ?string $departmentId = null, ?string $officeId = null): int
+function import_contractors_from_csv(string $fileTmpPath, ?string $departmentId = null): int
 {
     $imported = 0;
     if (!is_readable($fileTmpPath)) {
         return 0;
     }
-    $contractors = load_contractors($departmentId, $officeId);
+    $contractors = load_contractors($departmentId);
     if (($handle = fopen($fileTmpPath, 'r')) !== false) {
         $header = fgetcsv($handle);
         while (($row = fgetcsv($handle)) !== false) {
@@ -182,7 +183,6 @@ function import_contractors_from_csv(string $fileTmpPath, ?string $departmentId 
                 'phone' => trim($phone),
                 'email' => trim($email),
                 'department_id' => $departmentId,
-                'office_id' => $officeId,
                 'active' => true,
             ];
             $contractors = upsert_contractor($contractors, $contractor);

@@ -119,9 +119,14 @@ function standardize_user_record(array $user): array
     $user['username'] = $user['username'] ?? ($user['email'] ?? null);
     $user['role'] = $user['role'] ?? 'user';
     $user['full_name'] = $user['full_name'] ?? ($user['username'] ?? '');
-    $defaultOffice = function_exists('get_default_office_id') ? get_default_office_id() : 'office_001';
-    $user['office_id'] = $user['office_id'] ?? $defaultOffice;
-    $user['department_id'] = $user['department_id'] ?? ($user['department'] ?? 'dept_default');
+    $defaultOffice = function_exists('get_default_department_id') ? get_default_department_id() : 'office_001';
+    $legacyDepartment = $user['department_id'] ?? ($user['department'] ?? null);
+    $primaryDepartment = $user['office_id'] ?? $legacyDepartment ?? $defaultOffice;
+    $user['department_id'] = $primaryDepartment;
+    if (!empty($legacyDepartment) && $legacyDepartment !== $primaryDepartment) {
+        $user['subunit_id'] = $user['subunit_id'] ?? $legacyDepartment;
+    }
+    $user['office_id'] = $user['office_id'] ?? $primaryDepartment; // legacy mirror for backward compatibility
     $user['staff_id'] = $user['staff_id'] ?? ($user['staff'] ?? null);
     $user['active'] = array_key_exists('active', $user) ? (bool) $user['active'] : true;
     $user['force_password_change'] = !empty($user['force_password_change']);

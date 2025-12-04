@@ -352,8 +352,8 @@ load_offices_registry();
 ensure_audit_storage();
 ensure_index_directory();
 
-// Update timezone from office config if available
-$currentOfficeId = get_current_office_id();
+// Update timezone from department config if available
+$currentOfficeId = get_current_department_id();
 $officeConfig = load_office_config_by_id($currentOfficeId);
 if (!empty($officeConfig['timezone'])) {
     @date_default_timezone_set($officeConfig['timezone']);

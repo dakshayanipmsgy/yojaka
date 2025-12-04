@@ -5,7 +5,7 @@ $officeId = isset($_GET['office']) ? trim($_GET['office']) : get_default_office_
 $registryEntry = find_office_registry_entry($officeId);
 if (!$registryEntry || empty($registryEntry['active'])) {
     http_response_code(404);
-    echo '<h2>Office not found or inactive.</h2>';
+    echo '<h2>Department not found or inactive.</h2>';
     exit;
 }
 
@@ -27,7 +27,7 @@ if ($kioskMode && $action === '' && !empty($portalConfig['kiosk']['default_actio
 if (empty($portalConfig['enabled'])) {
     echo '<div style="max-width:640px;margin:40px auto;font-family:Arial,sans-serif;text-align:center;">';
     echo '<h2>' . htmlspecialchars($officeConfig['office_name'] ?? 'Office') . '</h2>';
-    echo '<p>Public portal is disabled for this office.</p>';
+    echo '<p>Public portal is disabled for this department.</p>';
     echo '</div>';
     exit;
 }

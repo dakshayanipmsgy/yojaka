@@ -25,7 +25,7 @@
   "nav.logs": "Usage Logs",
   "nav.admin_users": "User Management",
   "nav.admin_departments": "Department Profiles",
-  "nav.admin_office": "Office Settings",
+  "nav.admin_office": "Department Settings",
   "nav.admin_master_data": "Master Data (Contractors & Staff)",
   "nav.templates_letters": "Letter Templates",
   "nav.documents_templates": "Document Templates",
@@ -39,7 +39,7 @@
   "btn.search": "Search",
   "btn.create_new": "Create New",
   "label.language": "Language",
-  "label.office": "Office",
+  "label.office": "Department",
   "label.custom_fields": "Custom Fields",
   "banner.trial": "Trial version – not for production use.",
   "banner.expired": "Trial expired on {date}. System is read-only.",
@@ -58,7 +58,7 @@
   "portal.yes": "Yes",
   "portal.no": "No",
   "portal.no_record": "No record found / Please check ID.",
-  "portal.feature_disabled": "This feature is disabled for the selected office.",
+  "portal.feature_disabled": "This feature is disabled for the selected department.",
   "portal.rate_limit": "Too many attempts, please try again later.",
   "portal.responsible_section": "Responsible section",
   "portal.last_moved_on": "Last movement",
@@ -86,7 +86,7 @@
   ,"users.username": "Username"
   ,"users.full_name": "Full Name"
   ,"users.role": "Role"
-  ,"users.office": "Office"
+  ,"users.office": "Department"
   ,"users.department": "Department"
   ,"users.active": "Active"
   ,"users.reset_password": "Reset Password"

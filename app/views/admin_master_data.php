@@ -10,11 +10,10 @@ $notices = [];
 $csrf = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(16));
 $_SESSION['csrf_token'] = $csrf;
 
-// Department is the larger unit (legacy office folder). Office is the smaller unit within it.
+// Department is the single organizational unit (legacy office folder path).
 $departmentId = get_current_department_id();
-$officeId = get_current_office_id();
 
-$contractors = load_contractors($departmentId, $officeId);
+$contractors = load_contractors($departmentId);
 $staff = load_staff($departmentId);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -42,12 +41,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         continue;
                     }
 
+                    $deptValue = trim($r['department_id'] ?? ($r['office_id'] ?? $departmentId));
                     $contractor = [
                         'contractor_id' => trim($r['contractor_id']),
                         'name' => trim($r['name']),
                         'category' => trim($r['category'] ?? ''),
-                        'department_id' => trim($r['department_id'] ?? $departmentId),
-                        'office_id' => trim($r['office_id'] ?? $officeId),
+                        'department_id' => $deptValue,
                         'address' => trim($r['address'] ?? ''),
                         'phone' => trim($r['phone'] ?? ''),
                         'email' => trim($r['email'] ?? ''),
@@ -82,12 +81,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         continue;
                     }
 
+                    $deptValue = trim($r['department_id'] ?? ($r['office_id'] ?? $departmentId));
                     $staffRow = [
                         'staff_id' => trim($r['staff_id']),
                         'full_name' => trim($r['full_name']),
                         'designation' => trim($r['designation'] ?? ''),
-                        'department_id' => trim($r['department_id'] ?? $departmentId),
-                        'office_id' => trim($r['office_id'] ?? $officeId),
+                        'department_id' => $deptValue,
                         'phone' => trim($r['phone'] ?? ''),
                         'email' => trim($r['email'] ?? ''),
                         'active' => strtolower(trim($r['active'] ?? 'true')) !== 'false',
@@ -104,11 +103,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <div class="grid">
-    <div class="card" style="grid-column:1 / -1;">
-        <div class="alert alert-info">
-            <strong>Hierarchy update:</strong> Department is now the larger organizational unit (legacy office folder). An Office is a smaller unit inside that department. CSVs use <code>department_id</code> for the department folder and <code>office_id</code> for the unit within it.
-        </div>
-    </div>
     <div class="card">
         <h3>Contractors</h3>
         <?php foreach ($errors as $err): ?>
@@ -127,10 +121,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
         <div class="table-responsive" style="margin-top:1rem;">
             <table class="table">
-                <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Department</th><th>Office</th><th>Active</th></tr></thead>
+                <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Department</th><th>Active</th></tr></thead>
                 <tbody>
                     <?php if (empty($contractors)): ?>
-                        <tr><td colspan="6">No contractors imported yet.</td></tr>
+                        <tr><td colspan="5">No contractors imported yet.</td></tr>
                     <?php else: ?>
                         <?php foreach ($contractors as $ctr): ?>
                             <tr>
@@ -138,7 +132,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <td><?= htmlspecialchars($ctr['name'] ?? ''); ?></td>
                                 <td><?= htmlspecialchars($ctr['category'] ?? ''); ?></td>
                                 <td><?= htmlspecialchars($ctr['department_id'] ?? ''); ?></td>
-                                <td><?= htmlspecialchars($ctr['office_id'] ?? ''); ?></td>
                                 <td><?= !empty($ctr['active']) ? 'Yes' : 'No'; ?></td>
                             </tr>
                         <?php endforeach; ?>
@@ -159,10 +152,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
         <div class="table-responsive" style="margin-top:1rem;">
             <table class="table">
-                <thead><tr><th>ID</th><th>Name</th><th>Designation</th><th>Department</th><th>Office</th><th>Active</th></tr></thead>
+                <thead><tr><th>ID</th><th>Name</th><th>Designation</th><th>Department</th><th>Active</th></tr></thead>
                 <tbody>
                     <?php if (empty($staff)): ?>
-                        <tr><td colspan="6">No staff imported yet.</td></tr>
+                        <tr><td colspan="5">No staff imported yet.</td></tr>
                     <?php else: ?>
                         <?php foreach ($staff as $person): ?>
                             <tr>
@@ -170,7 +163,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <td><?= htmlspecialchars($person['full_name'] ?? $person['name'] ?? ''); ?></td>
                                 <td><?= htmlspecialchars($person['designation'] ?? ''); ?></td>
                                 <td><?= htmlspecialchars($person['department_id'] ?? ''); ?></td>
-                                <td><?= htmlspecialchars($person['office_id'] ?? ''); ?></td>
                                 <td><?= !empty($person['active']) ? 'Yes' : 'No'; ?></td>
                             </tr>
                         <?php endforeach; ?>
