@@ -61,7 +61,10 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             'last_action_at' => $now,
             'office_id' => $currentOfficeId,
             'movements' => [],
+            'department_id' => $user['department_id'] ?? 'dept_default',
         ];
+
+        file_flow_initialize($entries[array_key_last($entries)], 'dak', $user['department_id'] ?? 'dept_default', $currentOfficeId);
 
         append_dak_movement($entries[array_key_last($entries)], 'created', null, $user['username'] ?? null, 'Dak entry created');
         save_dak_entries($entries);
@@ -127,6 +130,7 @@ $targetId = $_GET['id'] ?? null;
     <?php else: ?>
         <?php
         write_audit_log('dak', $entry['id'], 'view');
+        $entryChanged = false;
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['attachment_upload'])) {
             $submittedToken = $_POST['csrf_token'] ?? '';
             if (!$submittedToken || !hash_equals($csrfToken, $submittedToken)) {
@@ -134,6 +138,38 @@ $targetId = $_GET['id'] ?? null;
             }
             if ($officeReadOnly) {
                 $errors[] = 'Office is read-only; updates are blocked.';
+            }
+            if (empty($errors) && isset($_POST['file_flow_action'])) {
+                $action = $_POST['file_flow_action'];
+                if ($action === 'init_route') {
+                    file_flow_initialize($entry, 'dak', $entry['department_id'] ?? ($user['department_id'] ?? 'dept_default'), $entry['office_id'] ?? $currentOfficeId, $_POST['route_template_id'] ?? null);
+                    $entry['updated_at'] = gmdate('c');
+                    $entry['last_action'] = 'route_initialized';
+                    $entryChanged = true;
+                } elseif ($action === 'forward') {
+                    if (!file_flow_forward($entry, $user['username'] ?? '')) {
+                        $errors[] = 'Unable to move forward.';
+                    } else {
+                        $entryChanged = true;
+                    }
+                } elseif ($action === 'return') {
+                    $target = isset($_POST['target_index']) ? (int)$_POST['target_index'] : -1;
+                    if (!file_flow_return($entry, $user['username'] ?? '', $_POST['remarks'] ?? '', $target)) {
+                        $errors[] = 'Unable to return to the selected step.';
+                    } else {
+                        $entryChanged = true;
+                    }
+                } elseif ($action === 'reroute') {
+                    $newPosition = trim($_POST['new_position_id'] ?? '');
+                    if ($newPosition === '') {
+                        $errors[] = 'Select a position to reroute.';
+                    } else {
+                        file_flow_reroute($entry, $user['username'] ?? '', $newPosition, $_POST['remarks'] ?? '');
+                        $entryChanged = true;
+                    }
+                }
+                file_flow_sync_assignment($entry);
+                $entry['updated_at'] = gmdate('c');
             }
             if (empty($errors) && isset($_POST['assign_to']) && $canManageDak) {
                 $assignTo = trim($_POST['assign_to']);
@@ -187,6 +223,20 @@ $targetId = $_GET['id'] ?? null;
                     $errors[] = 'You are not allowed to move this Dak entry to the selected state.';
                 }
             }
+            if ($entryChanged && empty($errors)) {
+                foreach ($entries as &$item) {
+                    if (($item['id'] ?? '') === $entry['id']) {
+                        $item = $entry;
+                        break;
+                    }
+                }
+                unset($item);
+                save_dak_entries($entries);
+                log_event('dak_route_updated', $user['username'] ?? null, ['dak_id' => $entry['id']]);
+                write_audit_log('dak', $entry['id'], 'update', ['route' => true]);
+                header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=dak&mode=view&id=' . urlencode($entry['id']));
+                exit;
+            }
         }
         $canUploadAttachments = ($canManageDak || user_has_permission('create_documents')) && !$officeReadOnly;
         [$attachmentErrors, $attachmentNotice, $attachmentToken] = handle_attachment_upload('dak', $entry['id'], 'dak_attachment_csrf', $canUploadAttachments);
@@ -195,6 +245,8 @@ $targetId = $_GET['id'] ?? null;
             exit;
         }
         $entryAttachments = find_attachments_for_entity('dak', $entry['id']);
+        $positionsList = load_positions($entry['office_id'] ?? $currentOfficeId);
+        $availableRouteActions = file_flow_get_available_actions($entry, $user['username'] ?? '');
         ?>
         <div class="grid">
             <div class="card">
@@ -231,6 +283,95 @@ $targetId = $_GET['id'] ?? null;
                         </tbody>
                     </table>
                 </div>
+            </div>
+            <div class="card">
+                <h3>Route Overview</h3>
+                <?php if (empty($entry['route']['nodes'])): ?>
+                    <div class="alert info">Route not initialized. Initialize to start guided movement.</div>
+                    <form method="post">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+                        <input type="hidden" name="file_flow_action" value="init_route">
+                        <label>Route Template ID (optional)
+                            <input type="text" name="route_template_id" placeholder="ROUTE-001">
+                        </label>
+                        <button class="btn primary" type="submit">Initialize Route</button>
+                    </form>
+                <?php else: ?>
+                    <ol class="route-list">
+                        <?php foreach ($entry['route']['nodes'] as $idx => $node): ?>
+                            <?php
+                            $pos = null;
+                            foreach ($positionsList as $p) { if (($p['id'] ?? '') === ($node['position_id'] ?? '')) { $pos = $p; break; } }
+                            $isCurrent = ($entry['route']['current_node_index'] === $idx);
+                            ?>
+                            <li class="<?= $isCurrent ? 'active' : (($node['status'] ?? '') === 'completed' ? 'muted' : ''); ?>">
+                                <strong><?= htmlspecialchars($pos['title'] ?? ($node['position_id'] ?? '')); ?></strong>
+                                <?php if (!empty($node['user_username'])): ?>
+                                    <div class="muted">User: <?= htmlspecialchars($node['user_username']); ?></div>
+                                <?php endif; ?>
+                                <div>Status: <?= htmlspecialchars($node['status'] ?? 'pending'); ?></div>
+                                <?php if (!empty($node['completed_at'])): ?>
+                                    <div class="muted">Completed at <?= htmlspecialchars(format_date_for_display($node['completed_at'])); ?></div>
+                                <?php endif; ?>
+                                <?php if ($isCurrent): ?>
+                                    <div class="badge">Current</div>
+                                <?php endif; ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ol>
+                    <?php if (!empty($availableRouteActions)): ?>
+                        <form method="post" class="form-grid" style="margin-top:1rem;">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+                            <div class="form-field">
+                                <label>Remarks
+                                    <input type="text" name="remarks" placeholder="Optional">
+                                </label>
+                            </div>
+                            <div class="form-actions" style="gap:0.5rem;">
+                                <?php if (in_array('forward', $availableRouteActions, true)): ?>
+                                    <button class="btn primary" type="submit" name="file_flow_action" value="forward">Forward to Next Step</button>
+                                <?php endif; ?>
+                                <?php if (in_array('return', $availableRouteActions, true)): ?>
+                                    <select name="target_index">
+                                        <?php foreach ($entry['route']['nodes'] as $idx => $node): if ($idx >= ($entry['route']['current_node_index'] ?? 0)) { continue; } ?>
+                                            <option value="<?= (int)$idx; ?>">Return to <?= htmlspecialchars($node['position_id'] ?? ''); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button class="btn" type="submit" name="file_flow_action" value="return">Send Back</button>
+                                <?php endif; ?>
+                            </div>
+                            <?php if (in_array('reroute', $availableRouteActions, true)): ?>
+                                <label>Reroute to Position
+                                    <select name="new_position_id">
+                                        <option value="">Select position</option>
+                                        <?php foreach ($positionsList as $pos): ?>
+                                            <option value="<?= htmlspecialchars($pos['id'] ?? ''); ?>"><?= htmlspecialchars($pos['title'] ?? $pos['id']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </label>
+                                <button class="btn" type="submit" name="file_flow_action" value="reroute">Reroute</button>
+                            <?php endif; ?>
+                        </form>
+                    <?php endif; ?>
+                    <?php if (!empty($entry['route']['history'])): ?>
+                        <h4>Route History</h4>
+                        <table class="table">
+                            <thead><tr><th>Timestamp</th><th>Action</th><th>From</th><th>To</th><th>User</th><th>Remarks</th></tr></thead>
+                            <tbody>
+                                <?php foreach ($entry['route']['history'] as $row): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars(format_date_for_display($row['timestamp'] ?? '')); ?></td>
+                                        <td><?= htmlspecialchars($row['action'] ?? ''); ?></td>
+                                        <td><?= htmlspecialchars($row['from_position_id'] ?? ''); ?></td>
+                                        <td><?= htmlspecialchars($row['to_position_id'] ?? ''); ?></td>
+                                        <td><?= htmlspecialchars($row['user'] ?? ''); ?></td>
+                                        <td><?= htmlspecialchars($row['remarks'] ?? ''); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                <?php endif; ?>
             </div>
             <div class="card">
                 <h3>Workflow &amp; Assignment</h3>

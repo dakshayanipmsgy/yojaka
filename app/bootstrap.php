@@ -65,6 +65,7 @@ function bootstrap_ensure_base_directories(): void
         YOJAKA_DATA_PATH . '/master',
         YOJAKA_DATA_PATH . '/portal',
         YOJAKA_DATA_PATH . '/qr',
+        YOJAKA_DATA_PATH . '/org',
     ];
 
     foreach ($directories as $dir) {
@@ -198,6 +199,8 @@ require_once __DIR__ . '/portal_rate_limit.php';
 require_once __DIR__ . '/qr.php';
 require_once __DIR__ . '/pdf_export.php';
 require_once __DIR__ . '/search.php';
+require_once __DIR__ . '/org_hierarchy.php';
+require_once __DIR__ . '/file_flow.php';
 
 // Ensure logs directory exists early
 ensure_logs_directory();
