@@ -4,59 +4,117 @@
 }
 
 body.print-document {
-    font-family: "Times New Roman", serif;
+    font-family: "Times New Roman", "DejaVu Serif", serif;
     background: #fff;
     color: #000;
+    font-size: 11pt;
+    line-height: 1.4;
     margin: 0;
-    padding: 0;
 }
 
-.document-container {
+.document-page {
     width: 100%;
     box-sizing: border-box;
-    padding: 10mm;
+    position: relative;
 }
 
-.meta-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 6px 12px;
+.document-header,
+.document-footer {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.document-header-logo img {
+    height: 50px;
+    margin-bottom: 5px;
+}
+
+.document-title {
+    text-align: center;
+    font-weight: bold;
+    font-size: 14pt;
+    margin: 10px 0 15px;
+    text-transform: uppercase;
+}
+
+.document-body {
+    position: relative;
+    z-index: 1;
+}
+
+.document-body-content {
     margin-bottom: 12px;
 }
 
-.table {
+.meta-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
-.table th,
-.table td {
-    border: 1px solid #444;
-    padding: 6px;
-    text-align: left;
+.meta-table td {
+    padding: 2px 4px;
+    vertical-align: top;
 }
 
-.totals {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 8px;
-    margin: 12px 0;
-    font-weight: bold;
+.content-table {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-.print-body {
-    margin-top: 10px;
+.content-table th,
+.content-table td {
+    border: 1px solid #000;
+    padding: 4px 6px;
 }
 
-.muted {
-    color: #555;
-    font-size: 0.95em;
+.signature-block {
+    margin-top: 30mm;
+    text-align: right;
+}
+
+.signature-line {
+    margin-top: 15mm;
+    border-top: 1px solid #000;
+    width: 200px;
+    margin-left: auto;
+}
+
+.watermark {
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 42pt;
+    color: rgba(0, 0, 0, 0.08);
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.qr-block {
+    position: absolute;
+    bottom: 15mm;
+    left: 15mm;
+    font-size: 8pt;
+    text-align: center;
+}
+
+.qr-block img {
+    height: 60px;
+}
+
+.document-footer {
+    margin-top: 15px;
+    font-size: 9pt;
 }
 
 @media print {
     body {
         -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+    }
+
+    a[href]:after {
+        content: "";
     }
 }

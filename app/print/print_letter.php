@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/print_layout.php';
+
 $downloadData = $_SESSION['last_letter_download'] ?? null;
 if (!$downloadData) {
     http_response_code(404);
@@ -6,27 +8,23 @@ if (!$downloadData) {
     exit;
 }
 
-$pageSize = yojaka_print_page_size();
+$officeId = get_current_office_id();
+$letterTitle = $downloadData['template_name'] ?? 'Letter';
+
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Print Letter</title>
-    <link rel="stylesheet" href="<?= YOJAKA_BASE_URL; ?>/css/print.css">
-    <style>
-        @page { size: <?= htmlspecialchars($pageSize); ?> portrait; }
-    </style>
-</head>
-<body class="print-document">
-    <div class="document-container">
-        <h1><?= htmlspecialchars($downloadData['template_name'] ?? 'Letter'); ?></h1>
-        <div class="meta-grid">
-            <div><strong>Generated At:</strong> <?= htmlspecialchars($downloadData['generated_at'] ?? ''); ?></div>
-        </div>
-        <div class="print-body">
-            <?= $downloadData['content'] ?? ''; ?>
-        </div>
-    </div>
-</body>
-</html>
+<div class="document-title"><?= htmlspecialchars($letterTitle); ?></div>
+
+<table class="meta-table">
+    <tr>
+        <td><strong>Generated At:</strong></td>
+        <td><?= htmlspecialchars($downloadData['generated_at'] ?? ''); ?></td>
+    </tr>
+</table>
+
+<div class="document-body-content">
+    <?= $downloadData['content'] ?? ''; ?>
+</div>
+<?php
+$bodyHtml = ob_get_clean();
+render_print_page($letterTitle, $bodyHtml, $officeId, null);
