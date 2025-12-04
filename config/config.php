@@ -1,7 +1,7 @@
 <?php
 // Basic configuration for Yojaka v1.0+
 
-return [
+$config = [
     // Debug controls: set to true for development to display errors
     'debug' => true,
 
@@ -163,3 +163,15 @@ return [
     // Security settings
     'display_errors' => false,
 ];
+
+if (!isset($config['debug'])) {
+    $config['debug'] = true;
+}
+
+if ($config['debug']) {
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
+}
+
+return $config;

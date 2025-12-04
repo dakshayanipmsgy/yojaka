@@ -3,12 +3,7 @@
 
 function offices_data_directory(): string
 {
-    global $config;
-    $dir = $config['offices_data_path'] ?? (YOJAKA_DATA_PATH . '/offices');
-    if (!$dir) {
-        $dir = YOJAKA_DATA_PATH . '/offices';
-    }
-    return rtrim($dir, DIRECTORY_SEPARATOR);
+    return YOJAKA_DATA_PATH . '/offices';
 }
 
 function legacy_office_directory(): string
@@ -93,39 +88,49 @@ function ensure_office_storage(): void
     if (!file_exists($htaccess)) {
         @file_put_contents($htaccess, "Deny from all\n<IfModule mod_autoindex.c>\n  Options -Indexes\n</IfModule>\n");
     }
+}
+
+function seed_default_office_files(): void
+{
+    ensure_office_storage();
+
+    $dir = offices_data_directory();
+    $officeId = 'office_001';
     $registryPath = offices_registry_path();
+    $officeConfigPath = $dir . DIRECTORY_SEPARATOR . $officeId . '.json';
+    $licensePath = $dir . DIRECTORY_SEPARATOR . 'license_' . $officeId . '.json';
+
     if (!file_exists($registryPath)) {
-        $legacyPath = legacy_office_config_path();
-        $legacyConfig = file_exists($legacyPath) ? json_decode((string) file_get_contents($legacyPath), true) : [];
-        $baseConfig = is_array($legacyConfig) ? array_replace_recursive(default_office_config(), $legacyConfig) : default_office_config();
-        $officeId = 'office_001';
-        $officeFile = $officeId . '.json';
-        save_office_config_by_id($officeId, $officeFile, $baseConfig);
+        $baseConfig = default_office_config();
         $registry = [[
             'id' => $officeId,
             'name' => $baseConfig['office_name'] ?? 'Default Office',
             'short_name' => $baseConfig['office_short_name'] ?? 'YOJAKA',
             'active' => true,
-            'config_file' => $officeFile,
-            'license_file' => 'license_' . $officeId . '.json',
+            'config_file' => basename($officeConfigPath),
+            'license_file' => basename($licensePath),
             'created_at' => gmdate('c'),
         ]];
-        save_offices_registry($registry);
-        $license = default_trial_license($officeId, $baseConfig['office_name'] ?? $officeId);
-        save_office_license($license, $officeId);
-    } else {
-        $registry = load_offices_registry();
-        foreach ($registry as $entry) {
-            $configPath = office_config_path_by_file($entry['config_file'] ?? (($entry['id'] ?? 'office_001') . '.json'));
-            if (!file_exists($configPath)) {
-                save_office_config_by_id($entry['id'] ?? 'office_001', $entry['config_file'] ?? (($entry['id'] ?? 'office_001') . '.json'), default_office_config());
-            }
-            $licensePath = license_file_path($entry['id'] ?? 'office_001');
-            if (!file_exists($licensePath)) {
-                $seed = default_trial_license($entry['id'] ?? 'office_001', $entry['name'] ?? ($entry['id'] ?? 'Office'));
-                save_office_license($seed, $entry['id'] ?? 'office_001');
-            }
-        }
+        @file_put_contents($registryPath, json_encode($registry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    }
+
+    if (!file_exists($officeConfigPath)) {
+        $baseConfig = default_office_config();
+        @file_put_contents($officeConfigPath, json_encode($baseConfig, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    }
+
+    if (!file_exists($licensePath)) {
+        $officeConfig = json_decode((string) @file_get_contents($officeConfigPath), true);
+        $officeName = is_array($officeConfig) ? ($officeConfig['office_name'] ?? $officeId) : $officeId;
+        $license = function_exists('default_trial_license') ? default_trial_license($officeId, $officeName) : [
+            'license_key' => 'YOJAKA-TRIAL-' . strtoupper(substr(md5($officeId), 0, 6)),
+            'licensed_to' => $officeName,
+            'office_id' => $officeId,
+            'issue_date' => date('Y-m-d'),
+            'expiry_date' => date('Y-m-d', strtotime('+30 days')),
+            'type' => 'trial',
+        ];
+        @file_put_contents($licensePath, json_encode($license, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 }
 
@@ -134,8 +139,13 @@ function load_offices_registry(): array
     ensure_office_storage();
     $registryPath = offices_registry_path();
     if (!file_exists($registryPath)) {
+        seed_default_office_files();
+    }
+
+    if (!file_exists($registryPath)) {
         return [];
     }
+
     $data = json_decode((string) file_get_contents($registryPath), true);
     return is_array($data) ? $data : [];
 }

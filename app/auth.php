@@ -110,6 +110,7 @@ function create_default_admin_if_needed(array $config): void
             'created_at' => $now,
             'active' => true,
             'office_id' => get_default_office_id(),
+            'preferred_language' => 'en',
         ];
         save_users([$defaultUser]);
     }

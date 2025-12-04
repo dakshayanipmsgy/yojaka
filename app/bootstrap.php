@@ -28,9 +28,119 @@ if (!defined('YOJAKA_BASE_URL')) {
     define('YOJAKA_BASE_URL', rtrim($config['base_url'], '/'));
 }
 
+function bootstrap_ensure_directory(string $path): void
+{
+    if (!is_dir($path)) {
+        @mkdir($path, 0755, true);
+    }
+}
+
+function bootstrap_seed_json(string $path, $data): void
+{
+    if (file_exists($path)) {
+        return;
+    }
+    $dir = dirname($path);
+    bootstrap_ensure_directory($dir);
+    @file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+}
+
+function bootstrap_ensure_base_directories(): void
+{
+    $directories = [
+        YOJAKA_DATA_PATH,
+        YOJAKA_LOGS_PATH,
+        YOJAKA_DATA_PATH . '/logs',
+        YOJAKA_DATA_PATH . '/attachments',
+        YOJAKA_DATA_PATH . '/attachments/rti',
+        YOJAKA_DATA_PATH . '/attachments/dak',
+        YOJAKA_DATA_PATH . '/attachments/inspection',
+        YOJAKA_DATA_PATH . '/attachments/documents',
+        YOJAKA_DATA_PATH . '/attachments/bills',
+        YOJAKA_DATA_PATH . '/offices',
+        YOJAKA_DATA_PATH . '/audit',
+        YOJAKA_DATA_PATH . '/index',
+        YOJAKA_DATA_PATH . '/i18n',
+    ];
+
+    foreach ($directories as $dir) {
+        bootstrap_ensure_directory($dir);
+    }
+}
+
+function bootstrap_seed_default_users(array $config): void
+{
+    $usersFile = YOJAKA_DATA_PATH . '/users.json';
+    if (file_exists($usersFile)) {
+        return;
+    }
+
+    $admin = $config['default_admin'] ?? ['username' => 'admin', 'password' => 'admin123', 'full_name' => 'System Administrator'];
+    $user = [
+        'id' => 1,
+        'username' => $admin['username'],
+        'password_hash' => password_hash($admin['password'], PASSWORD_DEFAULT),
+        'role' => 'admin',
+        'office_id' => 'office_001',
+        'active' => true,
+        'preferred_language' => 'en',
+        'full_name' => $admin['full_name'] ?? 'System Administrator',
+        'department_id' => 'dept_default',
+        'created_at' => gmdate('c'),
+    ];
+
+    bootstrap_seed_json($usersFile, [$user]);
+}
+
+function bootstrap_seed_default_i18n(array $config): void
+{
+    $lang = $config['i18n_default_lang'] ?? 'en';
+    $langFile = YOJAKA_DATA_PATH . '/i18n/' . $lang . '.json';
+    $seed = [
+        'app.title' => 'Yojaka',
+        'nav.dashboard' => 'Dashboard',
+        'nav.rti' => 'RTI Cases',
+        'nav.dak' => 'Dak & File Movement',
+        'nav.inspection' => 'Inspection Reports',
+        'nav.documents' => 'Documents',
+        'nav.bills' => 'Contractor Bills',
+        'nav.my_tasks' => 'My Tasks',
+        'nav.notifications' => 'Notifications',
+        'nav.mis' => 'Reports & Analytics (MIS)',
+        'nav.global_search' => 'Global Search',
+        'nav.repository' => 'Documents Repository',
+        'nav.housekeeping' => 'Housekeeping & Retention',
+        'nav.license' => 'License & Trial Status',
+        'nav.admin_users' => 'User List',
+        'nav.admin_departments' => 'Department Profiles',
+        'nav.admin_office' => 'Office Settings',
+        'nav.templates_letters' => 'Letter Templates',
+        'nav.documents_templates' => 'Document Templates',
+        'nav.admin_rti' => 'RTI Management',
+        'nav.admin_dak' => 'Dak Management',
+        'nav.admin_inspection' => 'Inspection Management',
+        'btn.save' => 'Save',
+        'btn.cancel' => 'Cancel',
+        'btn.search' => 'Search',
+        'btn.create_new' => 'Create New',
+        'label.language' => 'Language',
+        'label.office' => 'Office',
+        'label.custom_fields' => 'Custom Fields',
+        'banner.trial' => 'Trial version – not for production use.',
+        'banner.expired' => 'Trial expired on {date}. System is read-only.',
+        'validation.required' => '{field} is required.',
+    ];
+
+    bootstrap_seed_json($langFile, $seed);
+}
+
 require_once __DIR__ . '/initialize.php';
 
 yojaka_initialize($config);
+
+bootstrap_ensure_base_directories();
+bootstrap_seed_default_i18n($config);
+bootstrap_seed_default_users($config);
 
 // Control error display for production safety
 $shouldDisplayErrors = $debug || !empty($config['display_errors']);
@@ -75,54 +185,12 @@ require_once __DIR__ . '/ui_config.php';
 // Ensure logs directory exists early
 ensure_logs_directory();
 
-$i18nDir = i18n_data_path();
-if (!is_dir($i18nDir)) {
-    @mkdir($i18nDir, 0755, true);
-}
-$defaultLangPath = $i18nDir . DIRECTORY_SEPARATOR . ($config['i18n_default_lang'] ?? 'en') . '.json';
-if (!file_exists($defaultLangPath)) {
-    $seed = [
-        'app.title' => 'Yojaka',
-        'nav.dashboard' => 'Dashboard',
-        'nav.rti' => 'RTI Cases',
-        'nav.dak' => 'Dak & File Movement',
-        'nav.inspection' => 'Inspection Reports',
-        'nav.documents' => 'Documents',
-        'nav.bills' => 'Contractor Bills',
-        'nav.my_tasks' => 'My Tasks',
-        'nav.notifications' => 'Notifications',
-        'nav.mis' => 'Reports & Analytics (MIS)',
-        'nav.global_search' => 'Global Search',
-        'nav.repository' => 'Documents Repository',
-        'nav.housekeeping' => 'Housekeeping & Retention',
-        'nav.license' => 'License & Trial Status',
-        'nav.admin_users' => 'User List',
-        'nav.admin_departments' => 'Department Profiles',
-        'nav.admin_office' => 'Office Settings',
-        'nav.templates_letters' => 'Letter Templates',
-        'nav.documents_templates' => 'Document Templates',
-        'nav.admin_rti' => 'RTI Management',
-        'nav.admin_dak' => 'Dak Management',
-        'nav.admin_inspection' => 'Inspection Management',
-        'btn.save' => 'Save',
-        'btn.cancel' => 'Cancel',
-        'btn.search' => 'Search',
-        'btn.create_new' => 'Create New',
-        'label.language' => 'Language',
-        'label.office' => 'Office',
-        'label.custom_fields' => 'Custom Fields',
-        'banner.trial' => 'Trial version – not for production use.',
-        'banner.expired' => 'Trial expired on {date}. System is read-only.',
-        'validation.required' => '{field} is required.',
-    ];
-    @file_put_contents($defaultLangPath, json_encode($seed, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-}
-
 // Ensure backup directory exists
 ensure_backup_directory_exists();
 
 // Ensure office configuration exists
 ensure_office_storage();
+load_offices_registry();
 
 // Ensure audit directory exists
 ensure_audit_storage();
