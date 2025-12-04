@@ -84,6 +84,7 @@ function bootstrap_seed_permissions(): void
             'superadmin' => ['*'],
             'admin' => [
                 'manage_users',
+                'manage_people',
                 'manage_hierarchy',
                 'manage_routes',
                 'manage_master_data',
@@ -306,6 +307,7 @@ require_once __DIR__ . '/archive.php';
 require_once __DIR__ . '/bills.php';
 require_once __DIR__ . '/master_data.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/staff.php';
 require_once __DIR__ . '/templates.php';
 require_once __DIR__ . '/document_templates.php';
 require_once __DIR__ . '/rti.php';
@@ -329,6 +331,7 @@ require_once __DIR__ . '/pdf_export.php';
 require_once __DIR__ . '/search.php';
 require_once __DIR__ . '/dashboard_config.php';
 require_once __DIR__ . '/org_hierarchy.php';
+bootstrap_seed_json(org_position_history_file(), []);
 require_once __DIR__ . '/file_flow.php';
 require_once __DIR__ . '/ai_assistant.php';
 require_once __DIR__ . '/ai_prompts.php';

@@ -201,6 +201,11 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
 }
 ?>
 
+<div class="flex" style="justify-content: space-between; align-items:center; margin-bottom: 10px;">
+    <h2>User Administration</h2>
+    <a class="btn ghost" target="_blank" href="<?= YOJAKA_BASE_URL ?>/app.php?page=help_user_roles">Help</a>
+</div>
+
 <?php if (!empty($errors)): ?>
     <div class="alert alert-danger">
         <ul>

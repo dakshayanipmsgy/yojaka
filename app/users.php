@@ -122,6 +122,7 @@ function standardize_user_record(array $user): array
     $defaultOffice = function_exists('get_default_office_id') ? get_default_office_id() : 'office_001';
     $user['office_id'] = $user['office_id'] ?? $defaultOffice;
     $user['department_id'] = $user['department_id'] ?? ($user['department'] ?? 'dept_default');
+    $user['staff_id'] = $user['staff_id'] ?? ($user['staff'] ?? null);
     $user['active'] = array_key_exists('active', $user) ? (bool) $user['active'] : true;
     $user['force_password_change'] = !empty($user['force_password_change']);
     $user['password_hash'] = $user['password_hash'] ?? password_hash('changeme', PASSWORD_DEFAULT);

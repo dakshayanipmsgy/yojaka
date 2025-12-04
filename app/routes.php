@@ -131,6 +131,11 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_routes.php',
             'permission' => 'manage_office_config',
         ],
+        'admin_people' => [
+            'title' => 'People & Users',
+            'view' => __DIR__ . '/views/admin_people.php',
+            'permission' => 'manage_people',
+        ],
         'admin_mis' => [
             'title' => 'Reports & Analytics (MIS)',
             'view' => __DIR__ . '/views/admin_mis.php',
@@ -180,6 +185,10 @@ function resolve_route(string $page): array
             'title' => 'Super Admin Dashboard',
             'view' => __DIR__ . '/views/superadmin_dashboard.php',
             'role' => 'superadmin',
+        ],
+        'help_user_roles' => [
+            'title' => 'User & Roles Manual',
+            'view' => __DIR__ . '/views/help_user_roles.php',
         ],
     ];
 
