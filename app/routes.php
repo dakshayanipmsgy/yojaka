@@ -22,6 +22,18 @@ function resolve_route(string $page): array
             'title' => 'Letters & Notices',
             'view' => __DIR__ . '/views/letters.php',
         ],
+        'meeting_minutes' => [
+            'title' => 'Meeting Minutes',
+            'view' => __DIR__ . '/views/meeting_minutes.php',
+        ],
+        'work_orders' => [
+            'title' => 'Work Orders',
+            'view' => __DIR__ . '/views/work_orders.php',
+        ],
+        'guc' => [
+            'title' => 'Grant Utilization Certificates',
+            'view' => __DIR__ . '/views/guc.php',
+        ],
         'rti' => [
             'title' => 'RTI Cases',
             'view' => __DIR__ . '/views/rti.php',
@@ -29,6 +41,11 @@ function resolve_route(string $page): array
         'admin_letter_templates' => [
             'title' => 'Letter Templates',
             'view' => __DIR__ . '/views/admin_letter_templates.php',
+            'permission' => 'manage_templates',
+        ],
+        'admin_documents' => [
+            'title' => 'Document Templates',
+            'view' => __DIR__ . '/views/admin_documents.php',
             'permission' => 'manage_templates',
         ],
         'admin_rti' => [

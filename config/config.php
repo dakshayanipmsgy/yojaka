@@ -12,7 +12,13 @@ return [
     'usage_log_file' => 'usage.log',
     'templates_path' => __DIR__ . '/../data/templates',
     'letters_templates_file' => 'letters.json',
+    'document_templates_file' => 'documents.json',
     'generated_letters_log' => 'generated_letters.log',
+
+    'documents_data_path' => __DIR__ . '/../data/documents',
+    'documents_meeting_minutes_file' => 'meeting_minutes.json',
+    'documents_work_orders_file' => 'work_orders.json',
+    'documents_guc_file' => 'guc.json',
 
     // Departments configuration
     'departments_data_path' => __DIR__ . '/../data/departments',
