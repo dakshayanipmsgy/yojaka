@@ -1,6 +1,10 @@
 <?php
 require_login();
+require_permission('create_documents');
 $templates = load_letter_templates();
+$departments = load_departments();
+$user = current_user();
+$userDepartment = get_user_department($user, $departments);
 $activeTemplates = array_filter($templates, function ($tpl) {
     return !empty($tpl['active']);
 });
@@ -11,10 +15,10 @@ if (isset($_GET['download']) && $_GET['download'] === '1') {
         $filename = preg_replace('/[^a-zA-Z0-9_-]+/', '_', strtolower($downloadData['template_name'])) ?: 'letter';
         header('Content-Type: text/html; charset=UTF-8');
         header('Content-Disposition: attachment; filename="' . $filename . '.html"');
-        echo "<html><head><meta charset=\"UTF-8\"><title>" . htmlspecialchars($downloadData['template_name']) . "</title></head><body>";
-        echo '<h2>' . htmlspecialchars($downloadData['template_name']) . '</h2>';
-        echo '<div><small>Generated at: ' . htmlspecialchars($downloadData['generated_at']) . '</small></div>';
-        echo '<div style="margin-top:10px;white-space:pre-line;font-family:serif;">' . nl2br($downloadData['content']) . '</div>';
+        echo "<html><head><meta charset=\"UTF-8\"><title>" . htmlspecialchars($downloadData['template_name']) . "</title>";
+        echo '<link rel="stylesheet" href="' . YOJAKA_BASE_URL . '/assets/css/style.css">';
+        echo "</head><body>";
+        echo $downloadData['full_html'] ?? nl2br($downloadData['content'] ?? '');
         echo '</body></html>';
         exit;
     }
@@ -56,6 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors) && $selectedTemplate) {
         $mergedContent = render_template_body($selectedTemplate['body'], $inputValues);
         $generatedAt = gmdate('c');
+        $letterBody = nl2br($mergedContent);
+        $renderedLetter = $userDepartment ? render_with_letterhead($letterBody, $userDepartment, true) : $letterBody;
         log_event('letter_generated', $_SESSION['username'] ?? null, [
             'template_id' => $selectedTemplate['id'] ?? '',
             'template_name' => $selectedTemplate['name'] ?? '',
@@ -65,7 +71,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'template_name' => $selectedTemplate['name'] ?? 'Letter',
             'generated_at' => $generatedAt,
             'content' => $mergedContent,
+            'full_html' => $renderedLetter,
         ];
+        $mergedContent = $renderedLetter;
     }
 }
 ?>
@@ -140,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div><strong>Template:</strong> <?= htmlspecialchars($selectedTemplate['name']); ?></div>
     <div><strong>Generated at:</strong> <?= htmlspecialchars($generatedAt); ?></div>
     <div class="letter-preview" style="margin-top:10px; padding:10px; border:1px solid #ddd; background:#fafafa;">
-        <?= nl2br($mergedContent); ?>
+        <?= $mergedContent; ?>
     </div>
     <div class="actions" style="margin-top:10px; display:flex; gap:10px;">
         <button type="button" onclick="window.print();">Print</button>

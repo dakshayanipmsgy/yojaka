@@ -106,3 +106,9 @@ a { text-decoration: none; color: inherit; }
 .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; }
 .detail-grid .muted { color: var(--muted); font-size: 0.9rem; }
 .detail-grid .strong { font-weight: 700; font-size: 1.05rem; }
+.document-wrapper { border: 1px solid var(--border); background: #fff; padding: 1rem; border-radius: 10px; box-shadow: 0 6px 12px rgba(0,0,0,0.04); }
+.letterhead-header, .letterhead-footer { padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+.letterhead-footer { border-top: 1px solid var(--border); border-bottom: none; margin-top: 1rem; }
+.document-body { padding: 1rem 0; line-height: 1.6; }
+.document-signatory { margin-top: 1.5rem; font-weight: 600; }
+.letterhead-block { text-align: center; }

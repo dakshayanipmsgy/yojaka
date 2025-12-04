@@ -1,5 +1,5 @@
 <?php
-require_role('admin');
+require_permission('manage_templates');
 $templates = load_letter_templates();
 $action = $_GET['action'] ?? ($_POST['mode'] ?? 'list');
 $editingId = $_GET['id'] ?? ($_POST['id'] ?? '');

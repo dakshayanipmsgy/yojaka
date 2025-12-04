@@ -1,4 +1,5 @@
 <?php
+require_permission('view_logs');
 $maxEntries = 300;
 $entries = read_usage_logs($maxEntries);
 $totalLoginSuccess = count_events($entries, 'login_success');

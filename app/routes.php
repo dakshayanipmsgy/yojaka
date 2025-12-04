@@ -11,12 +11,12 @@ function resolve_route(string $page): array
         'admin_users' => [
             'title' => 'User List',
             'view' => __DIR__ . '/views/admin_users.php',
-            'role' => 'admin',
+            'permission' => 'manage_users',
         ],
         'admin_logs' => [
             'title' => 'Usage Logs',
             'view' => __DIR__ . '/views/admin_logs.php',
-            'role' => 'admin',
+            'permission' => 'view_logs',
         ],
         'letters' => [
             'title' => 'Letters & Notices',
@@ -29,12 +29,12 @@ function resolve_route(string $page): array
         'admin_letter_templates' => [
             'title' => 'Letter Templates',
             'view' => __DIR__ . '/views/admin_letter_templates.php',
-            'role' => 'admin',
+            'permission' => 'manage_templates',
         ],
         'admin_rti' => [
             'title' => 'RTI Management',
             'view' => __DIR__ . '/views/admin_rti.php',
-            'role' => 'admin',
+            'permission' => 'manage_rti',
         ],
         'dak' => [
             'title' => 'Dak & File Movement',
@@ -43,7 +43,7 @@ function resolve_route(string $page): array
         'admin_dak' => [
             'title' => 'Dak Management',
             'view' => __DIR__ . '/views/admin_dak.php',
-            'role' => 'admin',
+            'permission' => 'manage_dak',
         ],
         'inspection' => [
             'title' => 'Inspection Reports',
@@ -52,7 +52,12 @@ function resolve_route(string $page): array
         'admin_inspection' => [
             'title' => 'Inspection Management',
             'view' => __DIR__ . '/views/admin_inspection.php',
-            'role' => 'admin',
+            'permission' => 'manage_inspection',
+        ],
+        'admin_departments' => [
+            'title' => 'Department Profiles',
+            'view' => __DIR__ . '/views/admin_departments.php',
+            'permission' => 'manage_departments',
         ],
     ];
 
