@@ -1,6 +1,7 @@
 <?php
 require_permission('manage_users');
 require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../departments.php';
 
 $currentUser = current_user();
 
@@ -8,6 +9,7 @@ $csrfToken = $_SESSION['user_admin_csrf'] ?? bin2hex(random_bytes(16));
 $_SESSION['user_admin_csrf'] = $csrfToken;
 $action = $_GET['action'] ?? 'list';
 $usernameParam = $_GET['username'] ?? '';
+$editUsername = $_GET['edit_username'] ?? null;
 $errors = [];
 $notice = '';
 $generatedPassword = '';
@@ -24,6 +26,17 @@ if (empty($roleOptions) && !empty($config['roles_permissions'])) {
         ];
     }, $roleOptions);
 }
+
+$departments = load_departments();
+$activeDepartments = array_values(array_filter($departments, static function ($dept) {
+    return !isset($dept['active']) || $dept['active'];
+}));
+$hasActiveDepartments = !empty($activeDepartments);
+
+if (!$editUsername && $action === 'edit' && $usernameParam) {
+    $editUsername = $usernameParam;
+}
+$editUser = $editUsername ? find_user($editUsername) : null;
 
 function admin_users_generate_password(): string
 {
@@ -47,10 +60,67 @@ function admin_users_validate_role(string $role, array $roleOptions): bool
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    unset($_POST['department_id'], $_POST['department'], $_POST['office_id']);
     $submittedToken = $_POST['csrf_token'] ?? '';
     if (!$submittedToken || !hash_equals($_SESSION['user_admin_csrf'], $submittedToken)) {
         $errors[] = 'Security token mismatch. Please retry.';
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_user' && empty($errors)) {
+    $username = trim($_POST['username'] ?? '');
+    $fullName = trim($_POST['full_name'] ?? '');
+    $role = trim($_POST['role'] ?? '');
+    $departmentId = trim($_POST['department_id'] ?? '');
+    $active = !empty($_POST['active']);
+    $newPassword = $_POST['new_password'] ?? '';
+
+    if ($username === '') {
+        $errors[] = 'Invalid user.';
+    }
+
+    if (!admin_users_validate_role($role, $roleOptions)) {
+        $errors[] = 'Invalid role selected.';
+    }
+
+    $departmentData = find_department_by_id($departments, $departmentId);
+    if ($departmentId === '' || !$departmentData || (isset($departmentData['active']) && !$departmentData['active'])) {
+        $errors[] = 'Please select a valid department.';
+    }
+
+    $targetUser = $username ? find_user($username) : null;
+    if (!$targetUser) {
+        $errors[] = 'User not found.';
+    }
+
+    if (empty($errors) && $targetUser) {
+        $adminCount = admin_users_count_active_admins($users);
+        $demotingLastAdmin = (($targetUser['role'] ?? '') === 'admin' && $role !== 'admin' && $adminCount <= 1) || (($targetUser['role'] ?? '') === 'admin' && !$active && $adminCount <= 1);
+        if ($demotingLastAdmin) {
+            $errors[] = 'Cannot remove admin role or deactivate the last active admin user.';
+        }
+    }
+
+    if (empty($errors) && $targetUser) {
+        $targetUser['full_name'] = $fullName !== '' ? $fullName : ($targetUser['full_name'] ?? $username);
+        $targetUser['role'] = $role;
+        $targetUser['department_id'] = $departmentId;
+        $targetUser['office_id'] = $departmentId;
+        $targetUser['active'] = $active;
+        if ($newPassword !== '') {
+            $targetUser['password_hash'] = password_hash($newPassword, PASSWORD_DEFAULT);
+            $targetUser['force_password_change'] = true;
+        }
+        $targetUser['updated_at'] = gmdate('c');
+
+        if (save_user($targetUser)) {
+            $notice = 'User updated successfully.';
+            log_event('user_updated', $_SESSION['username'] ?? null, ['updated_username' => $username]);
+            write_audit_log('user', $username, 'updated', ['updated_by' => $_SESSION['username'] ?? 'system']);
+            $users = load_users();
+            $editUser = find_user($username);
+        } else {
+            $errors[] = 'Unable to save user record.';
+        }
     }
 }
 
@@ -58,6 +128,7 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($erro
     $username = trim($_POST['username'] ?? '');
     $fullName = trim($_POST['full_name'] ?? '');
     $role = trim($_POST['role'] ?? '');
+    $departmentId = trim($_POST['department_id'] ?? '');
     $active = !empty($_POST['active']);
     $password = trim($_POST['password'] ?? '');
 
@@ -70,6 +141,12 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($erro
     if (!admin_users_validate_role($role, $roleOptions)) {
         $errors[] = 'Invalid role selected.';
     }
+
+    $departmentData = find_department_by_id($departments, $departmentId);
+    if ($departmentId === '' || !$departmentData || (isset($departmentData['active']) && !$departmentData['active'])) {
+        $errors[] = 'Please select a valid department.';
+    }
+
     if ($password === '') {
         $password = admin_users_generate_password();
         $generatedPassword = $password;
@@ -84,7 +161,8 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($erro
             'username' => $username,
             'full_name' => $fullName !== '' ? $fullName : $username,
             'role' => $role,
-            'office_id' => get_default_office_id(),
+            'department_id' => $departmentId,
+            'office_id' => $departmentId,
             'active' => $active,
             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
             'force_password_change' => true,
@@ -99,42 +177,6 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($erro
             $users = load_users();
         } else {
             $errors[] = 'Unable to save user record.';
-        }
-    }
-}
-
-if ($action === 'edit' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
-    $username = $_POST['username'] ?? '';
-    $targetUser = find_user($username);
-    if (!$targetUser) {
-        $errors[] = 'User not found.';
-    } else {
-        $fullName = trim($_POST['full_name'] ?? '');
-        $role = trim($_POST['role'] ?? '');
-        $active = !empty($_POST['active']);
-
-        if (!admin_users_validate_role($role, $roleOptions)) {
-            $errors[] = 'Invalid role selected.';
-        }
-        $adminCount = admin_users_count_active_admins($users);
-        $demotingLastAdmin = (($targetUser['role'] ?? '') === 'admin' && $role !== 'admin' && $adminCount <= 1) || (($targetUser['role'] ?? '') === 'admin' && !$active && $adminCount <= 1);
-        if ($demotingLastAdmin) {
-            $errors[] = 'Cannot remove admin role or deactivate the last active admin user.';
-        }
-
-        if (empty($errors)) {
-            $targetUser['full_name'] = $fullName !== '' ? $fullName : ($targetUser['full_name'] ?? $username);
-            $targetUser['role'] = $role;
-            $targetUser['active'] = $active;
-            $targetUser['updated_at'] = gmdate('c');
-            if (save_user($targetUser)) {
-                $notice = 'User updated successfully.';
-                log_event('user_updated', $_SESSION['username'] ?? null, ['updated_username' => $username]);
-                write_audit_log('user', $username, 'updated', ['updated_by' => $_SESSION['username'] ?? 'system']);
-                $users = load_users();
-            } else {
-                $errors[] = 'Unable to save user record.';
-            }
         }
     }
 }
@@ -172,7 +214,7 @@ if ($action === 'reset' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($error
 }
 
 $targetUser = null;
-if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
+if ($action === 'reset' && $usernameParam) {
     $targetUser = find_user($usernameParam);
     if (!$targetUser) {
         $errors[] = 'User not found.';
@@ -207,36 +249,67 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
     </div>
 <?php endif; ?>
 
-<?php if ($action === 'edit' && $targetUser): ?>
-    <h3><?= htmlspecialchars(i18n_get('users.title')); ?> - <?= htmlspecialchars(i18n_get('btn.save')); ?></h3>
-    <form method="post" class="form-stacked" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=edit&username=<?= urlencode($targetUser['username']); ?>">
-        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
-        <div class="form-field">
-            <label><?= htmlspecialchars(i18n_get('users.username')); ?></label>
-            <input type="text" value="<?= htmlspecialchars($targetUser['username']); ?>" disabled>
-            <input type="hidden" name="username" value="<?= htmlspecialchars($targetUser['username']); ?>">
+<?php if ($editUser): ?>
+    <div class="card" style="margin-bottom: 1rem;">
+        <div class="card-header">Edit User: <?= htmlspecialchars($editUser['username']); ?></div>
+        <div class="card-body">
+            <?php if (!$hasActiveDepartments): ?>
+                <div class="alert alert-warning">No departments defined. Please create a department before editing users.</div>
+            <?php endif; ?>
+            <form method="post" class="form-stacked" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+                <input type="hidden" name="username" value="<?= htmlspecialchars($editUser['username']); ?>">
+                <input type="hidden" name="action" value="update_user">
+
+                <div class="form-field">
+                    <label><?= htmlspecialchars(i18n_get('users.username')); ?></label>
+                    <input type="text" value="<?= htmlspecialchars($editUser['username']); ?>" disabled>
+                </div>
+
+                <div class="form-field">
+                    <label for="full_name_edit">Full Name</label>
+                    <input type="text" id="full_name_edit" name="full_name" value="<?= htmlspecialchars($editUser['full_name'] ?? ''); ?>">
+                </div>
+
+                <div class="form-field">
+                    <label for="role_edit">Role</label>
+                    <select name="role" id="role_edit" required>
+                        <?php foreach ($allRoles as $role): ?>
+                            <option value="<?= htmlspecialchars($role['id']); ?>" <?= ($editUser['role'] ?? '') === ($role['id'] ?? '') ? 'selected' : ''; ?>><?= htmlspecialchars($role['label'] ?? $role['id']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label for="department_edit">Department</label>
+                    <select name="department_id" id="department_edit" class="form-control" required <?= $hasActiveDepartments ? '' : 'disabled'; ?>>
+                        <option value="">-- Select Department --</option>
+                        <?php foreach ($activeDepartments as $dept): ?>
+                            <?php $deptId = $dept['id'] ?? ''; ?>
+                            <option value="<?= htmlspecialchars($deptId); ?>" <?= $deptId === ($editUser['department_id'] ?? '') ? 'selected' : ''; ?>><?= htmlspecialchars($dept['name'] ?? $deptId); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label for="new_password">New Password (leave blank to keep current)</label>
+                    <input type="password" id="new_password" name="new_password" class="form-control">
+                </div>
+
+                <div class="form-field">
+                    <label><input type="checkbox" name="active" value="1" <?= !empty($editUser['active']) ? 'checked' : ''; ?>> <?= htmlspecialchars(i18n_get('users.active')); ?></label>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-primary" type="submit" <?= $hasActiveDepartments ? '' : 'disabled'; ?>><?= htmlspecialchars(i18n_get('btn.save')); ?></button>
+                    <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users">Cancel</a>
+                </div>
+            </form>
         </div>
-        <div class="form-field">
-            <label for="full_name"><?= htmlspecialchars(i18n_get('users.full_name')); ?></label>
-            <input type="text" id="full_name" name="full_name" value="<?= htmlspecialchars($targetUser['full_name'] ?? ''); ?>">
-        </div>
-        <div class="form-field">
-            <label for="role"><?= htmlspecialchars(i18n_get('users.role')); ?></label>
-            <select name="role" id="role" required>
-                <?php foreach ($allRoles as $role): ?>
-                    <option value="<?= htmlspecialchars($role['id']); ?>" <?= ($targetUser['role'] ?? '') === ($role['id'] ?? '') ? 'selected' : ''; ?>><?= htmlspecialchars($role['label'] ?? $role['id']); ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="form-field">
-            <label><input type="checkbox" name="active" value="1" <?= !empty($targetUser['active']) ? 'checked' : ''; ?>> <?= htmlspecialchars(i18n_get('users.active')); ?></label>
-        </div>
-        <div class="form-actions">
-            <button class="btn-primary" type="submit"><?= htmlspecialchars(i18n_get('btn.save')); ?></button>
-            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users"><?= htmlspecialchars(i18n_get('btn.cancel')); ?></a>
-        </div>
-    </form>
-<?php elseif ($action === 'reset' && $targetUser): ?>
+    </div>
+<?php endif; ?>
+
+<?php if ($action === 'reset' && $targetUser): ?>
     <h3><?= htmlspecialchars(i18n_get('users.reset_password')); ?> - <?= htmlspecialchars($targetUser['username']); ?></h3>
     <form method="post" class="form-stacked" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=reset&username=<?= urlencode($targetUser['username']); ?>">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
@@ -260,6 +333,7 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
                 <th><?= htmlspecialchars(i18n_get('users.username')); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.full_name')); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.role')); ?></th>
+                <th>Department</th>
                 <th><?= htmlspecialchars(i18n_get('users.active')); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.created_at') ?? 'Created'); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.actions') ?? 'Actions'); ?></th>
@@ -267,17 +341,22 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
         </thead>
         <tbody>
             <?php if (empty($users)): ?>
-                <tr><td colspan="6">No users found.</td></tr>
+                <tr><td colspan="7">No users found.</td></tr>
             <?php else: ?>
                 <?php foreach ($users as $listedUser): ?>
                     <tr>
                         <td><?= htmlspecialchars($listedUser['username'] ?? ''); ?></td>
                         <td><?= htmlspecialchars($listedUser['full_name'] ?? ''); ?></td>
                         <td><span class="badge"><?= htmlspecialchars($listedUser['role'] ?? ''); ?></span></td>
+                        <td><?= htmlspecialchars(get_department_label($listedUser['department_id'] ?? '', $departments)); ?></td>
                         <td><?= !empty($listedUser['active']) ? i18n_get('portal.yes') : i18n_get('portal.no'); ?></td>
                         <td><?= htmlspecialchars($listedUser['created_at'] ?? ''); ?></td>
                         <td>
-                            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=edit&username=<?= urlencode($listedUser['username']); ?>"><?= htmlspecialchars(i18n_get('btn.save')); ?></a>
+                            <form method="get" style="display:inline;">
+                                <input type="hidden" name="page" value="admin_users">
+                                <input type="hidden" name="edit_username" value="<?= htmlspecialchars($listedUser['username']); ?>">
+                                <button type="submit" class="button" style="margin-bottom:0;">Edit</button>
+                            </form>
                             <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=reset&username=<?= urlencode($listedUser['username']); ?>"><?= htmlspecialchars(i18n_get('users.reset_password')); ?></a>
                         </td>
                     </tr>
@@ -288,6 +367,9 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
 </div>
 
 <h3><?= htmlspecialchars(i18n_get('users.add_new')); ?></h3>
+<?php if (!$hasActiveDepartments): ?>
+    <div class="alert alert-warning">No departments defined. Please create a department before adding users.</div>
+<?php endif; ?>
 <form method="post" class="form-stacked" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=create">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
     <div class="form-field">
@@ -307,6 +389,16 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
         </select>
     </div>
     <div class="form-field">
+        <label for="department_id">Department</label>
+        <select name="department_id" id="department_id" class="form-control" required <?= $hasActiveDepartments ? '' : 'disabled'; ?>>
+            <option value="">-- Select Department --</option>
+            <?php foreach ($activeDepartments as $dept): ?>
+                <?php $deptId = $dept['id'] ?? ''; ?>
+                <option value="<?= htmlspecialchars($deptId); ?>"><?= htmlspecialchars($dept['name'] ?? $deptId); ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="form-field">
         <label for="password"><?= htmlspecialchars(i18n_get('users.new_password')); ?> (leave blank to auto-generate)</label>
         <input type="text" id="password" name="password">
     </div>
@@ -314,6 +406,6 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
         <label><input type="checkbox" name="active" value="1" checked> <?= htmlspecialchars(i18n_get('users.active')); ?></label>
     </div>
     <div class="form-actions">
-        <button class="btn-primary" type="submit"><?= htmlspecialchars(i18n_get('btn.save')); ?></button>
+        <button class="btn-primary" type="submit" <?= $hasActiveDepartments ? '' : 'disabled'; ?>><?= htmlspecialchars(i18n_get('btn.save')); ?></button>
     </div>
 </form>
