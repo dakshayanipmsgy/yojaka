@@ -9,6 +9,33 @@ $totalLoginFailure = count_events($usageEntries, 'login_failure');
 $userDashboardViews = count_events($usageEntries, 'dashboard_view', $user['username'] ?? null);
 $totalLettersGenerated = count_events($usageEntries, 'letter_generated');
 $userLettersGenerated = count_events($usageEntries, 'letter_generated', $user['username'] ?? null);
+
+$rtiCases = load_rti_cases();
+
+$yourPendingRtis = 0;
+$yourOverdueRtis = 0;
+$totalRtis = count($rtiCases);
+$pendingRtis = 0;
+$overdueRtis = 0;
+
+foreach ($rtiCases as $case) {
+    $isPending = ($case['status'] ?? '') === 'Pending';
+    $isOverdue = is_rti_overdue($case);
+    if (($case['created_by'] ?? null) === ($user['username'] ?? null)) {
+        if ($isPending) {
+            $yourPendingRtis++;
+        }
+        if ($isOverdue) {
+            $yourOverdueRtis++;
+        }
+    }
+    if ($isPending) {
+        $pendingRtis++;
+    }
+    if ($isOverdue) {
+        $overdueRtis++;
+    }
+}
 ?>
 <div class="grid">
     <div class="card highlight">
@@ -40,4 +67,26 @@ $userLettersGenerated = count_events($usageEntries, 'letter_generated', $user['u
         <div class="stat-label">Your Letters Generated</div>
         <div class="stat-value"><?= (int) $userLettersGenerated; ?></div>
     </div>
+    <div class="card stat">
+        <div class="stat-label">Your RTIs (Pending)</div>
+        <div class="stat-value"><?= (int) $yourPendingRtis; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Your RTIs (Overdue)</div>
+        <div class="stat-value warn"><?= (int) $yourOverdueRtis; ?></div>
+    </div>
+    <?php if (($user['role'] ?? '') === 'admin'): ?>
+        <div class="card stat">
+            <div class="stat-label">Total RTIs</div>
+            <div class="stat-value"><?= (int) $totalRtis; ?></div>
+        </div>
+        <div class="card stat">
+            <div class="stat-label">Pending RTIs</div>
+            <div class="stat-value"><?= (int) $pendingRtis; ?></div>
+        </div>
+        <div class="card stat">
+            <div class="stat-label">Overdue RTIs</div>
+            <div class="stat-value warn"><?= (int) $overdueRtis; ?></div>
+        </div>
+    <?php endif; ?>
 </div>

@@ -22,9 +22,18 @@ function resolve_route(string $page): array
             'title' => 'Letters & Notices',
             'view' => __DIR__ . '/views/letters.php',
         ],
+        'rti' => [
+            'title' => 'RTI Cases',
+            'view' => __DIR__ . '/views/rti.php',
+        ],
         'admin_letter_templates' => [
             'title' => 'Letter Templates',
             'view' => __DIR__ . '/views/admin_letter_templates.php',
+            'role' => 'admin',
+        ],
+        'admin_rti' => [
+            'title' => 'RTI Management',
+            'view' => __DIR__ . '/views/admin_rti.php',
             'role' => 'admin',
         ],
     ];
