@@ -23,7 +23,7 @@
   "nav.housekeeping": "Housekeeping & Retention",
   "nav.license": "License & Trial Status",
   "nav.logs": "Usage Logs",
-  "nav.admin_users": "User List",
+  "nav.admin_users": "User Management",
   "nav.admin_departments": "Department Profiles",
   "nav.admin_office": "Office Settings",
   "nav.admin_master_data": "Master Data (Contractors & Staff)",
@@ -81,4 +81,20 @@
   "portal.landing_intro": "Access RTI and Dak status or submit requests without logging in.",
   "portal.reset": "Reset",
   "portal.home": "Home"
+  ,"users.title": "User Management"
+  ,"users.add_new": "Add New User"
+  ,"users.username": "Username"
+  ,"users.full_name": "Full Name"
+  ,"users.role": "Role"
+  ,"users.office": "Office"
+  ,"users.department": "Department"
+  ,"users.active": "Active"
+  ,"users.reset_password": "Reset Password"
+  ,"users.change_password": "Change Password"
+  ,"users.current_password": "Current Password"
+  ,"users.new_password": "New Password"
+  ,"users.confirm_password": "Confirm Password"
+  ,"users.password_changed": "Password changed successfully."
+  ,"users.password_reset_success": "Password has been reset. Please note the new password."
+  ,"users.force_password_change_message": "You must change your password before continuing."
 }

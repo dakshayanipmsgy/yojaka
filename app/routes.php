@@ -147,6 +147,10 @@ function resolve_route(string $page): array
             'title' => 'Change Language',
             'view' => __DIR__ . '/views/change_language.php',
         ],
+        'change_password' => [
+            'title' => 'Change Password',
+            'view' => __DIR__ . '/views/change_password.php',
+        ],
         'case_export' => [
             'title' => 'Case Bundle Export',
             'view' => __DIR__ . '/views/case_export.php',

@@ -47,28 +47,43 @@ if (!empty($route['permission']) && $requiresAuth) {
 
 // Handle login inside the routed app
 if ($page === 'login') {
-    $error = false;
+    $error = '';
     $csrf_token = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(16));
     $_SESSION['csrf_token'] = $csrf_token;
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $submittedToken = $_POST['csrf_token'] ?? '';
         if (!$submittedToken || !hash_equals($_SESSION['csrf_token'], $submittedToken)) {
-            $error = true;
+            $error = 'Security token mismatch. Please retry.';
             log_event('login_failure', $_POST['username'] ?? null, ['reason' => 'csrf_mismatch']);
         } else {
             $username = trim($_POST['username'] ?? '');
             $password = trim($_POST['password'] ?? '');
 
-            if ($username !== '' && $password !== '' && login($username, $password)) {
-                unset($_SESSION['csrf_token']);
-                $roleConfig = get_role_dashboard_config($_SESSION['role'] ?? 'user');
-                $landingPage = $roleConfig['landing_page'] ?? 'dashboard';
-                header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=' . urlencode($landingPage));
-                exit;
-            }
-            $error = true;
-            if ($username === '' || $password === '') {
+            if ($username !== '' && $password !== '') {
+                $result = login($username, $password);
+                if (!empty($result['success'])) {
+                    unset($_SESSION['csrf_token']);
+                    if (!empty($result['force_password_change'])) {
+                        $_SESSION['force_password_change'] = true;
+                        header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=change_password&forced=1');
+                        exit;
+                    }
+                    $roleConfig = get_role_dashboard_config($_SESSION['role'] ?? 'user');
+                    $landingPage = $roleConfig['landing_page'] ?? 'dashboard';
+                    header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=' . urlencode($landingPage));
+                    exit;
+                }
+                $reason = $result['error'] ?? 'unknown_error';
+                if ($reason === 'inactive_user') {
+                    $error = 'Account disabled, contact administrator.';
+                } elseif ($reason === 'user_not_found' || $reason === 'invalid_password') {
+                    $error = 'Invalid credentials.';
+                } else {
+                    $error = 'Login failed. Please try again.';
+                }
+            } else {
+                $error = 'Username and password are required.';
                 log_event('login_failure', $username ?: null, ['reason' => 'missing_credentials']);
             }
         }

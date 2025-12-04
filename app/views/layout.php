@@ -65,6 +65,7 @@ if (!empty($viewFile) && file_exists($viewFile)) {
                     <?php endforeach; ?>
                 </select>
             </form>
+            <a class="logout" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=change_password"><?= htmlspecialchars(i18n_get('users.change_password')); ?></a>
             <a class="logout" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=notifications"><?= i18n_get('nav.notifications'); ?> <?= $unreadNotifications ? '(' . (int) $unreadNotifications . ')' : ''; ?></a>
             <a class="logout" href="<?= YOJAKA_BASE_URL; ?>/logout.php">Logout</a>
         </div>

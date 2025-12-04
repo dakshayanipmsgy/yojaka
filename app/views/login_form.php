@@ -15,7 +15,7 @@ $csrf_token = $csrf_token ?? '';
         <div class="auth-brand">Yojaka</div>
         <p class="auth-subtitle">Secure access for government workflow</p>
         <?php if (!empty($error)): ?>
-            <div class="alert alert-danger">Invalid credentials or inactive account.</div>
+            <div class="alert alert-danger"><?= htmlspecialchars($error); ?></div>
         <?php endif; ?>
         <form method="post" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=login">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
