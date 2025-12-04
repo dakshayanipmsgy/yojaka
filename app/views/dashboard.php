@@ -7,6 +7,8 @@ $totalUsers = count($users);
 $totalLoginSuccess = count_events($usageEntries, 'login_success');
 $totalLoginFailure = count_events($usageEntries, 'login_failure');
 $userDashboardViews = count_events($usageEntries, 'dashboard_view', $user['username'] ?? null);
+$totalLettersGenerated = count_events($usageEntries, 'letter_generated');
+$userLettersGenerated = count_events($usageEntries, 'letter_generated', $user['username'] ?? null);
 ?>
 <div class="grid">
     <div class="card highlight">
@@ -30,16 +32,12 @@ $userDashboardViews = count_events($usageEntries, 'dashboard_view', $user['usern
         <div class="stat-label">Your Dashboard Views</div>
         <div class="stat-value"><?= (int) $userDashboardViews; ?></div>
     </div>
-    <div class="card">
-        <h3>Letters &amp; Notices</h3>
-        <p>Coming soon.</p>
+    <div class="card stat">
+        <div class="stat-label">Total Letters Generated</div>
+        <div class="stat-value"><?= (int) $totalLettersGenerated; ?></div>
     </div>
-    <div class="card">
-        <h3>RTI Replies</h3>
-        <p>Coming soon.</p>
-    </div>
-    <div class="card">
-        <h3>Dak &amp; File Movement</h3>
-        <p>Coming soon.</p>
+    <div class="card stat">
+        <div class="stat-label">Your Letters Generated</div>
+        <div class="stat-value"><?= (int) $userLettersGenerated; ?></div>
     </div>
 </div>

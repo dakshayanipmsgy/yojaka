@@ -28,15 +28,13 @@ $pageTitle = $pageTitle ?? 'Yojaka';
         <nav class="sidebar">
             <div class="nav-section">Main</div>
             <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dashboard" class="nav-item<?= ($activePage ?? '') === 'dashboard' ? ' active' : ''; ?>">Dashboard</a>
+            <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=letters" class="nav-item<?= ($activePage ?? '') === 'letters' ? ' active' : ''; ?>">Letters &amp; Notices</a>
             <?php if (($user['role'] ?? '') === 'admin'): ?>
                 <div class="nav-section">Admin</div>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users" class="nav-item<?= ($activePage ?? '') === 'admin_users' ? ' active' : ''; ?>">User List</a>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_logs" class="nav-item<?= ($activePage ?? '') === 'admin_logs' ? ' active' : ''; ?>">Usage Logs</a>
+                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_letter_templates" class="nav-item<?= ($activePage ?? '') === 'admin_letter_templates' ? ' active' : ''; ?>">Letter Templates</a>
             <?php endif; ?>
-            <div class="nav-section">Modules</div>
-            <div class="nav-item disabled">Letters &amp; Notices (Coming Soon)</div>
-            <div class="nav-item disabled">RTI Replies (Coming Soon)</div>
-            <div class="nav-item disabled">Dak &amp; File Movement (Coming Soon)</div>
         </nav>
         <main class="content">
             <h1><?= htmlspecialchars($pageTitle); ?></h1>
@@ -48,7 +46,7 @@ $pageTitle = $pageTitle ?? 'Yojaka';
         </main>
     </div>
     <footer class="footer">
-        Powered by Dakshayani &bull; Yojaka v0.2
+        Powered by Dakshayani &bull; Yojaka v0.3
     </footer>
 </body>
 </html>

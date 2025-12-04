@@ -28,9 +28,13 @@ if (!defined('YOJAKA_BASE_URL')) {
 
 require_once __DIR__ . '/logging.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/templates.php';
 
 // Ensure logs directory exists early
 ensure_logs_directory();
 
 // Seed default admin user if necessary
 create_default_admin_if_needed($config);
+
+// Seed default letter templates if necessary
+ensure_default_letter_templates();

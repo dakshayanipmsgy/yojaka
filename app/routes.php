@@ -18,6 +18,15 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_logs.php',
             'role' => 'admin',
         ],
+        'letters' => [
+            'title' => 'Letters & Notices',
+            'view' => __DIR__ . '/views/letters.php',
+        ],
+        'admin_letter_templates' => [
+            'title' => 'Letter Templates',
+            'view' => __DIR__ . '/views/admin_letter_templates.php',
+            'role' => 'admin',
+        ],
     ];
 
     if (isset($routes[$page])) {
