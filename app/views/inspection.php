@@ -446,7 +446,7 @@ if ($selectedTemplate && !($selectedTemplate['active'] ?? false)) {
     <div style="margin-bottom:1rem; display:flex; gap: 0.5rem;">
         <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=inspection">Back to list</a>
         <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=inspection&mode=view&id=<?= urlencode($report['id']); ?>&download=1">Download HTML</a>
-        <button class="btn-primary" onclick="window.print(); return false;">Print</button>
+        <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=print_document&amp;type=inspection&amp;id=<?= urlencode($report['id']); ?>" target="_blank">Print</a>
         <?php if (($report['status'] ?? '') !== 'Closed' && (($report['created_by'] ?? '') === ($user['username'] ?? '') || $canViewAll || $canManageInspection)): ?>
             <form method="post" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=inspection&mode=view&id=<?= urlencode($report['id']); ?>" style="display:inline-block;">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">

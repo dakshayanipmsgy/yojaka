@@ -7,6 +7,11 @@ require_once __DIR__ . '/../app/bootstrap.php';
 require_once __DIR__ . '/../app/routes.php';
 
 $page = $_GET['page'] ?? 'dashboard';
+
+if ($page === 'print_document') {
+    include __DIR__ . '/../app/print/print_dispatcher.php';
+    exit;
+}
 $route = resolve_route($page);
 $pageTitle = $route['title'] ?? 'Yojaka';
 $viewFile = $route['view'] ?? null;

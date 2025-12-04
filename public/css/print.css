@@ -1,0 +1,62 @@
+@page {
+    size: A4 portrait;
+    margin: 15mm;
+}
+
+body.print-document {
+    font-family: "Times New Roman", serif;
+    background: #fff;
+    color: #000;
+    margin: 0;
+    padding: 0;
+}
+
+.document-container {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10mm;
+}
+
+.meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 6px 12px;
+    margin-bottom: 12px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 12px;
+}
+
+.table th,
+.table td {
+    border: 1px solid #444;
+    padding: 6px;
+    text-align: left;
+}
+
+.totals {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+    margin: 12px 0;
+    font-weight: bold;
+}
+
+.print-body {
+    margin-top: 10px;
+}
+
+.muted {
+    color: #555;
+    font-size: 0.95em;
+}
+
+@media print {
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

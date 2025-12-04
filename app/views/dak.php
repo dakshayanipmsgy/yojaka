@@ -258,6 +258,9 @@ $targetId = $_GET['id'] ?? null;
         $positionsList = load_positions($entry['office_id'] ?? $currentOfficeId);
         $availableRouteActions = file_flow_get_available_actions($entry, $user['username'] ?? '');
         ?>
+        <div class="actions" style="margin-bottom:0.75rem; display:flex; gap:10px;">
+            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=print_document&amp;type=dak&amp;id=<?= urlencode($entry['id']); ?>" target="_blank">Print</a>
+        </div>
         <div class="grid">
             <div class="card">
                 <h3>Dak Details</h3>

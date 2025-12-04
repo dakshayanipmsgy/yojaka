@@ -301,7 +301,7 @@ if ($mode === 'view') {
     ?>
     <div class="form-actions" style="justify-content: flex-end; margin-bottom:1rem;">
         <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=bills">Back to list</a>
-        <button class="button" onclick="window.print(); return false;">Print</button>
+        <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=print_document&amp;type=bill&amp;id=<?= urlencode($bill['id']); ?>" target="_blank">Print</a>
         <a class="btn-primary" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=bills&mode=view&id=<?= urlencode($bill['id']); ?>&download=1">Download HTML</a>
     </div>
     <?= $wrapped; ?>

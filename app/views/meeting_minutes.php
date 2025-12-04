@@ -73,7 +73,7 @@ if ($mode === 'view') {
             <?= $record['rendered_body'] ?? ''; ?>
         </div>
         <div class="actions" style="margin-top:10px; display:flex; gap:10px;">
-            <button type="button" onclick="window.print();">Print</button>
+            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=print_document&amp;type=meeting_minutes&amp;id=<?= urlencode($record['id'] ?? ''); ?>" target="_blank">Print</a>
             <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=meeting_minutes&amp;mode=view&amp;id=<?= urlencode($record['id'] ?? ''); ?>&amp;download=1">Download HTML</a>
         </div>
     </div>
