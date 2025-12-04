@@ -1,6 +1,9 @@
 <?php
 require_permission('manage_users');
 require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../departments.php';
+
+$currentUser = current_user();
 
 $csrfToken = $_SESSION['user_admin_csrf'] ?? bin2hex(random_bytes(16));
 $_SESSION['user_admin_csrf'] = $csrfToken;
@@ -11,10 +14,11 @@ $notice = '';
 $generatedPassword = '';
 
 $users = load_users();
-$departments = load_departments();
+$departmentProfiles = load_departments();
+$departmentProfiles = array_column($departmentProfiles, null, 'id');
 $deptNames = [];
-foreach ($departments as $dept) {
-    $deptNames[$dept['id']] = $dept['name'] ?? $dept['id'];
+foreach ($departmentProfiles as $deptId => $dept) {
+    $deptNames[$deptId] = $dept['name'] ?? $deptId;
 }
 $offices = load_offices_registry();
 $officeNames = [];
@@ -259,8 +263,8 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
             <label for="department_id"><?= htmlspecialchars(i18n_get('users.department')); ?></label>
             <select name="department_id" id="department_id">
                 <option value="">--</option>
-                <?php foreach ($departments as $dept): ?>
-                    <option value="<?= htmlspecialchars($dept['id']); ?>" <?= ($targetUser['department_id'] ?? '') === ($dept['id'] ?? '') ? 'selected' : ''; ?>><?= htmlspecialchars($dept['name'] ?? $dept['id']); ?></option>
+                <?php foreach ($departmentProfiles as $deptId => $dept): ?>
+                    <option value="<?= htmlspecialchars($deptId); ?>" <?= ($targetUser['department_id'] ?? '') === $deptId ? 'selected' : ''; ?>><?= htmlspecialchars($dept['name'] ?? $deptId); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
@@ -314,17 +318,21 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
             <?php if (empty($users)): ?>
                 <tr><td colspan="7">No users found.</td></tr>
             <?php else: ?>
-                <?php foreach ($users as $user): ?>
+                <?php foreach ($users as $listedUser): ?>
                     <tr>
-                        <td><?= htmlspecialchars($user['username'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($user['full_name'] ?? ''); ?></td>
-                        <td><span class="badge"><?= htmlspecialchars($user['role'] ?? ''); ?></span></td>
-                        <td><?= htmlspecialchars($deptNames[$user['department_id'] ?? ''] ?? ''); ?></td>
-                        <td><?= !empty($user['active']) ? i18n_get('portal.yes') : i18n_get('portal.no'); ?></td>
-                        <td><?= htmlspecialchars($user['created_at'] ?? ''); ?></td>
+                        <td><?= htmlspecialchars($listedUser['username'] ?? ''); ?></td>
+                        <td><?= htmlspecialchars($listedUser['full_name'] ?? ''); ?></td>
+                        <td><span class="badge"><?= htmlspecialchars($listedUser['role'] ?? ''); ?></span></td>
+                        <?php 
+                        $deptId = $listedUser['department_id'] ?? ''; 
+                        $deptName = $departmentProfiles[$deptId]['name'] ?? ''; 
+                        ?>
+                        <td><?= htmlspecialchars($deptName); ?></td>
+                        <td><?= !empty($listedUser['active']) ? i18n_get('portal.yes') : i18n_get('portal.no'); ?></td>
+                        <td><?= htmlspecialchars($listedUser['created_at'] ?? ''); ?></td>
                         <td>
-                            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=edit&username=<?= urlencode($user['username']); ?>"><?= htmlspecialchars(i18n_get('btn.save')); ?></a>
-                            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=reset&username=<?= urlencode($user['username']); ?>"><?= htmlspecialchars(i18n_get('users.reset_password')); ?></a>
+                            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=edit&username=<?= urlencode($listedUser['username']); ?>"><?= htmlspecialchars(i18n_get('btn.save')); ?></a>
+                            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=reset&username=<?= urlencode($listedUser['username']); ?>"><?= htmlspecialchars(i18n_get('users.reset_password')); ?></a>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -364,8 +372,8 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
         <label for="department_id"><?= htmlspecialchars(i18n_get('users.department')); ?></label>
         <select name="department_id" id="department_id">
             <option value="">--</option>
-            <?php foreach ($departments as $dept): ?>
-                <option value="<?= htmlspecialchars($dept['id']); ?>"><?= htmlspecialchars($dept['name'] ?? $dept['id']); ?></option>
+            <?php foreach ($departmentProfiles as $deptId => $dept): ?>
+                <option value="<?= htmlspecialchars($deptId); ?>"><?= htmlspecialchars($dept['name'] ?? $deptId); ?></option>
             <?php endforeach; ?>
         </select>
     </div>
