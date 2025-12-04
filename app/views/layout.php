@@ -114,6 +114,7 @@ $currentLanguage = i18n_current_language();
                         'admin_rti' => 'manage_rti',
                         'admin_dak' => 'manage_dak',
                         'admin_inspection' => 'manage_inspection',
+                        'admin_master_data' => 'manage_office_config',
                         'admin_repository' => 'manage_documents_repository',
                         'admin_logs' => 'view_logs',
                         'admin_housekeeping' => 'manage_housekeeping',

@@ -61,6 +61,7 @@ function bootstrap_ensure_base_directories(): void
         YOJAKA_DATA_PATH . '/audit',
         YOJAKA_DATA_PATH . '/index',
         YOJAKA_DATA_PATH . '/i18n',
+        YOJAKA_DATA_PATH . '/master',
     ];
 
     foreach ($directories as $dir) {
@@ -164,6 +165,7 @@ require_once __DIR__ . '/license.php';
 require_once __DIR__ . '/audit.php';
 require_once __DIR__ . '/archive.php';
 require_once __DIR__ . '/bills.php';
+require_once __DIR__ . '/master_data.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/templates.php';
 require_once __DIR__ . '/document_templates.php';

@@ -3,6 +3,7 @@ require_login();
 require_permission('manage_office_config');
 
 $office = load_office_config();
+$currentOfficeId = get_current_office_id();
 $csrf = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(16));
 $_SESSION['csrf_token'] = $csrf;
 
@@ -32,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        if (save_office_config($office)) {
+        if (save_office_config($currentOfficeId, $office)) {
             echo '<div class="info">Office configuration updated successfully.</div>';
         } else {
             echo '<div class="alert alert-danger">Unable to save configuration.</div>';

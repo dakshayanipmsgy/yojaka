@@ -21,6 +21,7 @@ function default_menu_config(): array
             ['page' => 'admin_users', 'visible' => true, 'label_key' => 'nav.admin_users'],
             ['page' => 'admin_departments', 'visible' => true, 'label_key' => 'nav.admin_departments'],
             ['page' => 'admin_office', 'visible' => true, 'label_key' => 'nav.admin_office'],
+            ['page' => 'admin_master_data', 'visible' => true, 'label_key' => 'nav.admin_master_data'],
             ['page' => 'admin_license', 'visible' => true, 'label_key' => 'nav.license'],
             ['page' => 'admin_letter_templates', 'visible' => true, 'label_key' => 'nav.templates_letters'],
             ['page' => 'admin_documents', 'visible' => true, 'label_key' => 'nav.documents_templates'],
