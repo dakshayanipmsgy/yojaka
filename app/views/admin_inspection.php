@@ -1,5 +1,5 @@
 <?php
-require_role('admin');
+require_permission('manage_inspection');
 
 $user = current_user();
 $templates = load_inspection_templates();

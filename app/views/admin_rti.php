@@ -1,5 +1,5 @@
 <?php
-require_role('admin');
+require_permission('manage_rti');
 
 $statuses = ['Pending', 'Replied', 'Closed'];
 $cases = load_rti_cases();

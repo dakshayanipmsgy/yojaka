@@ -1,5 +1,5 @@
 <?php
-require_role('admin');
+require_permission('manage_dak');
 
 $mode = $_GET['mode'] ?? 'list';
 $entries = load_dak_entries();

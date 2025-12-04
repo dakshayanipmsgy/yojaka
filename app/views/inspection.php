@@ -2,15 +2,26 @@
 require_login();
 
 $user = current_user();
+$canManageInspection = user_has_permission('manage_inspection');
+$canCreateDocuments = user_has_permission('create_documents');
+$canViewAll = user_has_permission('view_all_records');
+if (!$canManageInspection && !$canCreateDocuments && !user_has_permission('view_reports_basic')) {
+    require_permission('manage_inspection');
+}
 $templates = load_inspection_templates();
 $reports = load_inspection_reports();
 $mode = $_GET['mode'] ?? 'list';
 $mode = in_array($mode, ['list', 'create', 'view'], true) ? $mode : 'list';
 $errors = [];
 $notice = '';
+$departments = load_departments();
 
 $csrfToken = $_SESSION['inspection_csrf_token'] ?? bin2hex(random_bytes(16));
 $_SESSION['inspection_csrf_token'] = $csrfToken;
+
+if ($mode === 'create' && !$canManageInspection && !$canCreateDocuments) {
+    require_permission('manage_inspection');
+}
 
 function sanitize_text($value): string
 {
@@ -18,6 +29,9 @@ function sanitize_text($value): string
 }
 
 if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['step'] ?? '') === 'submit_report') {
+    if (!$canManageInspection && !$canCreateDocuments) {
+        require_permission('manage_inspection');
+    }
     $submittedToken = $_POST['csrf_token'] ?? '';
     if (!$submittedToken || !hash_equals($_SESSION['inspection_csrf_token'], $submittedToken)) {
         $errors[] = 'Security token mismatch. Please try again.';
@@ -116,7 +130,7 @@ if ($mode === 'view' && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action
         $report = $id ? find_inspection_report_by_id($reports, $id) : null;
         if (!$report) {
             $errors[] = 'Inspection report not found.';
-        } elseif (($user['role'] ?? '') !== 'admin' && ($report['created_by'] ?? '') !== ($user['username'] ?? '')) {
+        } elseif (!$canViewAll && ($report['created_by'] ?? '') !== ($user['username'] ?? '')) {
             $errors[] = 'You are not allowed to update this inspection report.';
         } elseif (($report['status'] ?? '') === 'Closed') {
             $notice = 'Report is already closed.';
@@ -140,7 +154,7 @@ if ($mode === 'view') {
     $report = $id ? find_inspection_report_by_id($reports, $id) : null;
     if (!$report) {
         $errors[] = 'Inspection report not found.';
-    } elseif (($user['role'] ?? '') !== 'admin' && ($report['created_by'] ?? '') !== ($user['username'] ?? '')) {
+    } elseif (!$canViewAll && ($report['created_by'] ?? '') !== ($user['username'] ?? '')) {
         $errors[] = 'You are not allowed to view this inspection report.';
         $report = null;
     }
@@ -148,7 +162,7 @@ if ($mode === 'view') {
 }
 
 if ($mode === 'list') {
-    if (($user['role'] ?? '') === 'admin') {
+    if ($canViewAll || $canManageInspection) {
         $visibleReports = $reports;
     } else {
         $visibleReports = array_filter($reports, function ($report) use ($user) {
@@ -401,8 +415,14 @@ if ($selectedTemplate && !($selectedTemplate['active'] ?? false)) {
         return ob_get_clean();
     };
 
+    $reportDepartment = get_user_department($user, $departments);
+    $wrappedReport = $reportContent();
+    if ($reportDepartment) {
+        $wrappedReport = render_with_letterhead($wrappedReport, $reportDepartment, true);
+    }
+
     if (isset($_GET['download']) && $_GET['download'] == '1') {
-        $html = $reportContent();
+        $html = $wrappedReport;
         header('Content-Type: text/html');
         header('Content-Disposition: attachment; filename="' . ($report['id'] ?? 'inspection') . '.html"');
         echo $html;
@@ -413,7 +433,7 @@ if ($selectedTemplate && !($selectedTemplate['active'] ?? false)) {
         <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=inspection">Back to list</a>
         <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=inspection&mode=view&id=<?= urlencode($report['id']); ?>&download=1">Download HTML</a>
         <button class="btn-primary" onclick="window.print(); return false;">Print</button>
-        <?php if (($report['status'] ?? '') !== 'Closed' && (($report['created_by'] ?? '') === ($user['username'] ?? '') || ($user['role'] ?? '') === 'admin')): ?>
+        <?php if (($report['status'] ?? '') !== 'Closed' && (($report['created_by'] ?? '') === ($user['username'] ?? '') || $canViewAll || $canManageInspection)): ?>
             <form method="post" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=inspection&mode=view&id=<?= urlencode($report['id']); ?>" style="display:inline-block;">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
                 <input type="hidden" name="action" value="close_report">
@@ -422,5 +442,5 @@ if ($selectedTemplate && !($selectedTemplate['active'] ?? false)) {
             </form>
         <?php endif; ?>
     </div>
-    <?= $reportContent(); ?>
+    <?= $wrappedReport; ?>
 <?php endif; ?>
