@@ -4,6 +4,9 @@ require_login();
 $user = current_user();
 $canManage = user_has_permission('manage_rti');
 $canViewAll = user_has_permission('view_all_records');
+$currentOfficeId = get_current_office_id();
+$currentLicense = get_current_office_license();
+$officeReadOnly = office_is_read_only($currentLicense);
 if (!$canManage && !user_has_permission('view_reports_basic')) {
     require_permission('manage_rti');
 }
@@ -29,6 +32,9 @@ function sanitize_field($value): string
 if ($mode === 'create') {
     if (!$canManage) {
         require_permission('manage_rti');
+    }
+    if ($officeReadOnly) {
+        $errors[] = 'This office is in read-only mode because the license is expired or invalid.';
     }
 }
 
@@ -61,7 +67,7 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    if (empty($errors)) {
+    if (empty($errors) && !$officeReadOnly) {
         $now = gmdate('c');
         $newCase = [
             'id' => generate_next_rti_id($cases),
@@ -83,6 +89,7 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             'approver_chain' => [],
             'last_action' => 'created',
             'last_action_at' => $now,
+            'office_id' => $currentOfficeId,
         ];
         $cases[] = $newCase;
         save_rti_cases($cases);
@@ -90,6 +97,7 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             'rti_id' => $newCase['id'],
             'reference_number' => $referenceNumber,
         ]);
+        write_audit_log('rti', $newCase['id'], 'create');
         header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=rti&mode=view&id=' . urlencode($newCase['id']));
         exit;
     }
@@ -98,6 +106,10 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($mode === 'view') {
     $id = $_GET['id'] ?? '';
     $case = $id ? find_rti_by_id($cases, $id) : null;
+    if ($case && !$canViewAll && ($case['office_id'] ?? $currentOfficeId) !== $currentOfficeId) {
+        $errors[] = 'You cannot access RTI cases from other offices.';
+        $case = null;
+    }
     if (!$case) {
         $errors[] = 'RTI case not found.';
     } elseif (!$canViewAll && ($case['created_by'] ?? '') !== ($user['username'] ?? '')) {
@@ -106,10 +118,14 @@ if ($mode === 'view') {
     }
 
     if ($case) {
+        write_audit_log('rti', $case['id'], 'view');
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['attachment_upload'])) {
             $submittedToken = $_POST['csrf_token'] ?? '';
             if (!$submittedToken || !hash_equals($_SESSION['rti_csrf_token'], $submittedToken)) {
                 $errors[] = 'Security token mismatch. Please try again.';
+            }
+            if ($officeReadOnly) {
+                $errors[] = 'This office is in read-only mode; changes are blocked.';
             }
             if (empty($errors) && isset($_POST['assign_to']) && $canManage) {
                 $assignTo = trim($_POST['assign_to']);
@@ -123,6 +139,7 @@ if ($mode === 'view') {
                     save_rti_cases($cases);
                     create_notification($assignTo, 'rti', $case['id'], 'rti_assigned', 'RTI case assigned to you', ($case['id'] ?? '') . ' has been assigned.');
                     log_event('rti_assigned', $user['username'] ?? null, ['rti_id' => $case['id'], 'assigned_to' => $assignTo]);
+                    write_audit_log('rti', $case['id'], 'update', ['assigned_to' => $assignTo]);
                     header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=rti&mode=view&id=' . urlencode($case['id']));
                     exit;
                 }
@@ -144,6 +161,7 @@ if ($mode === 'view') {
                     if (!empty($case['created_by'])) {
                         create_notification($case['created_by'], 'rti', $case['id'], 'rti_workflow_changed', 'RTI updated', 'RTI ' . ($case['id'] ?? '') . ' moved to ' . $newState);
                     }
+                    write_audit_log('rti', $case['id'], 'workflow_change', ['new_state' => $newState]);
                     header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=rti&mode=view&id=' . urlencode($case['id']));
                     exit;
                 } else {
@@ -151,7 +169,7 @@ if ($mode === 'view') {
                 }
             }
         }
-        $canUploadAttachments = $canManage || user_has_permission('create_documents');
+        $canUploadAttachments = ($canManage || user_has_permission('create_documents')) && !$officeReadOnly;
         [$attachmentErrors, $attachmentNotice, $attachmentToken] = handle_attachment_upload('rti', $case['id'], 'rti_attachment_csrf', $canUploadAttachments);
         if (!empty($attachmentNotice) && empty($attachmentErrors)) {
             header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=rti&mode=view&id=' . urlencode($case['id']));
@@ -168,6 +186,10 @@ if ($mode === 'list') {
         $visibleCases = array_filter($cases, function ($case) use ($user) {
             return ($case['created_by'] ?? null) === ($user['username'] ?? null);
         });
+    }
+
+    if (!$canViewAll) {
+        $visibleCases = filter_records_by_office($visibleCases, $currentOfficeId);
     }
 
     $searchTerm = trim($_GET['q'] ?? '');
@@ -206,8 +228,10 @@ if ($mode === 'list') {
         <div>
             <strong>Your RTI cases</strong> <?= ($canViewAll || $canManage) ? '(all cases shown per your permissions)' : ''; ?>
         </div>
-        <?php if ($canManage): ?>
+        <?php if ($canManage && !$officeReadOnly): ?>
             <a class="btn-primary" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=rti&mode=create">Create New RTI</a>
+        <?php elseif ($officeReadOnly): ?>
+            <span class="muted">Creation disabled - office is in read-only mode.</span>
         <?php endif; ?>
     </div>
     <div class="filter-bar">

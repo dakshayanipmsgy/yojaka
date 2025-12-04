@@ -72,10 +72,15 @@ function ensure_users_have_departments(): void
         return;
     }
     $defaultId = $defaultDept['id'];
+    $defaultOfficeId = get_default_office_id();
     $updated = false;
     foreach ($users as &$user) {
         if (empty($user['department_id'])) {
             $user['department_id'] = $defaultId;
+            $updated = true;
+        }
+        if (empty($user['office_id'])) {
+            $user['office_id'] = $defaultOfficeId;
             $updated = true;
         }
     }
@@ -104,6 +109,7 @@ function create_default_admin_if_needed(array $config): void
             'full_name' => $admin['full_name'],
             'created_at' => $now,
             'active' => true,
+            'office_id' => get_default_office_id(),
         ];
         save_users([$defaultUser]);
     }
@@ -132,6 +138,7 @@ function login(string $username, string $password): bool
     $_SESSION['role'] = $user['role'];
     $_SESSION['full_name'] = $user['full_name'];
     $_SESSION['department_id'] = $user['department_id'] ?? null;
+    $_SESSION['office_id'] = $user['office_id'] ?? get_default_office_id();
 
     log_event('login_success', $user['username']);
 

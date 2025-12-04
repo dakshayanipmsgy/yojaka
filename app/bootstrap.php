@@ -35,6 +35,8 @@ require_once __DIR__ . '/list_helpers.php';
 require_once __DIR__ . '/departments.php';
 require_once __DIR__ . '/rendering.php';
 require_once __DIR__ . '/office.php';
+require_once __DIR__ . '/license.php';
+require_once __DIR__ . '/audit.php';
 require_once __DIR__ . '/bills.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/templates.php';
@@ -59,11 +61,18 @@ if (YOJAKA_INSTALLED) {
     // Ensure office configuration exists
     ensure_office_storage();
 
+    // Ensure audit directory exists
+    ensure_audit_storage();
+
     // Update timezone from office config if available
-    $officeConfig = load_office_config();
+    $currentOfficeId = get_current_office_id();
+    $officeConfig = load_office_config_by_id($currentOfficeId);
     if (!empty($officeConfig['timezone'])) {
         @date_default_timezone_set($officeConfig['timezone']);
     }
+    $GLOBALS['current_office_config'] = $officeConfig;
+    $GLOBALS['current_office_id'] = $currentOfficeId;
+    $GLOBALS['current_office_license'] = load_office_license($currentOfficeId);
 
     // Ensure module storages exist
     ensure_departments_storage();

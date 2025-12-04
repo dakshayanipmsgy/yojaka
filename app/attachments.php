@@ -157,6 +157,7 @@ function store_uploaded_attachment(array $file, string $module, ?string $entity_
             return $t !== '';
         })),
         'department_id' => $currentUser['department_id'] ?? null,
+        'office_id' => get_current_office_id(),
     ];
 
     $meta = load_attachments_meta();
@@ -169,8 +170,9 @@ function store_uploaded_attachment(array $file, string $module, ?string $entity_
 function find_attachments_for_entity(string $module, string $entity_id): array
 {
     $meta = load_attachments_meta();
-    return array_values(array_filter($meta, function ($item) use ($module, $entity_id) {
-        return ($item['module'] ?? '') === $module && ($item['entity_id'] ?? '') === $entity_id;
+    $officeId = get_current_office_id();
+    return array_values(array_filter($meta, function ($item) use ($module, $entity_id, $officeId) {
+        return ($item['module'] ?? '') === $module && ($item['entity_id'] ?? '') === $entity_id && (($item['office_id'] ?? $officeId) === $officeId);
     }));
 }
 
@@ -224,6 +226,9 @@ function handle_attachment_upload(string $module, string $entityId, string $csrf
                     'module' => $module,
                     'entity_id' => $entityId,
                 ]);
+                if (function_exists('write_audit_log')) {
+                    write_audit_log($module, $entityId, 'attachment_upload', ['attachment_id' => $record['id']]);
+                }
                 $notice = 'Attachment uploaded successfully.';
             } else {
                 $errors[] = 'Unable to save attachment. Please check file type and size.';

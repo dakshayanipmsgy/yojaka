@@ -1,10 +1,21 @@
 <?php
 require_permission('admin_backup');
+$license = get_current_office_license();
+$officeReadOnly = office_is_read_only($license);
 
 $csrfToken = $_SESSION['admin_backup_csrf'] ?? bin2hex(random_bytes(16));
 $_SESSION['admin_backup_csrf'] = $csrfToken;
 $message = '';
 $error = '';
+
+if (!license_feature_enabled($license, 'enable_backup')) {
+    echo '<div class="alert alert-danger">Backup and export are disabled by the current license.</div>';
+    return;
+}
+if ($officeReadOnly) {
+    echo '<div class="alert alert-danger">Trial expired. Backups are blocked while in read-only mode.</div>';
+    return;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submittedToken = $_POST['csrf_token'] ?? '';

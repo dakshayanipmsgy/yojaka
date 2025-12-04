@@ -32,8 +32,10 @@ function load_rti_cases(): array
     $contents = file_get_contents($path);
     $data = json_decode($contents, true);
     $data = is_array($data) ? $data : [];
+    $currentOffice = get_current_office_id();
 
-    return array_map(function ($case) {
+    return array_map(function ($case) use ($currentOffice) {
+        $case = ensure_record_office($case, $currentOffice);
         return enrich_workflow_defaults('rti', $case);
     }, $data);
 }

@@ -3,6 +3,9 @@ require_login();
 $user = current_user();
 $canManageDak = user_has_permission('manage_dak');
 $canViewAll = user_has_permission('view_all_records');
+$currentOfficeId = get_current_office_id();
+$currentLicense = get_current_office_license();
+$officeReadOnly = office_is_read_only($currentLicense);
 if (!$canManageDak && !user_has_permission('view_reports_basic')) {
     require_permission('manage_dak');
 }
@@ -20,6 +23,9 @@ if ($mode === 'create') {
     if (!$canManageDak) {
         require_permission('manage_dak');
     }
+    if ($officeReadOnly) {
+        $errors[] = 'Office is read-only due to license status.';
+    }
 }
 
 if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -33,7 +39,7 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'All fields except details are required.';
     }
 
-    if (empty($errors)) {
+    if (empty($errors) && !$officeReadOnly) {
         $now = gmdate('c');
         $dakId = generate_next_dak_id($entries);
         $entries[] = [
@@ -53,11 +59,13 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             'approver_chain' => [],
             'last_action' => 'created',
             'last_action_at' => $now,
+            'office_id' => $currentOfficeId,
         ];
 
         save_dak_entries($entries);
         log_event('dak_created', $user['username'] ?? null, ['dak_id' => $dakId]);
         log_dak_movement($dakId, 'created', null, $user['username'] ?? null, 'Dak entry created');
+        write_audit_log('dak', $dakId, 'create');
 
         header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=dak&mode=view&id=' . urlencode($dakId));
         exit;
@@ -107,15 +115,23 @@ $targetId = $_GET['id'] ?? null;
         }
     }
     ?>
+    <?php if ($entry && !$canViewAll && ($entry['office_id'] ?? $currentOfficeId) !== $currentOfficeId): ?>
+        <p class="alert error">You cannot view dak entries from another office.</p>
+        <?php $entry = null; ?>
+    <?php endif; ?>
     <?php if (!$entry): ?>
         <p class="alert error">Dak entry not found.</p>
         <a class="btn" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dak">Back to list</a>
     <?php else: ?>
         <?php
+        write_audit_log('dak', $entry['id'], 'view');
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['attachment_upload'])) {
             $submittedToken = $_POST['csrf_token'] ?? '';
             if (!$submittedToken || !hash_equals($csrfToken, $submittedToken)) {
                 $errors[] = 'Security token mismatch. Please try again.';
+            }
+            if ($officeReadOnly) {
+                $errors[] = 'Office is read-only; updates are blocked.';
             }
             if (empty($errors) && isset($_POST['assign_to']) && $canManageDak) {
                 $assignTo = trim($_POST['assign_to']);
@@ -135,6 +151,7 @@ $targetId = $_GET['id'] ?? null;
                     save_dak_entries($entries);
                     create_notification($assignTo, 'dak', $entry['id'], 'dak_assigned', 'Dak assigned to you', ($entry['id'] ?? '') . ' has been assigned.');
                     log_event('dak_assigned', $user['username'] ?? null, ['dak_id' => $entry['id'], 'assigned_to' => $assignTo]);
+                    write_audit_log('dak', $entry['id'], 'update', ['assigned_to' => $assignTo]);
                     header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=dak&mode=view&id=' . urlencode($entry['id']));
                     exit;
                 }
@@ -159,6 +176,7 @@ $targetId = $_GET['id'] ?? null;
                     unset($item);
                     save_dak_entries($entries);
                     log_event('dak_workflow_changed', $user['username'] ?? null, ['dak_id' => $entry['id'], 'new_state' => $newState]);
+                    write_audit_log('dak', $entry['id'], 'workflow_change', ['new_state' => $newState]);
                     header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=dak&mode=view&id=' . urlencode($entry['id']));
                     exit;
                 } else {
@@ -166,7 +184,7 @@ $targetId = $_GET['id'] ?? null;
                 }
             }
         }
-        $canUploadAttachments = $canManageDak || user_has_permission('create_documents');
+        $canUploadAttachments = ($canManageDak || user_has_permission('create_documents')) && !$officeReadOnly;
         [$attachmentErrors, $attachmentNotice, $attachmentToken] = handle_attachment_upload('dak', $entry['id'], 'dak_attachment_csrf', $canUploadAttachments);
         if (!empty($attachmentNotice) && empty($attachmentErrors)) {
             header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=dak&mode=view&id=' . urlencode($entry['id']));
@@ -322,14 +340,19 @@ $targetId = $_GET['id'] ?? null;
     <?php
     $userDak = [];
     foreach ($entries as $entry) {
+        if (!$canViewAll && ($entry['office_id'] ?? $currentOfficeId) !== $currentOfficeId) {
+            continue;
+        }
         if ($canViewAll || $canManageDak || ($entry['assigned_to'] ?? null) === ($user['username'] ?? null) || ($entry['created_by'] ?? null) === ($user['username'] ?? null)) {
             $userDak[] = $entry;
         }
     }
     ?>
     <div class="actions">
-        <?php if ($canManageDak): ?>
+        <?php if ($canManageDak && !$officeReadOnly): ?>
             <a class="btn primary" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dak&mode=create">Add New Dak</a>
+        <?php elseif ($officeReadOnly): ?>
+            <span class="muted">Creation disabled - license expired.</span>
         <?php endif; ?>
     </div>
     <?php if (empty($userDak)): ?>

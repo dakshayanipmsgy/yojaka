@@ -13,6 +13,8 @@ return [
     'data_path' => realpath(__DIR__ . '/../data'),
     'logs_path' => realpath(__DIR__ . '/../logs'),
     'usage_log_file' => 'usage.log',
+    'offices_data_path' => realpath(__DIR__ . '/../data/offices'),
+    'audit_data_path' => realpath(__DIR__ . '/../data/audit'),
     'templates_path' => __DIR__ . '/../data/templates',
     'letters_templates_file' => 'letters.json',
     'document_templates_file' => 'documents.json',
@@ -30,7 +32,7 @@ return [
     'attachments_max_size_bytes' => 5 * 1024 * 1024, // 5 MB
 
     // Office / instance configuration
-    'office_data_path' => __DIR__ . '/../data/office',
+    'office_data_path' => __DIR__ . '/../data/office', // legacy path for migration
     'office_config_file' => 'office.json',
 
     // Contractor bills configuration
@@ -78,6 +80,8 @@ return [
     'backup_path' => realpath(__DIR__ . '/..') . '/backup',
     'backup_include_data' => true,
     'backup_include_config' => true,
+
+    'license_default_trial_days' => 30,
 
     // Roles and permissions
     'roles_permissions' => [
