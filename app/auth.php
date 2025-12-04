@@ -1,11 +1,6 @@
 <?php
 // Authentication and user helper functions for Yojaka.
 
-function users_file_path(): string
-{
-    return YOJAKA_DATA_PATH . '/users.json';
-}
-
 function permissions_file_path(): string
 {
     return YOJAKA_DATA_PATH . '/org/permissions.json';
@@ -36,80 +31,6 @@ function save_permissions_config(array $data): void
         flock($handle, LOCK_UN);
     }
     fclose($handle);
-}
-
-function load_users(): array
-{
-    $path = users_file_path();
-    if (!file_exists($path)) {
-        return [];
-    }
-    $json = file_get_contents($path);
-    $data = json_decode($json, true);
-    $data = is_array($data) ? $data : [];
-
-    return array_map('normalize_user_record', $data);
-}
-
-function save_users(array $users): void
-{
-    $path = users_file_path();
-    $handle = fopen($path, 'c+');
-    if (!$handle) {
-        throw new RuntimeException('Unable to open users file for writing.');
-    }
-
-    if (!flock($handle, LOCK_EX)) {
-        fclose($handle);
-        throw new RuntimeException('Unable to lock users file.');
-    }
-
-    ftruncate($handle, 0);
-    rewind($handle);
-    fwrite($handle, json_encode($users, JSON_PRETTY_PRINT));
-    fflush($handle);
-    flock($handle, LOCK_UN);
-    fclose($handle);
-}
-
-function normalize_user_record(array $user): array
-{
-    $defaultOfficeId = get_default_office_id();
-    $defaultDepartmentId = $user['department_id'] ?? ($user['department'] ?? null);
-    if (!$defaultDepartmentId) {
-        $departments = load_departments();
-        $defaultDepartmentId = (get_default_department($departments)['id'] ?? null) ?: 'dept_default';
-    }
-
-    $user['username'] = $user['username'] ?? ($user['email'] ?? null);
-    $user['password_hash'] = $user['password_hash'] ?? password_hash($user['password'] ?? '', PASSWORD_DEFAULT);
-    $user['role'] = $user['role'] ?? 'user';
-    $user['department_id'] = $user['department_id'] ?? $defaultDepartmentId;
-    $user['office_id'] = $user['office_id'] ?? $defaultOfficeId;
-
-    return $user;
-}
-
-function find_user_by_username(string $username): ?array
-{
-    $users = load_users();
-    foreach ($users as $user) {
-        if (isset($user['username']) && strtolower($user['username']) === strtolower($username)) {
-            return $user;
-        }
-    }
-    return null;
-}
-
-function find_user_by_id($id): ?array
-{
-    $users = load_users();
-    foreach ($users as $user) {
-        if (isset($user['id']) && (string) $user['id'] === (string) $id) {
-            return $user;
-        }
-    }
-    return null;
 }
 
 function ensure_users_have_departments(): void
@@ -144,7 +65,7 @@ function ensure_users_have_departments(): void
 
 function create_default_admin_if_needed(array $config): void
 {
-    $path = users_file_path();
+    $path = users_data_path();
     $users = load_users();
 
     if (!file_exists($path) || empty($users)) {
@@ -160,30 +81,32 @@ function create_default_admin_if_needed(array $config): void
             'department_id' => $defaultDept['id'] ?? 'dept_default',
             'full_name' => $admin['full_name'],
             'created_at' => $now,
+            'updated_at' => $now,
             'active' => true,
             'office_id' => get_default_office_id(),
             'preferred_language' => 'en',
+            'force_password_change' => true,
         ];
         save_users([$defaultUser]);
     }
 }
 
-function login(string $username, string $password): bool
+function login(string $username, string $password): array
 {
     $user = find_user_by_username($username);
     if (!$user) {
         log_event('login_failure', $username, ['reason' => 'user_not_found']);
-        return false;
+        return ['success' => false, 'error' => 'user_not_found'];
     }
 
     if (empty($user['active'])) {
         log_event('login_failure', $username, ['reason' => 'inactive_user']);
-        return false;
+        return ['success' => false, 'error' => 'inactive_user'];
     }
 
     if (!password_verify($password, $user['password_hash'])) {
         log_event('login_failure', $username, ['reason' => 'invalid_password']);
-        return false;
+        return ['success' => false, 'error' => 'invalid_password'];
     }
 
     $_SESSION['user_id'] = $user['id'];
@@ -197,7 +120,11 @@ function login(string $username, string $password): bool
     log_event('user_login', $user['username'], ['office_id' => $_SESSION['office_id'], 'role' => $_SESSION['role']]);
     write_audit_log('auth', $user['username'], 'login', ['office_id' => $_SESSION['office_id']]);
 
-    return true;
+    return [
+        'success' => true,
+        'user' => $user,
+        'force_password_change' => !empty($user['force_password_change']),
+    ];
 }
 
 function logout(): void

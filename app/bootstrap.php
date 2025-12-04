@@ -148,6 +148,8 @@ function bootstrap_seed_default_users(array $config): void
             'full_name' => $admin['full_name'] ?? 'System Administrator',
             'department_id' => 'dept_default',
             'created_at' => gmdate('c'),
+            'updated_at' => gmdate('c'),
+            'force_password_change' => true,
         ];
     }
 
@@ -171,6 +173,7 @@ function bootstrap_seed_default_users(array $config): void
             'full_name' => 'Super Administrator',
             'department_id' => 'dept_default',
             'created_at' => gmdate('c'),
+            'updated_at' => gmdate('c'),
         ];
     }
 
@@ -201,7 +204,7 @@ function bootstrap_seed_default_i18n(array $config): void
         'nav.repository' => 'Documents Repository',
         'nav.housekeeping' => 'Housekeeping & Retention',
         'nav.license' => 'License & Trial Status',
-        'nav.admin_users' => 'User List',
+        'nav.admin_users' => 'User Management',
         'nav.admin_departments' => 'Department Profiles',
         'nav.admin_office' => 'Office Settings',
         'nav.templates_letters' => 'Letter Templates',
@@ -226,6 +229,22 @@ function bootstrap_seed_default_i18n(array $config): void
         'banner.trial' => 'Trial version – not for production use.',
         'banner.expired' => 'Trial expired on {date}. System is read-only.',
         'validation.required' => '{field} is required.',
+        'users.title' => 'User Management',
+        'users.add_new' => 'Add New User',
+        'users.username' => 'Username',
+        'users.full_name' => 'Full Name',
+        'users.role' => 'Role',
+        'users.office' => 'Office',
+        'users.department' => 'Department',
+        'users.active' => 'Active',
+        'users.reset_password' => 'Reset Password',
+        'users.change_password' => 'Change Password',
+        'users.current_password' => 'Current Password',
+        'users.new_password' => 'New Password',
+        'users.confirm_password' => 'Confirm Password',
+        'users.password_changed' => 'Password changed successfully.',
+        'users.password_reset_success' => 'Password has been reset. Please note the new password.',
+        'users.force_password_change_message' => 'You must change your password before continuing.',
     ];
 
     bootstrap_seed_json($langFile, $seed);
@@ -259,6 +278,7 @@ require_once __DIR__ . '/departments.php';
 require_once __DIR__ . '/rendering.php';
 require_once __DIR__ . '/office.php';
 require_once __DIR__ . '/license.php';
+require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/audit.php';
 require_once __DIR__ . '/archive.php';
 require_once __DIR__ . '/bills.php';

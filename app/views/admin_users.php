@@ -1,66 +1,203 @@
 <?php
 require_permission('manage_users');
+
+$csrfToken = $_SESSION['user_admin_csrf'] ?? bin2hex(random_bytes(16));
+$_SESSION['user_admin_csrf'] = $csrfToken;
+$action = $_GET['action'] ?? 'list';
+$usernameParam = $_GET['username'] ?? '';
+$errors = [];
+$notice = '';
+$generatedPassword = '';
+
 $users = load_users();
 $departments = load_departments();
 $deptNames = [];
 foreach ($departments as $dept) {
     $deptNames[$dept['id']] = $dept['name'] ?? $dept['id'];
 }
-$action = $_GET['action'] ?? 'list';
-$errors = [];
-$notice = '';
-$csrfToken = $_SESSION['user_admin_csrf'] ?? bin2hex(random_bytes(16));
-$_SESSION['user_admin_csrf'] = $csrfToken;
-
-if ($action === 'edit') {
-    $username = $_GET['username'] ?? '';
-    $targetUser = $username ? find_user_by_username($username) : null;
-    if (!$targetUser) {
-        $errors[] = 'User not found.';
-        $action = 'list';
-    }
+$offices = load_offices_registry();
+$officeNames = [];
+foreach ($offices as $office) {
+    $officeNames[$office['id']] = $office['name'] ?? ($office['short_name'] ?? $office['id']);
+}
+if (empty($officeNames)) {
+    $officeNames[get_default_office_id()] = 'Default Office';
+}
+$permissions = load_permissions_config();
+$roleOptions = array_keys($permissions['roles'] ?? []);
+if (empty($roleOptions) && !empty($config['roles_permissions'])) {
+    $roleOptions = array_keys($config['roles_permissions']);
 }
 
-if ($action === 'edit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+function admin_users_generate_password(): string
+{
+    return substr(str_replace(['/', '+', '='], '', base64_encode(random_bytes(12))), 0, 12);
+}
+
+function admin_users_count_active_admins(array $users): int
+{
+    $count = 0;
+    foreach ($users as $user) {
+        if (($user['role'] ?? '') === 'admin' && !empty($user['active'])) {
+            $count++;
+        }
+    }
+    return $count;
+}
+
+function admin_users_validate_role(string $role, array $roleOptions): bool
+{
+    return in_array($role, $roleOptions, true);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submittedToken = $_POST['csrf_token'] ?? '';
     if (!$submittedToken || !hash_equals($_SESSION['user_admin_csrf'], $submittedToken)) {
         $errors[] = 'Security token mismatch. Please retry.';
     }
+}
 
-    $username = $_POST['username'] ?? '';
-    $usersList = $users;
-    $role = $_POST['role'] ?? '';
+if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
+    $username = trim($_POST['username'] ?? '');
     $fullName = trim($_POST['full_name'] ?? '');
-    $departmentId = $_POST['department_id'] ?? '';
+    $role = trim($_POST['role'] ?? '');
+    $departmentId = trim($_POST['department_id'] ?? '');
+    $officeId = trim($_POST['office_id'] ?? get_default_office_id());
     $active = !empty($_POST['active']);
+    $password = trim($_POST['password'] ?? '');
 
-    if (!isset($config['roles_permissions'][$role])) {
+    if ($username === '' || !preg_match('/^[A-Za-z0-9._-]+$/', $username)) {
+        $errors[] = 'Username is required and may only contain letters, numbers, dots, underscores, and hyphens.';
+    }
+    if (user_exists($username)) {
+        $errors[] = 'Username is already taken.';
+    }
+    if (!admin_users_validate_role($role, $roleOptions)) {
         $errors[] = 'Invalid role selected.';
     }
-    if (!isset($deptNames[$departmentId])) {
+    if ($departmentId !== '' && !isset($deptNames[$departmentId])) {
         $errors[] = 'Invalid department selected.';
+    }
+    if ($officeId === '') {
+        $officeId = get_default_office_id();
+    }
+
+    if ($password === '') {
+        $password = admin_users_generate_password();
+        $generatedPassword = $password;
+    }
+    if (strlen($password) < 8) {
+        $errors[] = 'Password must be at least 8 characters long.';
     }
 
     if (empty($errors)) {
-        foreach ($usersList as &$user) {
-            if (($user['username'] ?? '') === $username) {
-                $user['role'] = $role;
-                $user['department_id'] = $departmentId;
-                $user['active'] = $active;
-                if ($fullName !== '') {
-                    $user['full_name'] = $fullName;
-                }
-                break;
+        $now = gmdate('c');
+        $newUser = [
+            'username' => $username,
+            'full_name' => $fullName !== '' ? $fullName : $username,
+            'role' => $role,
+            'department_id' => $departmentId ?: null,
+            'office_id' => $officeId,
+            'active' => $active,
+            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'force_password_change' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
+
+        if (save_user($newUser)) {
+            $notice = 'User created successfully.';
+            log_event('user_created', $_SESSION['username'] ?? null, ['target' => $username, 'role' => $role]);
+            write_audit_log('user', $username, 'created', ['created_by' => $_SESSION['username'] ?? 'system']);
+            $users = load_users();
+        } else {
+            $errors[] = 'Unable to save user record.';
+        }
+    }
+}
+
+if ($action === 'edit' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
+    $username = $_POST['username'] ?? '';
+    $targetUser = find_user($username);
+    if (!$targetUser) {
+        $errors[] = 'User not found.';
+    } else {
+        $fullName = trim($_POST['full_name'] ?? '');
+        $role = trim($_POST['role'] ?? '');
+        $departmentId = trim($_POST['department_id'] ?? '');
+        $officeId = trim($_POST['office_id'] ?? get_default_office_id());
+        $active = !empty($_POST['active']);
+
+        if (!admin_users_validate_role($role, $roleOptions)) {
+            $errors[] = 'Invalid role selected.';
+        }
+        if ($departmentId !== '' && !isset($deptNames[$departmentId])) {
+            $errors[] = 'Invalid department selected.';
+        }
+        $adminCount = admin_users_count_active_admins($users);
+        $demotingLastAdmin = (($targetUser['role'] ?? '') === 'admin' && $role !== 'admin' && $adminCount <= 1) || (($targetUser['role'] ?? '') === 'admin' && !$active && $adminCount <= 1);
+        if ($demotingLastAdmin) {
+            $errors[] = 'Cannot remove admin role or deactivate the last active admin user.';
+        }
+
+        if (empty($errors)) {
+            $targetUser['full_name'] = $fullName !== '' ? $fullName : ($targetUser['full_name'] ?? $username);
+            $targetUser['role'] = $role;
+            $targetUser['department_id'] = $departmentId ?: null;
+            $targetUser['office_id'] = $officeId;
+            $targetUser['active'] = $active;
+            $targetUser['updated_at'] = gmdate('c');
+            if (save_user($targetUser)) {
+                $notice = 'User updated successfully.';
+                log_event('user_updated', $_SESSION['username'] ?? null, ['updated_username' => $username]);
+                write_audit_log('user', $username, 'updated', ['updated_by' => $_SESSION['username'] ?? 'system']);
+                $users = load_users();
+            } else {
+                $errors[] = 'Unable to save user record.';
             }
         }
-        unset($user);
-        save_users($usersList);
-        log_event('user_updated', $_SESSION['username'] ?? null, ['updated_username' => $username]);
-        header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=admin_users');
-        exit;
     }
-    $users = $usersList;
-    $targetUser = find_user_by_username($username);
+}
+
+if ($action === 'reset' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
+    $username = $_POST['username'] ?? '';
+    $targetUser = find_user($username);
+    if (!$targetUser) {
+        $errors[] = 'User not found.';
+    } else {
+        $password = trim($_POST['password'] ?? '');
+        if ($password === '') {
+            $password = admin_users_generate_password();
+            $generatedPassword = $password;
+        }
+        if (strlen($password) < 8) {
+            $errors[] = 'Password must be at least 8 characters long.';
+        }
+        if (empty($errors)) {
+            $targetUser['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+            $targetUser['force_password_change'] = true;
+            $targetUser['updated_at'] = gmdate('c');
+            if (save_user($targetUser)) {
+                $notice = i18n_get('users.password_reset_success');
+                $generatedPassword = $generatedPassword ?: $password;
+                log_event('user_password_reset', $_SESSION['username'] ?? null, ['target' => $username]);
+                write_audit_log('user', $username, 'password_reset', ['reset_by' => $_SESSION['username'] ?? 'system']);
+                $users = load_users();
+                $action = 'list';
+            } else {
+                $errors[] = 'Unable to reset password.';
+            }
+        }
+    }
+}
+
+$targetUser = null;
+if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
+    $targetUser = find_user($usernameParam);
+    if (!$targetUser) {
+        $errors[] = 'User not found.';
+        $action = 'list';
+    }
 }
 ?>
 
@@ -78,78 +215,158 @@ if ($action === 'edit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="alert alert-success"><?= htmlspecialchars($notice); ?></div>
 <?php endif; ?>
 
-<?php if ($action === 'edit' && !empty($targetUser)): ?>
+<?php if ($generatedPassword): ?>
+    <div class="alert info">
+        <?= htmlspecialchars(i18n_get('users.password_reset_success')); ?><br>
+        <strong><?= htmlspecialchars($generatedPassword); ?></strong>
+    </div>
+<?php endif; ?>
+
+<?php if ($action === 'edit' && $targetUser): ?>
+    <h3><?= htmlspecialchars(i18n_get('users.title')); ?> - <?= htmlspecialchars(i18n_get('btn.save')); ?></h3>
     <form method="post" class="form-stacked" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=edit&username=<?= urlencode($targetUser['username']); ?>">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
         <div class="form-field">
-            <label>Username</label>
+            <label><?= htmlspecialchars(i18n_get('users.username')); ?></label>
             <input type="text" value="<?= htmlspecialchars($targetUser['username']); ?>" disabled>
             <input type="hidden" name="username" value="<?= htmlspecialchars($targetUser['username']); ?>">
         </div>
         <div class="form-field">
-            <label for="full_name">Full Name</label>
+            <label for="full_name"><?= htmlspecialchars(i18n_get('users.full_name')); ?></label>
             <input type="text" id="full_name" name="full_name" value="<?= htmlspecialchars($targetUser['full_name'] ?? ''); ?>">
         </div>
         <div class="form-field">
-            <label for="role">Role</label>
+            <label for="role"><?= htmlspecialchars(i18n_get('users.role')); ?></label>
             <select name="role" id="role" required>
-                <?php foreach (array_keys($config['roles_permissions'] ?? []) as $roleKey): ?>
+                <?php foreach ($roleOptions as $roleKey): ?>
                     <option value="<?= htmlspecialchars($roleKey); ?>" <?= ($targetUser['role'] ?? '') === $roleKey ? 'selected' : ''; ?>><?= htmlspecialchars(ucfirst($roleKey)); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
         <div class="form-field">
-            <label for="department_id">Department</label>
-            <select name="department_id" id="department_id" required>
+            <label for="department_id"><?= htmlspecialchars(i18n_get('users.department')); ?></label>
+            <select name="department_id" id="department_id">
+                <option value="">--</option>
                 <?php foreach ($departments as $dept): ?>
                     <option value="<?= htmlspecialchars($dept['id']); ?>" <?= ($targetUser['department_id'] ?? '') === ($dept['id'] ?? '') ? 'selected' : ''; ?>><?= htmlspecialchars($dept['name'] ?? $dept['id']); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
         <div class="form-field">
-            <label><input type="checkbox" name="active" value="1" <?= !empty($targetUser['active']) ? 'checked' : ''; ?>> Active</label>
+            <label for="office_id"><?= htmlspecialchars(i18n_get('users.office')); ?></label>
+            <select name="office_id" id="office_id">
+                <?php foreach ($officeNames as $id => $name): ?>
+                    <option value="<?= htmlspecialchars($id); ?>" <?= ($targetUser['office_id'] ?? '') === $id ? 'selected' : ''; ?>><?= htmlspecialchars($name); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="form-field">
+            <label><input type="checkbox" name="active" value="1" <?= !empty($targetUser['active']) ? 'checked' : ''; ?>> <?= htmlspecialchars(i18n_get('users.active')); ?></label>
         </div>
         <div class="form-actions">
-            <button class="btn-primary" type="submit">Save User</button>
-            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users">Cancel</a>
+            <button class="btn-primary" type="submit"><?= htmlspecialchars(i18n_get('btn.save')); ?></button>
+            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users"><?= htmlspecialchars(i18n_get('btn.cancel')); ?></a>
         </div>
     </form>
-<?php else: ?>
-    <div class="info">
-        <p>Manage user roles and department associations.</p>
-    </div>
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Username</th>
-                    <th>Full Name</th>
-                    <th>Role</th>
-                    <th>Department</th>
-                    <th>Active</th>
-                    <th>Created At</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($users)): ?>
-                    <tr><td colspan="8">No users found.</td></tr>
-                <?php else: ?>
-                    <?php foreach ($users as $user): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($user['id'] ?? ''); ?></td>
-                            <td><?= htmlspecialchars($user['username'] ?? ''); ?></td>
-                            <td><?= htmlspecialchars($user['full_name'] ?? ''); ?></td>
-                            <td><span class="badge"><?= htmlspecialchars($user['role'] ?? ''); ?></span></td>
-                            <td><?= htmlspecialchars($deptNames[$user['department_id'] ?? ''] ?? ''); ?></td>
-                            <td><?= !empty($user['active']) ? 'Yes' : 'No'; ?></td>
-                            <td><?= htmlspecialchars($user['created_at'] ?? ''); ?></td>
-                            <td><a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=edit&username=<?= urlencode($user['username']); ?>">Edit</a></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
+<?php elseif ($action === 'reset' && $targetUser): ?>
+    <h3><?= htmlspecialchars(i18n_get('users.reset_password')); ?> - <?= htmlspecialchars($targetUser['username']); ?></h3>
+    <form method="post" class="form-stacked" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=reset&username=<?= urlencode($targetUser['username']); ?>">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+        <input type="hidden" name="username" value="<?= htmlspecialchars($targetUser['username']); ?>">
+        <div class="form-field">
+            <label for="password"><?= htmlspecialchars(i18n_get('users.new_password')); ?> (leave blank to auto-generate)</label>
+            <input type="text" id="password" name="password" value="">
+        </div>
+        <div class="form-actions">
+            <button class="btn-primary" type="submit"><?= htmlspecialchars(i18n_get('users.reset_password')); ?></button>
+            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users"><?= htmlspecialchars(i18n_get('btn.cancel')); ?></a>
+        </div>
+    </form>
 <?php endif; ?>
+
+<h3><?= htmlspecialchars(i18n_get('users.title')); ?></h3>
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th><?= htmlspecialchars(i18n_get('users.username')); ?></th>
+                <th><?= htmlspecialchars(i18n_get('users.full_name')); ?></th>
+                <th><?= htmlspecialchars(i18n_get('users.role')); ?></th>
+                <th><?= htmlspecialchars(i18n_get('users.department')); ?></th>
+                <th><?= htmlspecialchars(i18n_get('users.office')); ?></th>
+                <th><?= htmlspecialchars(i18n_get('users.active')); ?></th>
+                <th><?= htmlspecialchars(i18n_get('users.created_at') ?? 'Created'); ?></th>
+                <th><?= htmlspecialchars(i18n_get('users.actions') ?? 'Actions'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (empty($users)): ?>
+                <tr><td colspan="8">No users found.</td></tr>
+            <?php else: ?>
+                <?php foreach ($users as $user): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($user['username'] ?? ''); ?></td>
+                        <td><?= htmlspecialchars($user['full_name'] ?? ''); ?></td>
+                        <td><span class="badge"><?= htmlspecialchars($user['role'] ?? ''); ?></span></td>
+                        <td><?= htmlspecialchars($deptNames[$user['department_id'] ?? ''] ?? ''); ?></td>
+                        <td><?= htmlspecialchars($officeNames[$user['office_id'] ?? ''] ?? ($user['office_id'] ?? '')); ?></td>
+                        <td><?= !empty($user['active']) ? i18n_get('portal.yes') : i18n_get('portal.no'); ?></td>
+                        <td><?= htmlspecialchars($user['created_at'] ?? ''); ?></td>
+                        <td>
+                            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=edit&username=<?= urlencode($user['username']); ?>"><?= htmlspecialchars(i18n_get('btn.save')); ?></a>
+                            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=reset&username=<?= urlencode($user['username']); ?>"><?= htmlspecialchars(i18n_get('users.reset_password')); ?></a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </tbody>
+    </table>
+</div>
+
+<h3><?= htmlspecialchars(i18n_get('users.add_new')); ?></h3>
+<form method="post" class="form-stacked" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users&action=create">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+    <div class="form-field">
+        <label for="username"><?= htmlspecialchars(i18n_get('users.username')); ?></label>
+        <input type="text" id="username" name="username" required>
+    </div>
+    <div class="form-field">
+        <label for="full_name"><?= htmlspecialchars(i18n_get('users.full_name')); ?></label>
+        <input type="text" id="full_name" name="full_name">
+    </div>
+    <div class="form-field">
+        <label for="role"><?= htmlspecialchars(i18n_get('users.role')); ?></label>
+        <select name="role" id="role" required>
+            <?php foreach ($roleOptions as $roleKey): ?>
+                <option value="<?= htmlspecialchars($roleKey); ?>"><?= htmlspecialchars(ucfirst($roleKey)); ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="form-field">
+        <label for="office_id"><?= htmlspecialchars(i18n_get('users.office')); ?></label>
+        <select name="office_id" id="office_id">
+            <?php foreach ($officeNames as $id => $name): ?>
+                <option value="<?= htmlspecialchars($id); ?>" <?= $id === get_default_office_id() ? 'selected' : ''; ?>><?= htmlspecialchars($name); ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="form-field">
+        <label for="department_id"><?= htmlspecialchars(i18n_get('users.department')); ?></label>
+        <select name="department_id" id="department_id">
+            <option value="">--</option>
+            <?php foreach ($departments as $dept): ?>
+                <option value="<?= htmlspecialchars($dept['id']); ?>"><?= htmlspecialchars($dept['name'] ?? $dept['id']); ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="form-field">
+        <label for="password"><?= htmlspecialchars(i18n_get('users.new_password')); ?> (leave blank to auto-generate)</label>
+        <input type="text" id="password" name="password">
+    </div>
+    <div class="form-field">
+        <label><input type="checkbox" name="active" value="1" checked> <?= htmlspecialchars(i18n_get('users.active')); ?></label>
+    </div>
+    <div class="form-actions">
+        <button class="btn-primary" type="submit"><?= htmlspecialchars(i18n_get('btn.save')); ?></button>
+    </div>
+</form>

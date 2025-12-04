@@ -1,0 +1,28 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "password_hash": "$2y$12$eu5DZpyehCZppClOVCwb0.6rcTaNisWZBmYWUjgE5jhdDYrO59Czq",
+    "role": "admin",
+    "full_name": "System Administrator",
+    "office_id": "office_001",
+    "department_id": "dept_default",
+    "active": true,
+    "force_password_change": true,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  },
+  {
+    "id": 2,
+    "username": "superadmin",
+    "password_hash": "$2y$12$ikr68r1ltUQ6VDlCQ6puFuSW/UG2pIAzAT1TioA7OISSO93VLwwWS",
+    "role": "superadmin",
+    "full_name": "Super Administrator",
+    "office_id": "office_001",
+    "department_id": "dept_default",
+    "active": true,
+    "force_password_change": false,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  }
+]
