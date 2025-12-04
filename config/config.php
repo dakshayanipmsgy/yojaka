@@ -1,5 +1,5 @@
 <?php
-// Basic configuration for Yojaka v0.7
+// Basic configuration for Yojaka v0.8
 
 return [
     // Base URL relative to server root; adjust if deployed under a subdirectory
@@ -32,6 +32,15 @@ return [
     'inspection_data_path' => __DIR__ . '/../data/inspection',
     'inspection_templates_file' => 'templates.json',
     'inspection_reports_file' => 'reports.json',
+
+    // Pagination defaults
+    'pagination_per_page' => 10,
+    'logs_pagination_per_page' => 50,
+
+    // Backup configuration (data-only backups for administrators)
+    'backup_path' => realpath(__DIR__ . '/..') . '/backup',
+    'backup_include_data' => true,
+    'backup_include_config' => true,
 
     // Roles and permissions
     'roles_permissions' => [
@@ -72,6 +81,6 @@ return [
         'full_name' => 'System Administrator'
     ],
 
-    // Security settings
+// Security settings
     'display_errors' => false,
 ];

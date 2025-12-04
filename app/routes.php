@@ -54,6 +54,11 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_inspection.php',
             'permission' => 'manage_inspection',
         ],
+        'admin_backup' => [
+            'title' => 'Backup & Export',
+            'view' => __DIR__ . '/views/admin_backup.php',
+            'permission' => 'admin_backup',
+        ],
         'admin_departments' => [
             'title' => 'Department Profiles',
             'view' => __DIR__ . '/views/admin_departments.php',

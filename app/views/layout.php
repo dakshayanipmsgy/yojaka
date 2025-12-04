@@ -3,7 +3,7 @@
 $user = current_user();
 $pageTitle = $pageTitle ?? 'Yojaka';
 $department = $user ? get_user_department($user) : null;
-$hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection');
+$hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -67,6 +67,9 @@ $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('mana
                 <?php endif; ?>
                 <?php if (user_has_permission('manage_inspection')): ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_inspection" class="nav-item<?= ($activePage ?? '') === 'admin_inspection' ? ' active' : ''; ?>">Inspection Management</a>
+                <?php endif; ?>
+                <?php if (user_has_permission('admin_backup')): ?>
+                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_backup" class="nav-item<?= ($activePage ?? '') === 'admin_backup' ? ' active' : ''; ?>">Backup &amp; Export</a>
                 <?php endif; ?>
             <?php endif; ?>
         </nav>

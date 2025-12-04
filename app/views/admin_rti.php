@@ -7,6 +7,9 @@ $selectedStatus = $_GET['status'] ?? '';
 $filterStatus = in_array($selectedStatus, $statuses, true) ? $selectedStatus : '';
 $errors = [];
 $success = '';
+$pagination = null;
+
+$searchTerm = trim($_GET['q'] ?? '');
 
 $csrfToken = $_SESSION['admin_rti_csrf'] ?? bin2hex(random_bytes(16));
 $_SESSION['admin_rti_csrf'] = $csrfToken;
@@ -63,6 +66,13 @@ if ($filterStatus !== '') {
     $filteredCases = $cases;
 }
 
+$filteredCases = filter_items_search($filteredCases, $searchTerm, ['reference_number', 'applicant_name', 'subject']);
+
+$perPage = $config['pagination_per_page'] ?? 10;
+$pageParam = 'p';
+$pagination = paginate_array(array_values($filteredCases), get_page_param($pageParam), $perPage);
+$filteredCases = $pagination['items'];
+
 $viewId = $_GET['id'] ?? '';
 $viewCase = $viewId ? find_rti_by_id($cases, $viewId) : null;
 ?>
@@ -82,8 +92,11 @@ $viewCase = $viewId ? find_rti_by_id($cases, $viewId) : null;
 <?php endif; ?>
 
 <div class="filter-bar">
-    <form method="get" action="<?= YOJAKA_BASE_URL; ?>/app.php">
+    <form method="get" action="<?= YOJAKA_BASE_URL; ?>/app.php" class="form-inline">
         <input type="hidden" name="page" value="admin_rti">
+        <div class="form-field">
+            <input type="text" name="q" placeholder="Search reference, applicant, subject" value="<?= htmlspecialchars($searchTerm); ?>">
+        </div>
         <label for="status">Filter by Status:</label>
         <select name="status" id="status" onchange="this.form.submit()">
             <option value="">All</option>
@@ -91,6 +104,7 @@ $viewCase = $viewId ? find_rti_by_id($cases, $viewId) : null;
                 <option value="<?= htmlspecialchars($status); ?>" <?= $filterStatus === $status ? 'selected' : ''; ?>><?= htmlspecialchars($status); ?></option>
             <?php endforeach; ?>
         </select>
+        <button type="submit" class="btn">Apply</button>
     </form>
 </div>
 
@@ -133,6 +147,29 @@ $viewCase = $viewId ? find_rti_by_id($cases, $viewId) : null;
         </tbody>
     </table>
 </div>
+
+<?php if ($pagination): ?>
+    <?php
+    $queryBase = [
+        'page' => 'admin_rti',
+        'q' => $searchTerm,
+        'status' => $filterStatus,
+    ];
+    ?>
+    <div class="pagination">
+        <span>Page <?= (int) $pagination['page']; ?> of <?= (int) $pagination['total_pages']; ?></span>
+        <div class="pager-links">
+            <?php if ($pagination['page'] > 1): ?>
+                <?php $prevQuery = http_build_query(array_merge($queryBase, ['p' => $pagination['page'] - 1])); ?>
+                <a class="btn" href="<?= YOJAKA_BASE_URL; ?>/app.php?<?= $prevQuery; ?>">&laquo; Prev</a>
+            <?php endif; ?>
+            <?php if ($pagination['page'] < $pagination['total_pages']): ?>
+                <?php $nextQuery = http_build_query(array_merge($queryBase, ['p' => $pagination['page'] + 1])); ?>
+                <a class="btn" href="<?= YOJAKA_BASE_URL; ?>/app.php?<?= $nextQuery; ?>">Next &raquo;</a>
+            <?php endif; ?>
+        </div>
+    </div>
+<?php endif; ?>
 
 <?php if ($viewCase): ?>
     <div class="card" style="margin-top:1.5rem;">
