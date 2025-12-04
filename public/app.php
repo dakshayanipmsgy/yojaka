@@ -10,6 +10,14 @@ $activePage = $page;
 $requiresAuth = $route['requires_auth'] ?? true;
 $useLayout = $route['layout'] ?? true;
 
+if (!$route) {
+    http_response_code(404);
+    $pageTitle = 'Page Not Found';
+    $viewFile = __DIR__ . '/../app/views/not_found.php';
+    $requiresAuth = false;
+    $useLayout = true;
+}
+
 if (!$requiresAuth && $page === 'login' && is_logged_in()) {
     header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=dashboard');
     exit;
