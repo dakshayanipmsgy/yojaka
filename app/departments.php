@@ -61,6 +61,31 @@ function load_departments(): array
     return $data;
 }
 
+function index_departments_by_id(array $departments): array
+{
+    $indexed = [];
+    foreach ($departments as $dept) {
+        if (isset($dept['id'])) {
+            $indexed[$dept['id']] = $dept;
+        }
+    }
+    return $indexed;
+}
+
+function get_department_label(?string $departmentId, array $departments): string
+{
+    if ($departmentId === null || $departmentId === '') {
+        return '(Not set)';
+    }
+
+    $dept = find_department_by_id($departments, $departmentId);
+    if ($dept) {
+        return $dept['name'] ?? $departmentId;
+    }
+
+    return $departmentId;
+}
+
 function save_departments(array $departments): bool
 {
     ensure_departments_storage();
