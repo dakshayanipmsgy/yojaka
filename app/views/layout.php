@@ -9,6 +9,7 @@ $officeReadOnly = office_is_read_only($currentLicense);
 $primaryColor = $officeConfig['theme']['primary_color'] ?? '#0f5aa5';
 $secondaryColor = $officeConfig['theme']['secondary_color'] ?? '#f5f7fb';
 $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup') || user_has_permission('manage_office_config') || user_has_permission('view_mis_reports') || user_has_permission('view_all_records') || user_has_permission('manage_housekeeping');
+$isSuperAdmin = get_current_user_role() === 'superadmin';
 $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['username'])) : 0;
 $menuConfig = get_office_menu_config();
 $availableLanguages = i18n_available_languages();
@@ -106,6 +107,7 @@ $currentLanguage = i18n_current_language();
                     $pageKey = $item['page'] ?? '';
                     $permissionMap = [
                         'admin_users' => 'manage_users',
+                        'admin_roles' => 'manage_users',
                         'admin_departments' => 'manage_departments',
                         'admin_office' => 'manage_office_config',
                         'admin_license' => 'manage_office_config',
@@ -133,6 +135,11 @@ $currentLanguage = i18n_current_language();
                     ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=<?= htmlspecialchars($pageKey); ?>" class="nav-item<?= ($activePage ?? '') === $pageKey ? ' active' : ''; ?>"><?= htmlspecialchars($label); ?></a>
                 <?php endforeach; ?>
+            <?php endif; ?>
+            <?php if ($isSuperAdmin): ?>
+                <div class="nav-section">Super Admin</div>
+                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=superadmin_dashboard" class="nav-item<?= ($activePage ?? '') === 'superadmin_dashboard' ? ' active' : ''; ?>">Global Dashboard</a>
+                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=superadmin_offices" class="nav-item<?= ($activePage ?? '') === 'superadmin_offices' ? ' active' : ''; ?>">Offices</a>
             <?php endif; ?>
         </nav>
         <main class="content">

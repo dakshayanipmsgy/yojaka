@@ -6,6 +6,38 @@ function users_file_path(): string
     return YOJAKA_DATA_PATH . '/users.json';
 }
 
+function permissions_file_path(): string
+{
+    return YOJAKA_DATA_PATH . '/org/permissions.json';
+}
+
+function load_permissions_config(): array
+{
+    $path = permissions_file_path();
+    if (!file_exists($path)) {
+        return ['roles' => [], 'custom_roles' => []];
+    }
+    $data = json_decode((string) file_get_contents($path), true);
+    return is_array($data) ? $data : ['roles' => [], 'custom_roles' => []];
+}
+
+function save_permissions_config(array $data): void
+{
+    $path = permissions_file_path();
+    $handle = fopen($path, 'c+');
+    if (!$handle) {
+        return;
+    }
+    if (flock($handle, LOCK_EX)) {
+        ftruncate($handle, 0);
+        rewind($handle);
+        fwrite($handle, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        fflush($handle);
+        flock($handle, LOCK_UN);
+    }
+    fclose($handle);
+}
+
 function load_users(): array
 {
     $path = users_file_path();
@@ -178,18 +210,45 @@ function get_current_user_role(): ?string
     return $_SESSION['role'] ?? (current_user()['role'] ?? null);
 }
 
+function get_user_role_permissions(?string $username = null): array
+{
+    $user = $username ? find_user_by_username($username) : current_user();
+    if (!$user) {
+        return [];
+    }
+
+    $role = $user['role'] ?? null;
+    $permissionsConfig = load_permissions_config();
+    $rolePermissions = [];
+    if ($role && !empty($permissionsConfig['roles'][$role])) {
+        $rolePermissions = $permissionsConfig['roles'][$role];
+    }
+
+    if ($role && !empty($permissionsConfig['custom_roles'][$role])) {
+        $rolePermissions = array_merge($rolePermissions, $permissionsConfig['custom_roles'][$role]);
+    }
+
+    // Backward compatibility with config-based permissions
+    global $config;
+    if (empty($rolePermissions) && !empty($config['roles_permissions'][$role])) {
+        $rolePermissions = $config['roles_permissions'][$role];
+    }
+
+    return array_values(array_unique($rolePermissions));
+}
+
 function user_has_permission(string $permission): bool
 {
-    global $config;
     if (!is_logged_in()) {
         return false;
     }
-    $role = get_current_user_role();
-    $map = $config['roles_permissions'] ?? [];
-    if (!$role || empty($map[$role])) {
-        return false;
+
+    $permissions = get_user_role_permissions();
+    if (in_array('*', $permissions, true)) {
+        return true;
     }
-    return in_array($permission, $map[$role], true);
+
+    return in_array($permission, $permissions, true);
 }
 
 function require_login(): void
@@ -205,7 +264,7 @@ function require_role(string $role): void
     if (!is_logged_in()) {
         require_login();
     }
-    if (empty($_SESSION['role']) || $_SESSION['role'] !== $role) {
+    if (empty($_SESSION['role']) || ($_SESSION['role'] !== $role && $_SESSION['role'] !== 'superadmin')) {
         include __DIR__ . '/views/access_denied.php';
         exit;
     }
