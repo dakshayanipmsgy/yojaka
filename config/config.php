@@ -72,6 +72,7 @@ return [
             'create_documents',
             'view_all_records',
             'view_reports_basic',
+            'view_mis_reports',
             'admin_backup',
             'manage_office_config',
             'manage_bills',

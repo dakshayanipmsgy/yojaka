@@ -6,7 +6,7 @@ $department = $user ? get_user_department($user) : null;
 $officeConfig = load_office_config();
 $primaryColor = $officeConfig['theme']['primary_color'] ?? '#0f5aa5';
 $secondaryColor = $officeConfig['theme']['secondary_color'] ?? '#f5f7fb';
-$hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup') || user_has_permission('manage_office_config');
+$hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup') || user_has_permission('manage_office_config') || user_has_permission('view_mis_reports');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -97,6 +97,9 @@ $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('mana
                 <?php endif; ?>
                 <?php if (user_has_permission('view_logs')): ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_logs" class="nav-item<?= ($activePage ?? '') === 'admin_logs' ? ' active' : ''; ?>">Usage Logs</a>
+                <?php endif; ?>
+                <?php if (user_has_permission('view_all_records') || user_has_permission('view_mis_reports')): ?>
+                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_mis" class="nav-item<?= ($activePage ?? '') === 'admin_mis' ? ' active' : ''; ?>">Reports &amp; Analytics (MIS)</a>
                 <?php endif; ?>
                 <?php if (user_has_permission('admin_backup')): ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_backup" class="nav-item<?= ($activePage ?? '') === 'admin_backup' ? ' active' : ''; ?>">Backup &amp; Export</a>

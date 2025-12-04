@@ -22,6 +22,14 @@ if (!empty($route['permission'])) {
     require_role($route['role']);
 }
 
+// Allow certain pages to bypass the layout (e.g., CSV exports)
+if ($page === 'admin_mis' && isset($_GET['export']) && $_GET['export'] === 'csv') {
+    if (!empty($viewFile) && file_exists($viewFile)) {
+        include $viewFile;
+    }
+    exit;
+}
+
 if ($page === 'dashboard' && isset($_SESSION['username'])) {
     log_event('dashboard_view', $_SESSION['username']);
 }

@@ -90,6 +90,11 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_office.php',
             'permission' => 'manage_office_config',
         ],
+        'admin_mis' => [
+            'title' => 'Reports & Analytics (MIS)',
+            'view' => __DIR__ . '/views/admin_mis.php',
+            'permission' => 'view_mis_reports',
+        ],
     ];
 
     if (isset($routes[$page])) {
