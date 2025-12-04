@@ -18,6 +18,7 @@ $attachmentToken = '';
 $csrfToken = $_SESSION['dak_csrf_token'] ?? bin2hex(random_bytes(16));
 $_SESSION['dak_csrf_token'] = $csrfToken;
 $usersList = load_users();
+$aiDraftText = '';
 
 if ($mode === 'create') {
     if (!$canManageDak) {
@@ -29,51 +30,65 @@ if ($mode === 'create') {
 }
 
 if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $ai_action = $_POST['ai_action'] ?? null;
     $reference_no = trim($_POST['reference_no'] ?? '');
     $received_from = trim($_POST['received_from'] ?? '');
     $subject = trim($_POST['subject'] ?? '');
     $details = trim($_POST['details'] ?? '');
     $date_received = trim($_POST['date_received'] ?? '');
 
-    if ($reference_no === '' || $received_from === '' || $subject === '' || $date_received === '') {
-        $errors[] = 'All fields except details are required.';
-    }
-
-    if (empty($errors) && !$officeReadOnly) {
-        $now = gmdate('c');
-        $dakId = generate_next_dak_id($entries);
-        $entries[] = [
-            'id' => $dakId,
-            'reference_no' => $reference_no,
-            'received_from' => $received_from,
+    if ($ai_action === 'draft') {
+        $context = [
+            'module' => 'dak',
+            'office_name' => $currentOfficeId,
             'subject' => $subject,
-            'details' => $details,
-            'date_received' => $date_received,
-            'status' => 'Received',
-            'assigned_to' => null,
-            'created_by' => $user['username'] ?? null,
-            'created_at' => $now,
-            'updated_at' => $now,
-            'workflow_state' => get_default_workflow_state('dak'),
-            'current_approver' => null,
-            'approver_chain' => [],
-            'last_action' => 'created',
-            'last_action_at' => $now,
-            'office_id' => $currentOfficeId,
-            'movements' => [],
-            'department_id' => $user['department_id'] ?? 'dept_default',
+            'recipient' => $received_from,
+            'purpose' => $details,
         ];
+        $prompt = build_ai_prompt_for_drafting($context);
+        $aiDraftText = ai_generate_text('draft_document', $prompt, $context) ?? '';
+        $_POST['details'] = $aiDraftText;
+    } else {
+        if ($reference_no === '' || $received_from === '' || $subject === '' || $date_received === '') {
+            $errors[] = 'All fields except details are required.';
+        }
 
-        file_flow_initialize($entries[array_key_last($entries)], 'dak', $user['department_id'] ?? 'dept_default', $currentOfficeId);
+        if (empty($errors) && !$officeReadOnly) {
+            $now = gmdate('c');
+            $dakId = generate_next_dak_id($entries);
+            $entries[] = [
+                'id' => $dakId,
+                'reference_no' => $reference_no,
+                'received_from' => $received_from,
+                'subject' => $subject,
+                'details' => $details,
+                'date_received' => $date_received,
+                'status' => 'Received',
+                'assigned_to' => null,
+                'created_by' => $user['username'] ?? null,
+                'created_at' => $now,
+                'updated_at' => $now,
+                'workflow_state' => get_default_workflow_state('dak'),
+                'current_approver' => null,
+                'approver_chain' => [],
+                'last_action' => 'created',
+                'last_action_at' => $now,
+                'office_id' => $currentOfficeId,
+                'movements' => [],
+                'department_id' => $user['department_id'] ?? 'dept_default',
+            ];
 
-        append_dak_movement($entries[array_key_last($entries)], 'created', null, $user['username'] ?? null, 'Dak entry created');
-        save_dak_entries($entries);
-        log_event('dak_created', $user['username'] ?? null, ['dak_id' => $dakId]);
-        log_dak_movement($dakId, 'created', null, $user['username'] ?? null, 'Dak entry created');
-        write_audit_log('dak', $dakId, 'create');
+            file_flow_initialize($entries[array_key_last($entries)], 'dak', $user['department_id'] ?? 'dept_default', $currentOfficeId);
 
-        header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=dak&mode=view&id=' . urlencode($dakId));
-        exit;
+            append_dak_movement($entries[array_key_last($entries)], 'created', null, $user['username'] ?? null, 'Dak entry created');
+            save_dak_entries($entries);
+            log_event('dak_created', $user['username'] ?? null, ['dak_id' => $dakId]);
+            log_dak_movement($dakId, 'created', null, $user['username'] ?? null, 'Dak entry created');
+            write_audit_log('dak', $dakId, 'create');
+
+            header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=dak&mode=view&id=' . urlencode($dakId));
+            exit;
+        }
     }
 }
 
@@ -99,13 +114,14 @@ $targetId = $_GET['id'] ?? null;
                 <input type="text" name="subject" value="<?= htmlspecialchars($_POST['subject'] ?? ''); ?>" required>
             </label>
             <label>Details / Summary
-                <textarea name="details" rows="4" placeholder="Optional additional details"><?= htmlspecialchars($_POST['details'] ?? ''); ?></textarea>
+                <textarea name="details" rows="4" placeholder="Optional additional details"><?= htmlspecialchars($_POST['details'] ?? $aiDraftText ?? ''); ?></textarea>
             </label>
             <label>Date Received
                 <input type="date" name="date_received" value="<?= htmlspecialchars($_POST['date_received'] ?? ''); ?>" required>
             </label>
             <div class="actions">
                 <button type="submit" class="btn primary">Save Dak</button>
+                <button type="submit" class="btn" name="ai_action" value="draft"><?= htmlspecialchars(i18n_get('ai.draft_with_assistant')); ?></button>
                 <a class="btn" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dak">Cancel</a>
             </div>
         </form>
@@ -119,6 +135,7 @@ $targetId = $_GET['id'] ?? null;
             break;
         }
     }
+    $routeSuggestions = $entry ? predict_next_positions($entry) : [];
     ?>
     <?php if ($entry && !$canViewAll && ($entry['office_id'] ?? $currentOfficeId) !== $currentOfficeId): ?>
         <p class="alert error">You cannot view dak entries from another office.</p>
@@ -327,12 +344,30 @@ $targetId = $_GET['id'] ?? null;
                                 <?php if (!empty($node['completed_at'])): ?>
                                     <div class="muted">Completed at <?= htmlspecialchars(format_date_for_display($node['completed_at'])); ?></div>
                                 <?php endif; ?>
-                                <?php if ($isCurrent): ?>
-                                    <div class="badge">Current</div>
-                                <?php endif; ?>
-                            </li>
+                            <?php if ($isCurrent): ?>
+                                <div class="badge">Current</div>
+                            <?php endif; ?>
+                        </li>
                         <?php endforeach; ?>
                     </ol>
+                    <?php if (!empty($routeSuggestions)): ?>
+                        <div class="alert info">
+                            <strong>Suggested next positions</strong>
+                            <ul>
+                                <?php foreach ($routeSuggestions as $s): ?>
+                                    <li>
+                                        <?= htmlspecialchars($s['position_id'] ?? ''); ?>
+                                        <?php if (!empty($s['label'])): ?>
+                                            <span class="badge"><?= htmlspecialchars($s['label']); ?></span>
+                                        <?php endif; ?>
+                                        <?php if (!empty($s['score'])): ?>
+                                            <span class="muted">Score: <?= htmlspecialchars((string) $s['score']); ?></span>
+                                        <?php endif; ?>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
                     <?php if (!empty($availableRouteActions)): ?>
                         <form method="post" class="form-grid" style="margin-top:1rem;">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">

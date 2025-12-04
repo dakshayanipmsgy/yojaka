@@ -97,4 +97,10 @@
   ,"users.password_changed": "Password changed successfully."
   ,"users.password_reset_success": "Password has been reset. Please note the new password."
   ,"users.force_password_change_message": "You must change your password before continuing."
+  ,"nav.admin_ai": "AI & Assistance Settings"
+  ,"nav.admin_replies": "Reply Templates"
+  ,"ai.draft_with_assistant": "Draft with Assistant"
+  ,"ai.generate_summary": "Generate Summary"
+  ,"ai.suggested_reply": "Suggested Reply"
+  ,"ai.settings": "AI & Assistance Settings"
 }

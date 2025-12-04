@@ -39,6 +39,8 @@ function default_menu_config(): array
             ['page' => 'admin_inspection', 'visible' => true, 'label_key' => 'nav.admin_inspection'],
             ['page' => 'admin_hierarchy', 'visible' => true, 'label_key' => 'nav.admin_hierarchy'],
             ['page' => 'admin_routes', 'visible' => true, 'label_key' => 'nav.admin_routes'],
+            ['page' => 'admin_ai', 'visible' => true, 'label_key' => 'nav.admin_ai'],
+            ['page' => 'admin_replies', 'visible' => true, 'label_key' => 'nav.admin_replies'],
             ['page' => 'admin_repository', 'visible' => true, 'label_key' => 'nav.repository'],
             ['page' => 'admin_logs', 'visible' => true, 'label_key' => 'nav.logs'],
             ['page' => 'admin_housekeeping', 'visible' => true, 'label_key' => 'nav.housekeeping'],
