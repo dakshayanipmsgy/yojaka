@@ -137,6 +137,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $module = $_POST['module'] ?? '';
             build_full_index_for_module($module);
             $messages[] = 'Index rebuilt for ' . htmlspecialchars($module);
+        } elseif ($action === 'rebuild_index_v2') {
+            rebuild_all_index_v2();
+            $messages[] = 'Index v2 rebuilt for all modules';
         }
     } catch (Exception $e) {
         $errors[] = $e->getMessage();
@@ -250,3 +253,7 @@ $attachmentsRetention = $config['retention']['attachments']['delete_archived_aft
         </form>
     <?php endforeach; ?>
 </div>
+<form method="post" style="margin-top:1rem;">
+    <input type="hidden" name="action" value="rebuild_index_v2">
+    <button class="btn primary" type="submit">Rebuild All Index v2</button>
+</form>
