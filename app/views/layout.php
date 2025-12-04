@@ -31,6 +31,7 @@ $pageTitle = $pageTitle ?? 'Yojaka';
             <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=letters" class="nav-item<?= ($activePage ?? '') === 'letters' ? ' active' : ''; ?>">Letters &amp; Notices</a>
             <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=rti" class="nav-item<?= ($activePage ?? '') === 'rti' ? ' active' : ''; ?>">RTI Cases</a>
             <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dak" class="nav-item<?= ($activePage ?? '') === 'dak' ? ' active' : ''; ?>">Dak &amp; File Movement</a>
+            <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=inspection" class="nav-item<?= ($activePage ?? '') === 'inspection' ? ' active' : ''; ?>">Inspection Reports</a>
             <?php if (($user['role'] ?? '') === 'admin'): ?>
                 <div class="nav-section">Admin</div>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users" class="nav-item<?= ($activePage ?? '') === 'admin_users' ? ' active' : ''; ?>">User List</a>
@@ -38,6 +39,7 @@ $pageTitle = $pageTitle ?? 'Yojaka';
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_letter_templates" class="nav-item<?= ($activePage ?? '') === 'admin_letter_templates' ? ' active' : ''; ?>">Letter Templates</a>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_rti" class="nav-item<?= ($activePage ?? '') === 'admin_rti' ? ' active' : ''; ?>">RTI Management</a>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_dak" class="nav-item<?= ($activePage ?? '') === 'admin_dak' ? ' active' : ''; ?>">Dak Management</a>
+                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_inspection" class="nav-item<?= ($activePage ?? '') === 'admin_inspection' ? ' active' : ''; ?>">Inspection Management</a>
             <?php endif; ?>
         </nav>
         <main class="content">

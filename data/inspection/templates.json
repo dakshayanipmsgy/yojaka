@@ -1,0 +1,38 @@
+[
+  {
+    "id": "generic_inspection",
+    "name": "Generic Inspection",
+    "description": "General purpose inspection checklist.",
+    "category": "General",
+    "active": true,
+    "fields": [
+      {"name": "location", "label": "Location", "type": "text", "required": true},
+      {"name": "date_of_inspection", "label": "Date of Inspection", "type": "date", "required": true},
+      {"name": "inspecting_officer", "label": "Inspecting Officer", "type": "text", "required": true}
+    ],
+    "checklist": [
+      {"code": "safety", "label": "Safety compliance", "default_status": "NA"},
+      {"code": "documentation", "label": "Documentation available", "default_status": "NA"}
+    ],
+    "footer_note": "Generated via Yojaka Inspection module."
+  },
+  {
+    "id": "school_inspection",
+    "name": "School Inspection",
+    "description": "Checklist for routine school inspection.",
+    "category": "Education",
+    "active": true,
+    "fields": [
+      {"name": "school_name", "label": "School Name", "type": "text", "required": true},
+      {"name": "address", "label": "Address", "type": "textarea", "required": true},
+      {"name": "date_of_inspection", "label": "Date of Inspection", "type": "date", "required": true},
+      {"name": "inspecting_officer", "label": "Inspecting Officer Name", "type": "text", "required": true}
+    ],
+    "checklist": [
+      {"code": "classrooms", "label": "Condition of classrooms", "default_status": "NA"},
+      {"code": "sanitation", "label": "Availability & cleanliness of toilets", "default_status": "NA"},
+      {"code": "safety_equipment", "label": "Safety equipment available", "default_status": "NA"}
+    ],
+    "footer_note": "This is a standard school inspection report format."
+  }
+]

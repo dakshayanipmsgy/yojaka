@@ -24,6 +24,11 @@ return [
     'rti_cases_file' => 'rti_cases.json',
     'rti_reply_days' => 30,
 
+    // Inspection module configuration
+    'inspection_data_path' => __DIR__ . '/../data/inspection',
+    'inspection_templates_file' => 'templates.json',
+    'inspection_reports_file' => 'reports.json',
+
     // Default admin credentials used only when seeding users.json on first run
     'default_admin' => [
         'username' => 'admin',

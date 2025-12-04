@@ -12,6 +12,7 @@ $userLettersGenerated = count_events($usageEntries, 'letter_generated', $user['u
 
 $rtiCases = load_rti_cases();
 $dakEntries = load_dak_entries();
+$inspectionReports = load_inspection_reports();
 
 $yourPendingRtis = 0;
 $yourOverdueRtis = 0;
@@ -25,6 +26,11 @@ $totalDak = count($dakEntries);
 $pendingDak = 0;
 $overdueDak = 0;
 $unassignedDak = 0;
+$yourInspections = 0;
+$yourOpenInspections = 0;
+$totalInspections = count($inspectionReports);
+$openInspections = 0;
+$closedInspections = 0;
 
 foreach ($rtiCases as $case) {
     $isPending = ($case['status'] ?? '') === 'Pending';
@@ -70,6 +76,22 @@ foreach ($dakEntries as $entry) {
         $unassignedDak++;
     }
 }
+
+foreach ($inspectionReports as $report) {
+    $isClosed = ($report['status'] ?? '') === 'Closed';
+    if (($report['created_by'] ?? null) === ($user['username'] ?? null)) {
+        $yourInspections++;
+        if (!$isClosed) {
+            $yourOpenInspections++;
+        }
+    }
+
+    if ($isClosed) {
+        $closedInspections++;
+    } else {
+        $openInspections++;
+    }
+}
 ?>
 <div class="grid">
     <div class="card highlight">
@@ -100,6 +122,14 @@ foreach ($dakEntries as $entry) {
     <div class="card stat">
         <div class="stat-label">Your Letters Generated</div>
         <div class="stat-value"><?= (int) $userLettersGenerated; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Your Inspection Reports</div>
+        <div class="stat-value"><?= (int) $yourInspections; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Your Open Inspections</div>
+        <div class="stat-value"><?= (int) $yourOpenInspections; ?></div>
     </div>
     <div class="card stat">
         <div class="stat-label">Dak Assigned to You</div>
@@ -149,6 +179,18 @@ foreach ($dakEntries as $entry) {
     <div class="card stat">
         <div class="stat-label">Unassigned Dak</div>
         <div class="stat-value"><?= (int) $unassignedDak; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Total Inspection Reports</div>
+        <div class="stat-value"><?= (int) $totalInspections; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Open Inspection Reports</div>
+        <div class="stat-value"><?= (int) $openInspections; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Closed Inspection Reports</div>
+        <div class="stat-value"><?= (int) $closedInspections; ?></div>
     </div>
     <?php endif; ?>
 </div>
