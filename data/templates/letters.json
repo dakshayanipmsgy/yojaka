@@ -1,0 +1,98 @@
+[
+    {
+        "id": "notice_delay_payment",
+        "name": "Notice for Delay in Payment",
+        "description": "Standard notice for delayed payment cases.",
+        "category": "Notice",
+        "active": true,
+        "variables": [
+            {
+                "name": "applicant_name",
+                "label": "Applicant Name",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "reference_number",
+                "label": "Reference Number",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "notice_date",
+                "label": "Notice Date",
+                "type": "date",
+                "required": true
+            }
+        ],
+        "body": "To,\n{{applicant_name}}\nRef: {{reference_number}}\nDate: {{notice_date}}\n\nSubject: Notice regarding delayed payment.\n\n[Body content here]\n\nAuthorized Signatory"
+    },
+    {
+        "id": "appointment_letter_basic",
+        "name": "Appointment Letter (Basic)",
+        "description": "Basic appointment confirmation letter.",
+        "category": "Letter",
+        "active": true,
+        "variables": [
+            {
+                "name": "recipient_name",
+                "label": "Recipient Name",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "position",
+                "label": "Position/Role",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "start_date",
+                "label": "Start Date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "name": "office_location",
+                "label": "Office Location",
+                "type": "text",
+                "required": true
+            }
+        ],
+        "body": "Dear {{recipient_name}},\n\nWe are pleased to confirm your appointment as {{position}} effective {{start_date}} at {{office_location}}.\n\nPlease report to the undersigned on the mentioned date.\n\nRegards,\n\nAuthorized Signatory"
+    },
+    {
+        "id": "information_request",
+        "name": "Request for Additional Information",
+        "description": "Letter requesting additional documents or information.",
+        "category": "Letter",
+        "active": true,
+        "variables": [
+            {
+                "name": "requestee_name",
+                "label": "Requestee Name",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "case_number",
+                "label": "Case/File Number",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "submission_deadline",
+                "label": "Submission Deadline",
+                "type": "date",
+                "required": true
+            },
+            {
+                "name": "required_documents",
+                "label": "Required Documents",
+                "type": "textarea",
+                "required": true
+            }
+        ],
+        "body": "To,\n{{requestee_name}}\nSubject: Additional information required for case {{case_number}}.\n\nKindly submit the following documents by {{submission_deadline}}:\n\n{{required_documents}}\n\nThank you for your cooperation.\n\nAuthorized Signatory"
+    }
+]

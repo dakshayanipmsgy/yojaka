@@ -10,6 +10,9 @@ return [
     'data_path' => realpath(__DIR__ . '/../data'),
     'logs_path' => realpath(__DIR__ . '/../logs'),
     'usage_log_file' => 'usage.log',
+    'templates_path' => __DIR__ . '/../data/templates',
+    'letters_templates_file' => 'letters.json',
+    'generated_letters_log' => 'generated_letters.log',
 
     // Default admin credentials used only when seeding users.json on first run
     'default_admin' => [
