@@ -1,6 +1,7 @@
 <?php
 require_login();
 require_permission('manage_people');
+require_once __DIR__ . '/../staff.php';
 
 $currentOfficeId = get_current_office_id();
 $staffList = load_staff($currentOfficeId);
