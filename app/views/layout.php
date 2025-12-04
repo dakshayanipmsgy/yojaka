@@ -1,7 +1,7 @@
 <?php
 // Main layout template
 $user = current_user();
-$pageTitle = $pageTitle ?? 'Yojaka';
+$pageTitle = $pageTitle ?? i18n_get('app.title');
 $department = $user ? get_user_department($user) : null;
 $officeConfig = get_current_office_config();
 $currentLicense = get_current_office_license();
@@ -10,14 +10,17 @@ $primaryColor = $officeConfig['theme']['primary_color'] ?? '#0f5aa5';
 $secondaryColor = $officeConfig['theme']['secondary_color'] ?? '#f5f7fb';
 $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup') || user_has_permission('manage_office_config') || user_has_permission('view_mis_reports') || user_has_permission('view_all_records') || user_has_permission('manage_housekeeping');
 $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['username'])) : 0;
+$menuConfig = get_office_menu_config();
+$availableLanguages = i18n_available_languages();
+$currentLanguage = i18n_current_language();
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?= htmlspecialchars($currentLanguage); ?>">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($pageTitle); ?> - Yojaka</title>
+    <title><?= htmlspecialchars($pageTitle); ?> - <?= htmlspecialchars(i18n_get('app.title')); ?></title>
     <link rel="stylesheet" href="<?= YOJAKA_BASE_URL; ?>/assets/css/style.css">
     <style>
         :root {
@@ -33,7 +36,7 @@ $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['us
                 <img src="<?= YOJAKA_BASE_URL . '/' . ltrim($officeConfig['theme']['logo_path'], '/'); ?>" alt="Logo" class="brand-logo">
             <?php endif; ?>
             <div>
-                <div class="logo"><?= htmlspecialchars($officeConfig['office_name'] ?? 'Yojaka'); ?></div>
+                <div class="logo"><?= htmlspecialchars($officeConfig['office_name'] ?? i18n_get('app.title')); ?></div>
                 <div class="subtitle">Govt Workflow &amp; Document Automation</div>
             </div>
         </div>
@@ -43,89 +46,90 @@ $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['us
             <?php if ($department): ?>
                 <div class="dept muted">Dept: <?= htmlspecialchars($department['name'] ?? ''); ?></div>
             <?php endif; ?>
-            <a class="logout" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=notifications">Notifications <?= $unreadNotifications ? '(' . (int) $unreadNotifications . ')' : ''; ?></a>
+            <form method="post" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=change_language" style="display:inline-block; margin-right:8px;">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? ($_SESSION['csrf_token'] = bin2hex(random_bytes(16)))); ?>" />
+                <select name="lang" onchange="this.form.submit()">
+                    <?php foreach ($availableLanguages as $langCode): ?>
+                        <option value="<?= htmlspecialchars($langCode); ?>" <?= $langCode === $currentLanguage ? 'selected' : ''; ?>><?= htmlspecialchars(strtoupper($langCode)); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+            <a class="logout" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=notifications"><?= i18n_get('nav.notifications'); ?> <?= $unreadNotifications ? '(' . (int) $unreadNotifications . ')' : ''; ?></a>
             <a class="logout" href="<?= YOJAKA_BASE_URL; ?>/logout.php">Logout</a>
         </div>
     </header>
     <?php if ($officeReadOnly): ?>
-        <div class="alert alert-danger" style="margin:0; border-radius:0;">Trial expired or license invalid for this office. System is read-only.</div>
+        <div class="alert alert-danger" style="margin:0; border-radius:0;"><?= htmlspecialchars(i18n_get('banner.expired', ['date' => format_date_for_display($currentLicense['expires_at'] ?? '')])); ?></div>
     <?php elseif (is_license_trial($currentLicense ?? [])): ?>
-        <div class="alert info" style="margin:0; border-radius:0;">Trial version – not for production use.</div>
+        <div class="alert info" style="margin:0; border-radius:0;"><?= htmlspecialchars(i18n_get('banner.trial')); ?></div>
     <?php endif; ?>
     <div class="body">
         <nav class="sidebar">
             <div class="nav-section">Main</div>
-            <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dashboard" class="nav-item<?= ($activePage ?? '') === 'dashboard' ? ' active' : ''; ?>">Dashboard</a>
-            <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=my_tasks" class="nav-item<?= ($activePage ?? '') === 'my_tasks' ? ' active' : ''; ?>">My Tasks</a>
-            <?php if (user_has_permission('create_documents')): ?>
-                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=letters" class="nav-item<?= ($activePage ?? '') === 'letters' ? ' active' : ''; ?>">Letters &amp; Notices</a>
-            <?php endif; ?>
-            <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=global_search" class="nav-item<?= ($activePage ?? '') === 'global_search' ? ' active' : ''; ?>">Global Search</a>
-            <?php if (is_module_enabled('rti') && (user_has_permission('manage_rti') || user_has_permission('view_reports_basic'))): ?>
-                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=rti" class="nav-item<?= ($activePage ?? '') === 'rti' ? ' active' : ''; ?>">RTI Cases</a>
-            <?php endif; ?>
-            <?php if (is_module_enabled('dak') && (user_has_permission('manage_dak') || user_has_permission('view_reports_basic'))): ?>
-                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dak" class="nav-item<?= ($activePage ?? '') === 'dak' ? ' active' : ''; ?>">Dak &amp; File Movement</a>
-            <?php endif; ?>
-            <?php if (is_module_enabled('inspection') && (user_has_permission('manage_inspection') || user_has_permission('view_reports_basic') || user_has_permission('create_documents'))): ?>
-                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=inspection" class="nav-item<?= ($activePage ?? '') === 'inspection' ? ' active' : ''; ?>">Inspection Reports</a>
-            <?php endif; ?>
-            <?php if (is_module_enabled('meeting_minutes') && user_has_permission('create_documents')): ?>
-                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=meeting_minutes" class="nav-item<?= ($activePage ?? '') === 'meeting_minutes' ? ' active' : ''; ?>">Meeting Minutes</a>
-            <?php endif; ?>
-            <?php if (is_module_enabled('work_orders') && user_has_permission('create_documents')): ?>
-                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=work_orders" class="nav-item<?= ($activePage ?? '') === 'work_orders' ? ' active' : ''; ?>">Work Orders</a>
-            <?php endif; ?>
-            <?php if (is_module_enabled('guc') && user_has_permission('create_documents')): ?>
-                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=guc" class="nav-item<?= ($activePage ?? '') === 'guc' ? ' active' : ''; ?>">Grant Utilization Certificates</a>
-            <?php endif; ?>
-            <?php if (is_module_enabled('bills') && user_has_permission('create_documents')): ?>
-                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=bills" class="nav-item<?= ($activePage ?? '') === 'bills' ? ' active' : ''; ?>">Contractor Bills</a>
-            <?php endif; ?>
+            <?php foreach ($menuConfig['main'] as $item): ?>
+                <?php
+                if (empty($item['visible'])) { continue; }
+                $pageKey = $item['page'] ?? '';
+                $allowed = true;
+                switch ($pageKey) {
+                    case 'rti':
+                        $allowed = is_module_enabled('rti') && (user_has_permission('manage_rti') || user_has_permission('view_reports_basic'));
+                        break;
+                    case 'dak':
+                        $allowed = is_module_enabled('dak') && (user_has_permission('manage_dak') || user_has_permission('view_reports_basic'));
+                        break;
+                    case 'inspection':
+                        $allowed = is_module_enabled('inspection') && (user_has_permission('manage_inspection') || user_has_permission('view_reports_basic') || user_has_permission('create_documents'));
+                        break;
+                    case 'letters':
+                        $allowed = user_has_permission('create_documents');
+                        break;
+                    case 'meeting_minutes':
+                    case 'work_orders':
+                    case 'guc':
+                    case 'bills':
+                        $allowed = user_has_permission('create_documents') && is_module_enabled($pageKey);
+                        break;
+                    default:
+                        $allowed = true;
+                }
+                if (!$allowed) { continue; }
+                $label = i18n_get($item['label_key'] ?? $pageKey);
+                ?>
+                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=<?= htmlspecialchars($pageKey); ?>" class="nav-item<?= ($activePage ?? '') === $pageKey ? ' active' : ''; ?>"><?= htmlspecialchars($label); ?></a>
+            <?php endforeach; ?>
             <?php if ($hasAdminMenu): ?>
                 <div class="nav-section">Admin</div>
-                <?php if (user_has_permission('manage_users')): ?>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_users" class="nav-item<?= ($activePage ?? '') === 'admin_users' ? ' active' : ''; ?>">User List</a>
-                <?php endif; ?>
-                <?php if (user_has_permission('manage_departments')): ?>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_departments" class="nav-item<?= ($activePage ?? '') === 'admin_departments' ? ' active' : ''; ?>">Department Profiles</a>
-                <?php endif; ?>
-                <?php if (user_has_permission('manage_office_config')): ?>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_office" class="nav-item<?= ($activePage ?? '') === 'admin_office' ? ' active' : ''; ?>">Office Settings</a>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_license" class="nav-item<?= ($activePage ?? '') === 'admin_license' ? ' active' : ''; ?>">License &amp; Trial Status</a>
-                <?php endif; ?>
-                <?php if (user_has_permission('manage_templates')): ?>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_letter_templates" class="nav-item<?= ($activePage ?? '') === 'admin_letter_templates' ? ' active' : ''; ?>">Letter Templates</a>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_documents" class="nav-item<?= ($activePage ?? '') === 'admin_documents' ? ' active' : ''; ?>">Document Templates</a>
-                <?php endif; ?>
-                <?php if (user_has_permission('manage_rti')): ?>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_rti" class="nav-item<?= ($activePage ?? '') === 'admin_rti' ? ' active' : ''; ?>">RTI Management</a>
-                <?php endif; ?>
-                <?php if (user_has_permission('manage_dak')): ?>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_dak" class="nav-item<?= ($activePage ?? '') === 'admin_dak' ? ' active' : ''; ?>">Dak Management</a>
-                <?php endif; ?>
-                <?php if (user_has_permission('manage_inspection')): ?>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_inspection" class="nav-item<?= ($activePage ?? '') === 'admin_inspection' ? ' active' : ''; ?>">Inspection Management</a>
-                <?php endif; ?>
-                <?php if (user_has_permission('view_all_records') || user_has_permission('manage_documents_repository')): ?>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_repository" class="nav-item<?= ($activePage ?? '') === 'admin_repository' ? ' active' : ''; ?>">Documents Repository</a>
-                <?php endif; ?>
-                <?php if (user_has_permission('view_logs')): ?>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_logs" class="nav-item<?= ($activePage ?? '') === 'admin_logs' ? ' active' : ''; ?>">Usage Logs</a>
-                <?php endif; ?>
-                <?php if (user_has_permission('manage_housekeeping')): ?>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_housekeeping" class="nav-item<?= ($activePage ?? '') === 'admin_housekeeping' ? ' active' : ''; ?>">Housekeeping &amp; Retention</a>
-                <?php endif; ?>
-                <?php if (user_has_permission('view_all_records') || user_has_permission('view_mis_reports')): ?>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_mis" class="nav-item<?= ($activePage ?? '') === 'admin_mis' ? ' active' : ''; ?>">Reports &amp; Analytics (MIS)</a>
-                <?php endif; ?>
-                <?php if (user_has_permission('admin_backup')): ?>
-                    <?php if (license_feature_enabled($currentLicense, 'enable_backup')): ?>
-                        <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_backup" class="nav-item<?= ($activePage ?? '') === 'admin_backup' ? ' active' : ''; ?>">Backup &amp; Export</a>
-                    <?php else: ?>
-                        <span class="nav-item muted">Backup disabled by license</span>
-                    <?php endif; ?>
-                <?php endif; ?>
+                <?php foreach ($menuConfig['admin'] as $item): ?>
+                    <?php
+                    if (empty($item['visible'])) { continue; }
+                    $pageKey = $item['page'] ?? '';
+                    $permissionMap = [
+                        'admin_users' => 'manage_users',
+                        'admin_departments' => 'manage_departments',
+                        'admin_office' => 'manage_office_config',
+                        'admin_license' => 'manage_office_config',
+                        'admin_letter_templates' => 'manage_templates',
+                        'admin_documents' => 'manage_templates',
+                        'admin_rti' => 'manage_rti',
+                        'admin_dak' => 'manage_dak',
+                        'admin_inspection' => 'manage_inspection',
+                        'admin_repository' => 'manage_documents_repository',
+                        'admin_logs' => 'view_logs',
+                        'admin_housekeeping' => 'manage_housekeeping',
+                        'admin_mis' => 'view_mis_reports',
+                        'admin_backup' => 'admin_backup',
+                    ];
+                    $requiredPermission = $permissionMap[$pageKey] ?? null;
+                    if ($requiredPermission && !user_has_permission($requiredPermission)) { continue; }
+                    if ($pageKey === 'admin_backup' && !license_feature_enabled($currentLicense, 'enable_backup')) {
+                        echo '<span class="nav-item muted">' . htmlspecialchars(i18n_get($item['label_key'] ?? $pageKey)) . '</span>';
+                        continue;
+                    }
+                    $label = i18n_get($item['label_key'] ?? $pageKey);
+                    ?>
+                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=<?= htmlspecialchars($pageKey); ?>" class="nav-item<?= ($activePage ?? '') === $pageKey ? ' active' : ''; ?>"><?= htmlspecialchars($label); ?></a>
+                <?php endforeach; ?>
             <?php endif; ?>
         </nav>
         <main class="content">
