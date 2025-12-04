@@ -1,24 +1,24 @@
 <?php
-// Basic configuration for Yojaka v1.0
+// Basic configuration for Yojaka v1.0+
 
 return [
-    // Installer flag - set to true after running the setup wizard
-    'installed' => false,
+    // Debug controls: set to true for development to display errors
+    'debug' => true,
 
     // Base URL relative to server root; adjust if deployed under a subdirectory
     'base_url' => '/yojaka/public',
 
     // Paths
-    'root_path' => realpath(__DIR__ . '/..'),
-    'data_path' => realpath(__DIR__ . '/../data'),
-    'logs_path' => realpath(__DIR__ . '/../logs'),
+    'root_path' => __DIR__ . '/..',
+    'data_path' => __DIR__ . '/../data',
+    'logs_path' => __DIR__ . '/../logs',
     'usage_log_file' => 'usage.log',
-    'i18n_data_path' => realpath(__DIR__ . '/../data/i18n'),
+    'i18n_data_path' => __DIR__ . '/../data/i18n',
     'i18n_default_lang' => 'en',
     'i18n_available_languages' => ['en'],
-    'offices_data_path' => realpath(__DIR__ . '/../data/offices'),
-    'audit_data_path' => realpath(__DIR__ . '/../data/audit'),
-    'index_data_path' => realpath(__DIR__ . '/../data/index'),
+    'offices_data_path' => __DIR__ . '/../data/offices',
+    'audit_data_path' => __DIR__ . '/../data/audit',
+    'index_data_path' => __DIR__ . '/../data/index',
     'templates_path' => __DIR__ . '/../data/templates',
     'letters_templates_file' => 'letters.json',
     'document_templates_file' => 'documents.json',

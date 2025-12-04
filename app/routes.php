@@ -4,6 +4,12 @@
 function resolve_route(string $page): array
 {
     $routes = [
+        'login' => [
+            'title' => 'Login',
+            'view' => __DIR__ . '/views/login_form.php',
+            'requires_auth' => false,
+            'layout' => false,
+        ],
         'dashboard' => [
             'title' => 'Dashboard',
             'view' => __DIR__ . '/views/dashboard.php',

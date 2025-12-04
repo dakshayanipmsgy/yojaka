@@ -45,9 +45,6 @@ function is_overdue_generic(?string $due_date): bool
 function run_sla_checks(): void
 {
     global $config;
-    if (!YOJAKA_INSTALLED) {
-        return;
-    }
     $currentUser = current_user();
     if (!$currentUser) {
         return;
