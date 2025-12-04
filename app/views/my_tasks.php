@@ -4,10 +4,74 @@ $user = current_user();
 global $config;
 $moduleFilter = strtolower(trim($_GET['module'] ?? 'all'));
 $onlyOverdue = !empty($_GET['only_overdue']);
+$action = $_GET['action'] ?? null;
+$csrfToken = $_SESSION['csrf_token'] ?? ($_SESSION['csrf_token'] = bin2hex(random_bytes(16)));
+$taskMessage = '';
+$errors = [];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action) {
+    $submitted = $_POST['csrf_token'] ?? '';
+    if (!$submitted || !hash_equals($csrfToken, $submitted)) {
+        $errors[] = 'Invalid security token. Please try again.';
+    } else {
+        if ($action === 'accept_file' || $action === 'reject_file') {
+            $fileId = $_POST['file_id'] ?? '';
+            $entries = load_dak_entries();
+            foreach ($entries as &$entry) {
+                if (($entry['id'] ?? '') !== $fileId) {
+                    continue;
+                }
+                $remarks = trim($_POST['remarks'] ?? '');
+                if ($action === 'accept_file') {
+                    if (file_flow_accept_handover($entry, $user['username'] ?? '', $remarks)) {
+                        append_dak_movement($entry, 'accepted', $entry['assigned_to'] ?? null, $user['username'] ?? null, $remarks, [
+                            'status' => 'accepted',
+                            'accepted_by' => $user['username'] ?? null,
+                            'accepted_at' => gmdate('c'),
+                            'rejected_reason' => null,
+                        ]);
+                        $entry['updated_at'] = gmdate('c');
+                        $taskMessage = 'File accepted successfully.';
+                        write_audit_log('dak', $entry['id'], 'file_accepted');
+                    } else {
+                        $errors[] = 'Unable to accept this file.';
+                    }
+                } else {
+                    $reason = trim($_POST['reason'] ?? '');
+                    if ($reason === '') {
+                        $errors[] = 'Reason is required to reject a handover.';
+                        break;
+                    }
+                    if (file_flow_reject_handover($entry, $user['username'] ?? '', $reason)) {
+                        append_dak_movement($entry, 'rejected', $user['username'] ?? null, $entry['assigned_to'] ?? null, $reason, [
+                            'status' => 'rejected',
+                            'accepted_by' => null,
+                            'accepted_at' => null,
+                            'rejected_reason' => $reason,
+                        ]);
+                        $entry['updated_at'] = gmdate('c');
+                        $taskMessage = 'File rejection recorded.';
+                        write_audit_log('dak', $entry['id'], 'file_rejected', ['reason' => $reason]);
+                    } else {
+                        $errors[] = 'Unable to reject this handover.';
+                    }
+                }
+                break;
+            }
+            unset($entry);
+            if (empty($errors)) {
+                save_dak_entries($entries);
+                header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=my_tasks');
+                exit;
+            }
+        }
+    }
+}
 
 $rtiTasks = [];
 $dakTasks = [];
 $billTasks = [];
+$pendingAcceptance = [];
 
 $rtiCases = load_rti_cases();
 foreach ($rtiCases as $case) {
@@ -34,8 +98,16 @@ $dakEntries = load_dak_entries();
 foreach ($dakEntries as $entry) {
     $entry = enrich_workflow_defaults('dak', $entry);
     $isAssigned = ($entry['assigned_to'] ?? null) === ($user['username'] ?? null);
+    $waitingAcceptance = !empty($entry['pending_acceptance']) && ($entry['current_holder'] ?? null) === ($user['username'] ?? null);
     $terminal = $entry['workflow_state'] === 'closed' || ($entry['status'] ?? '') === 'Closed';
-    if ($isAssigned && !$terminal) {
+    if ($waitingAcceptance) {
+        $pendingAcceptance[] = [
+            'id' => $entry['id'] ?? '',
+            'subject' => $entry['subject'] ?? '',
+            'state' => $entry['workflow_state'] ?? ($entry['status'] ?? ''),
+            'holder' => $entry['current_holder'] ?? '',
+        ];
+    } elseif ($isAssigned && !$terminal) {
         $dueDate = compute_due_date($entry['date_received'] ?? '', ($config['sla']['dak_process_days'] ?? ($config['dak_overdue_days'] ?? 7)));
         $overdue = is_overdue_generic($dueDate);
         if ($onlyOverdue && !$overdue) {
@@ -92,6 +164,50 @@ foreach ($bills as $bill) {
         <button type="submit" class="btn">Apply</button>
     </form>
 </div>
+
+<?php if (!empty($errors)): ?>
+    <div class="alert error">
+        <ul>
+            <?php foreach ($errors as $err): ?>
+                <li><?= htmlspecialchars($err); ?></li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+<?php elseif ($taskMessage): ?>
+    <div class="alert success"><?= htmlspecialchars($taskMessage); ?></div>
+<?php endif; ?>
+
+<?php if (!empty($pendingAcceptance)): ?>
+    <h3>Files awaiting my acceptance</h3>
+    <div class="table-responsive">
+        <table class="table">
+            <thead><tr><th>ID</th><th>Subject</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+            <?php foreach ($pendingAcceptance as $task): ?>
+                <tr>
+                    <td><?= htmlspecialchars($task['id']); ?></td>
+                    <td><?= htmlspecialchars($task['subject']); ?></td>
+                    <td><?= htmlspecialchars($task['state']); ?></td>
+                    <td style="display:flex; gap:0.5rem;">
+                        <form method="post" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=my_tasks&action=accept_file" style="margin:0;">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+                            <input type="hidden" name="file_id" value="<?= htmlspecialchars($task['id']); ?>">
+                            <input type="hidden" name="remarks" value="">
+                            <button class="btn primary" type="submit">Accept</button>
+                        </form>
+                        <form method="post" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=my_tasks&action=reject_file" style="margin:0; display:flex; gap:0.25rem; align-items:center;">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+                            <input type="hidden" name="file_id" value="<?= htmlspecialchars($task['id']); ?>">
+                            <input type="text" name="reason" placeholder="Reason" required>
+                            <button class="btn" type="submit">Reject</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+<?php endif; ?>
 
 <?php if ($moduleFilter === 'all' || $moduleFilter === 'rti'): ?>
     <h3>RTI Tasks</h3>

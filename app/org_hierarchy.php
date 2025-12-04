@@ -121,6 +121,16 @@ function get_route_by_id(string $officeId, string $routeId)
     return null;
 }
 
+function get_user_position(string $username, string $officeId): ?array
+{
+    foreach (load_positions($officeId) as $pos) {
+        if (isset($pos['user_username']) && strtolower((string) $pos['user_username']) === strtolower($username)) {
+            return $pos;
+        }
+    }
+    return null;
+}
+
 function get_default_route_for_file_type(string $officeId, string $fileType, ?string $departmentId = null)
 {
     $routes = load_routes($officeId);

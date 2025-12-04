@@ -285,6 +285,7 @@ require_once __DIR__ . '/portal_rate_limit.php';
 require_once __DIR__ . '/qr.php';
 require_once __DIR__ . '/pdf_export.php';
 require_once __DIR__ . '/search.php';
+require_once __DIR__ . '/dashboard_config.php';
 require_once __DIR__ . '/org_hierarchy.php';
 require_once __DIR__ . '/file_flow.php';
 

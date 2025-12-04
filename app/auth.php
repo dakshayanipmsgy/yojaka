@@ -46,7 +46,9 @@ function load_users(): array
     }
     $json = file_get_contents($path);
     $data = json_decode($json, true);
-    return is_array($data) ? $data : [];
+    $data = is_array($data) ? $data : [];
+
+    return array_map('normalize_user_record', $data);
 }
 
 function save_users(array $users): void
@@ -68,6 +70,24 @@ function save_users(array $users): void
     fflush($handle);
     flock($handle, LOCK_UN);
     fclose($handle);
+}
+
+function normalize_user_record(array $user): array
+{
+    $defaultOfficeId = get_default_office_id();
+    $defaultDepartmentId = $user['department_id'] ?? ($user['department'] ?? null);
+    if (!$defaultDepartmentId) {
+        $departments = load_departments();
+        $defaultDepartmentId = (get_default_department($departments)['id'] ?? null) ?: 'dept_default';
+    }
+
+    $user['username'] = $user['username'] ?? ($user['email'] ?? null);
+    $user['password_hash'] = $user['password_hash'] ?? password_hash($user['password'] ?? '', PASSWORD_DEFAULT);
+    $user['role'] = $user['role'] ?? 'user';
+    $user['department_id'] = $user['department_id'] ?? $defaultDepartmentId;
+    $user['office_id'] = $user['office_id'] ?? $defaultOfficeId;
+
+    return $user;
 }
 
 function find_user_by_username(string $username): ?array
@@ -174,6 +194,8 @@ function login(string $username, string $password): bool
     $_SESSION['office_id'] = $user['office_id'] ?? get_default_office_id();
 
     log_event('login_success', $user['username']);
+    log_event('user_login', $user['username'], ['office_id' => $_SESSION['office_id'], 'role' => $_SESSION['role']]);
+    write_audit_log('auth', $user['username'], 'login', ['office_id' => $_SESSION['office_id']]);
 
     return true;
 }
@@ -181,6 +203,7 @@ function login(string $username, string $password): bool
 function logout(): void
 {
     $username = $_SESSION['username'] ?? null;
+    $officeId = $_SESSION['office_id'] ?? get_default_office_id();
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
         $params = session_get_cookie_params();
@@ -189,6 +212,8 @@ function logout(): void
     session_destroy();
     if ($username) {
         log_event('logout', $username);
+        log_event('user_logout', $username, ['office_id' => $officeId]);
+        write_audit_log('auth', $username, 'logout', ['office_id' => $officeId]);
     }
 }
 
