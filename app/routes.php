@@ -34,6 +34,10 @@ function resolve_route(string $page): array
             'title' => 'Grant Utilization Certificates',
             'view' => __DIR__ . '/views/guc.php',
         ],
+        'bills' => [
+            'title' => 'Contractor Bills',
+            'view' => __DIR__ . '/views/bills.php',
+        ],
         'rti' => [
             'title' => 'RTI Cases',
             'view' => __DIR__ . '/views/rti.php',
@@ -80,6 +84,11 @@ function resolve_route(string $page): array
             'title' => 'Department Profiles',
             'view' => __DIR__ . '/views/admin_departments.php',
             'permission' => 'manage_departments',
+        ],
+        'admin_office' => [
+            'title' => 'Office Settings',
+            'view' => __DIR__ . '/views/admin_office.php',
+            'permission' => 'manage_office_config',
         ],
     ];
 

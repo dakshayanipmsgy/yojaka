@@ -1,7 +1,10 @@
 <?php
-// Basic configuration for Yojaka v0.8
+// Basic configuration for Yojaka v1.0
 
 return [
+    // Installer flag - set to true after running the setup wizard
+    'installed' => false,
+
     // Base URL relative to server root; adjust if deployed under a subdirectory
     'base_url' => '/yojaka/public',
 
@@ -19,6 +22,14 @@ return [
     'documents_meeting_minutes_file' => 'meeting_minutes.json',
     'documents_work_orders_file' => 'work_orders.json',
     'documents_guc_file' => 'guc.json',
+
+    // Office / instance configuration
+    'office_data_path' => __DIR__ . '/../data/office',
+    'office_config_file' => 'office.json',
+
+    // Contractor bills configuration
+    'bills_data_path' => __DIR__ . '/../data/bills',
+    'bills_file' => 'bills.json',
 
     // Departments configuration
     'departments_data_path' => __DIR__ . '/../data/departments',
@@ -62,6 +73,8 @@ return [
             'view_all_records',
             'view_reports_basic',
             'admin_backup',
+            'manage_office_config',
+            'manage_bills',
         ],
         'officer' => [
             'create_documents',
@@ -69,11 +82,13 @@ return [
             'manage_dak',
             'manage_inspection',
             'view_reports_basic',
+            'manage_bills',
         ],
         'clerk' => [
             'create_documents',
             'manage_dak',
             'view_reports_basic',
+            'manage_bills',
         ],
         'viewer' => [
             'view_reports_basic',
@@ -87,6 +102,6 @@ return [
         'full_name' => 'System Administrator'
     ],
 
-// Security settings
+    // Security settings
     'display_errors' => false,
 ];
