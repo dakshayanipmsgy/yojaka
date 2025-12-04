@@ -95,6 +95,15 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_mis.php',
             'permission' => 'view_mis_reports',
         ],
+        'admin_repository' => [
+            'title' => 'Documents Repository',
+            'view' => __DIR__ . '/views/admin_documents_repository.php',
+            'permission' => 'view_all_records',
+        ],
+        'global_search' => [
+            'title' => 'Global Search',
+            'view' => __DIR__ . '/views/global_search.php',
+        ],
     ];
 
     if (isset($routes[$page])) {
