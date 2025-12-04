@@ -37,7 +37,6 @@ function default_menu_config(): array
             ['page' => 'admin_rti', 'visible' => true, 'label_key' => 'nav.admin_rti'],
             ['page' => 'admin_dak', 'visible' => true, 'label_key' => 'nav.admin_dak'],
             ['page' => 'admin_inspection', 'visible' => true, 'label_key' => 'nav.admin_inspection'],
-            ['page' => 'admin_hierarchy', 'visible' => true, 'label_key' => 'nav.admin_hierarchy'],
             ['page' => 'admin_routes', 'visible' => true, 'label_key' => 'nav.admin_routes'],
             ['page' => 'admin_ai', 'visible' => true, 'label_key' => 'nav.admin_ai'],
             ['page' => 'admin_replies', 'visible' => true, 'label_key' => 'nav.admin_replies'],

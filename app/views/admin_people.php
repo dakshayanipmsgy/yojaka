@@ -3,7 +3,9 @@ require_login();
 require_permission('manage_people');
 require_once __DIR__ . '/../staff.php';
 
-$currentOfficeId = get_current_office_id();
+// Department is the larger unit (legacy office folder). Positions/staff files
+// remain stored per department directory for backward compatibility.
+$currentOfficeId = get_current_department_id();
 $staffList = load_staff($currentOfficeId);
 $users = load_users();
 $positions = load_positions($currentOfficeId);

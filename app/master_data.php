@@ -9,6 +9,17 @@ function master_contractors_path(): string
     return master_data_dir() . '/contractors.json';
 }
 
+function contractors_data_path(?string $departmentId = null): string
+{
+    // Department is the top-level container (legacy office folder). We keep
+    // legacy master_data storage for compatibility.
+    if ($departmentId !== null && $departmentId !== '') {
+        return rtrim(YOJAKA_DATA_PATH, DIRECTORY_SEPARATOR) . '/' . trim($departmentId, '/ ') . '/contractors.json';
+    }
+
+    return master_contractors_path();
+}
+
 function load_json_list(string $path): array
 {
     if (!file_exists($path)) {
@@ -40,14 +51,65 @@ function save_json_list(string $path, array $list): bool
     return $result;
 }
 
-function load_contractors(): array
+function standardize_contractor(array $record, ?string $departmentId = null, ?string $officeId = null): array
 {
-    return load_json_list(master_contractors_path());
+    $record['contractor_id'] = $record['contractor_id'] ?? ($record['id'] ?? null);
+    $record['id'] = $record['id'] ?? $record['contractor_id'];
+    $record['name'] = $record['name'] ?? '';
+    $record['category'] = $record['category'] ?? '';
+    $record['department_id'] = $record['department_id'] ?? $departmentId;
+    $record['office_id'] = $record['office_id'] ?? $officeId;
+    $record['address'] = $record['address'] ?? '';
+    $record['gstin'] = $record['gstin'] ?? ($record['gst_no'] ?? '');
+    $record['pan'] = $record['pan'] ?? '';
+    $record['phone'] = $record['phone'] ?? '';
+    $record['email'] = $record['email'] ?? '';
+    $record['active'] = array_key_exists('active', $record) ? (bool) $record['active'] : true;
+    return $record;
 }
 
-function save_contractors(array $list): bool
+function load_contractors(?string $departmentId = null, ?string $officeId = null): array
 {
-    return save_json_list(master_contractors_path(), $list);
+    $paths = [];
+    if ($departmentId !== null && $departmentId !== '') {
+        $paths[] = contractors_data_path($departmentId);
+    }
+
+    // Legacy fallbacks.
+    $paths[] = master_contractors_path();
+    $paths[] = rtrim(YOJAKA_DATA_PATH, DIRECTORY_SEPARATOR) . '/contractors.json';
+
+    foreach (array_unique($paths) as $path) {
+        if (!file_exists($path)) {
+            continue;
+        }
+        $data = load_json_list($path);
+        if (!empty($data)) {
+            return array_map(static function ($row) use ($departmentId, $officeId) {
+                return standardize_contractor(is_array($row) ? $row : [], $departmentId, $officeId);
+            }, $data);
+        }
+    }
+
+    return [];
+}
+
+function save_contractors(?string $departmentId, array $list): bool
+{
+    $path = contractors_data_path($departmentId);
+    $payload = array_values(array_map(function ($row) use ($departmentId) {
+        return standardize_contractor($row, $departmentId, $row['office_id'] ?? null);
+    }, $list));
+
+    $saved = save_json_list($path, $payload);
+
+    // Maintain legacy copy if it already exists.
+    $legacyPath = master_contractors_path();
+    if ($saved && file_exists($legacyPath) && $path !== $legacyPath) {
+        save_json_list($legacyPath, $payload);
+    }
+
+    return $saved;
 }
 
 function next_master_id(array $items, string $prefix): string
@@ -65,13 +127,40 @@ function next_master_id(array $items, string $prefix): string
     return sprintf('%s-%04d', $prefix, $next);
 }
 
-function import_contractors_from_csv(string $fileTmpPath): int
+function upsert_contractor(array $existing, array $contractor): array
+{
+    $id = $contractor['contractor_id'] ?? ($contractor['id'] ?? null);
+    if ($id === null) {
+        $contractor['contractor_id'] = next_master_id($existing, 'C');
+        $contractor['id'] = $contractor['contractor_id'];
+        $existing[] = $contractor;
+        return $existing;
+    }
+
+    $updated = false;
+    foreach ($existing as &$row) {
+        if (($row['contractor_id'] ?? $row['id'] ?? null) === $id) {
+            $row = array_merge($row, $contractor);
+            $updated = true;
+            break;
+        }
+    }
+    unset($row);
+
+    if (!$updated) {
+        $existing[] = $contractor;
+    }
+
+    return $existing;
+}
+
+function import_contractors_from_csv(string $fileTmpPath, ?string $departmentId = null, ?string $officeId = null): int
 {
     $imported = 0;
     if (!is_readable($fileTmpPath)) {
         return 0;
     }
-    $contractors = load_contractors();
+    $contractors = load_contractors($departmentId, $officeId);
     if (($handle = fopen($fileTmpPath, 'r')) !== false) {
         $header = fgetcsv($handle);
         while (($row = fgetcsv($handle)) !== false) {
@@ -83,8 +172,8 @@ function import_contractors_from_csv(string $fileTmpPath): int
             if ($name === '') {
                 continue;
             }
-            $contractors[] = [
-                'id' => next_master_id($contractors, 'C'),
+            $contractor = [
+                'contractor_id' => next_master_id($contractors, 'C'),
                 'name' => $name,
                 'category' => trim($category),
                 'address' => trim($address),
@@ -92,13 +181,16 @@ function import_contractors_from_csv(string $fileTmpPath): int
                 'pan' => trim($pan),
                 'phone' => trim($phone),
                 'email' => trim($email),
+                'department_id' => $departmentId,
+                'office_id' => $officeId,
                 'active' => true,
             ];
+            $contractors = upsert_contractor($contractors, $contractor);
             $imported++;
         }
         fclose($handle);
     }
-    save_contractors($contractors);
+    save_contractors($departmentId, $contractors);
     return $imported;
 }
 
