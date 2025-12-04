@@ -24,6 +24,7 @@
   "nav.license": "License & Trial Status",
   "nav.logs": "Usage Logs",
   "nav.admin_users": "User Management",
+  "nav.admin_roles": "Admin Roles",
   "nav.admin_departments": "Department Profiles",
   "nav.admin_office": "Department Settings",
   "nav.admin_master_data": "Master Data (Contractors & Staff)",
