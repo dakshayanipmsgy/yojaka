@@ -36,6 +36,7 @@ function load_rti_cases(): array
 
     return array_map(function ($case) use ($currentOffice) {
         $case = ensure_record_office($case, $currentOffice);
+        $case = ensure_archival_defaults($case);
         return enrich_workflow_defaults('rti', $case);
     }, $data);
 }

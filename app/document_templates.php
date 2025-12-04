@@ -30,7 +30,12 @@ function load_document_templates(): array
     }
     $json = file_get_contents($path);
     $data = json_decode($json, true);
-    return is_array($data) ? $data : [];
+    $data = is_array($data) ? $data : [];
+    $currentOffice = get_current_office_id();
+    return array_map(function ($record) use ($currentOffice) {
+        $record = ensure_record_office($record, $currentOffice);
+        return ensure_archival_defaults($record);
+    }, $data);
 }
 
 function save_document_templates(array $templates): bool

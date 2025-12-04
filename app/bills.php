@@ -39,7 +39,10 @@ function load_bills(): array
     }
     $data = json_decode((string) file_get_contents($path), true);
     $data = is_array($data) ? $data : [];
-    return array_map(function ($bill) {
+    $currentOffice = get_current_office_id();
+    return array_map(function ($bill) use ($currentOffice) {
+        $bill = ensure_record_office($bill, $currentOffice);
+        $bill = ensure_archival_defaults($bill);
         return enrich_workflow_defaults('bills', $bill);
     }, $data);
 }
@@ -61,6 +64,16 @@ function save_bills(array $bills): bool
     }
     fclose($handle);
     return true;
+}
+
+function find_bill_by_id(array $bills, string $id): ?array
+{
+    foreach ($bills as $bill) {
+        if (($bill['id'] ?? '') === $id) {
+            return $bill;
+        }
+    }
+    return null;
 }
 
 function generate_next_bill_id(array $existing): string

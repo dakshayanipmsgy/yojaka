@@ -80,6 +80,11 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_backup.php',
             'permission' => 'admin_backup',
         ],
+        'admin_housekeeping' => [
+            'title' => 'Housekeeping & Retention',
+            'view' => __DIR__ . '/views/admin_housekeeping.php',
+            'permission' => 'manage_housekeeping',
+        ],
         'admin_departments' => [
             'title' => 'Department Profiles',
             'view' => __DIR__ . '/views/admin_departments.php',
@@ -116,6 +121,11 @@ function resolve_route(string $page): array
         'notifications' => [
             'title' => 'Notifications',
             'view' => __DIR__ . '/views/notifications.php',
+        ],
+        'case_export' => [
+            'title' => 'Case Bundle Export',
+            'view' => __DIR__ . '/views/case_export.php',
+            'permission' => 'admin_backup',
         ],
     ];
 

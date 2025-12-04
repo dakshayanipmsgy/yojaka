@@ -37,6 +37,7 @@ require_once __DIR__ . '/rendering.php';
 require_once __DIR__ . '/office.php';
 require_once __DIR__ . '/license.php';
 require_once __DIR__ . '/audit.php';
+require_once __DIR__ . '/archive.php';
 require_once __DIR__ . '/bills.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/templates.php';
@@ -50,6 +51,8 @@ require_once __DIR__ . '/attachments.php';
 require_once __DIR__ . '/workflow.php';
 require_once __DIR__ . '/notifications.php';
 require_once __DIR__ . '/sla.php';
+require_once __DIR__ . '/indexes.php';
+require_once __DIR__ . '/export.php';
 
 // Ensure logs directory exists early
 ensure_logs_directory();
@@ -63,6 +66,7 @@ if (YOJAKA_INSTALLED) {
 
     // Ensure audit directory exists
     ensure_audit_storage();
+    ensure_index_directory();
 
     // Update timezone from office config if available
     $currentOfficeId = get_current_office_id();
