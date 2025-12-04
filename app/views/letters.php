@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?= $mergedContent; ?>
     </div>
     <div class="actions" style="margin-top:10px; display:flex; gap:10px;">
-        <button type="button" onclick="window.print();">Print</button>
+        <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=print_document&amp;type=letter" target="_blank">Print</a>
         <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=letters&download=1">Download HTML</a>
     </div>
 </div>

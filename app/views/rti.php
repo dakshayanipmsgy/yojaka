@@ -438,6 +438,9 @@ if ($mode === 'list') {
             <h3>Details</h3>
             <p><?= nl2br(htmlspecialchars($case['details'] ?? '')); ?></p>
         </div>
+        <div class="actions" style="margin-top:0.5rem; display:flex; gap:10px;">
+            <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=print_document&amp;type=rti&amp;id=<?= urlencode($case['id']); ?>" target="_blank">Print</a>
+        </div>
         <div class="card" style="margin-top:1rem;">
             <h3>Workflow &amp; Assignment</h3>
             <p><strong>Workflow State:</strong> <?= htmlspecialchars($case['workflow_state'] ?? get_default_workflow_state('rti')); ?></p>
