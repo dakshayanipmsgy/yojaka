@@ -62,6 +62,7 @@ function load_dak_entries(): array
     $currentOffice = get_current_office_id();
     return array_map(function ($entry) use ($currentOffice) {
         $entry = ensure_record_office($entry, $currentOffice);
+        $entry = ensure_archival_defaults($entry);
         return enrich_workflow_defaults('dak', $entry);
     }, $data);
 }

@@ -15,6 +15,7 @@ return [
     'usage_log_file' => 'usage.log',
     'offices_data_path' => realpath(__DIR__ . '/../data/offices'),
     'audit_data_path' => realpath(__DIR__ . '/../data/audit'),
+    'index_data_path' => realpath(__DIR__ . '/../data/index'),
     'templates_path' => __DIR__ . '/../data/templates',
     'letters_templates_file' => 'letters.json',
     'document_templates_file' => 'documents.json',
@@ -83,6 +84,32 @@ return [
 
     'license_default_trial_days' => 30,
 
+    'retention' => [
+        'rti' => [
+            'active_days' => 365,
+            'delete_days' => null,
+        ],
+        'dak' => [
+            'active_days' => 365,
+            'delete_days' => null,
+        ],
+        'inspection' => [
+            'active_days' => 730,
+            'delete_days' => null,
+        ],
+        'documents' => [
+            'active_days' => 730,
+            'delete_days' => null,
+        ],
+        'bills' => [
+            'active_days' => 730,
+            'delete_days' => null,
+        ],
+        'attachments' => [
+            'delete_archived_after_days' => null,
+        ],
+    ],
+
     // Roles and permissions
     'roles_permissions' => [
         'admin' => [
@@ -101,6 +128,7 @@ return [
             'manage_office_config',
             'manage_bills',
             'manage_documents_repository',
+            'manage_housekeeping',
         ],
         'officer' => [
             'create_documents',

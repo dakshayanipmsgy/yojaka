@@ -8,7 +8,7 @@ $currentLicense = get_current_office_license();
 $officeReadOnly = office_is_read_only($currentLicense);
 $primaryColor = $officeConfig['theme']['primary_color'] ?? '#0f5aa5';
 $secondaryColor = $officeConfig['theme']['secondary_color'] ?? '#f5f7fb';
-$hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup') || user_has_permission('manage_office_config') || user_has_permission('view_mis_reports') || user_has_permission('view_all_records');
+$hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup') || user_has_permission('manage_office_config') || user_has_permission('view_mis_reports') || user_has_permission('view_all_records') || user_has_permission('manage_housekeeping');
 $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['username'])) : 0;
 ?>
 <!DOCTYPE html>
@@ -113,6 +113,9 @@ $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['us
                 <?php if (user_has_permission('view_logs')): ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_logs" class="nav-item<?= ($activePage ?? '') === 'admin_logs' ? ' active' : ''; ?>">Usage Logs</a>
                 <?php endif; ?>
+                <?php if (user_has_permission('manage_housekeeping')): ?>
+                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_housekeeping" class="nav-item<?= ($activePage ?? '') === 'admin_housekeeping' ? ' active' : ''; ?>">Housekeeping &amp; Retention</a>
+                <?php endif; ?>
                 <?php if (user_has_permission('view_all_records') || user_has_permission('view_mis_reports')): ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_mis" class="nav-item<?= ($activePage ?? '') === 'admin_mis' ? ' active' : ''; ?>">Reports &amp; Analytics (MIS)</a>
                 <?php endif; ?>
@@ -136,7 +139,7 @@ $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['us
         </main>
     </div>
     <footer class="footer">
-        Powered by Dakshayani &bull; Yojaka v1.4
+        Powered by Dakshayani &bull; Yojaka v1.5
     </footer>
     <?php if (is_license_trial($currentLicense ?? []) && !empty($currentLicense['watermark_text'])): ?>
         <div style="position:fixed; top:30%; left:0; right:0; text-align:center; opacity:0.1; font-size:64px; pointer-events:none; transform:rotate(-20deg); z-index:0;">

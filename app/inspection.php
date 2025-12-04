@@ -45,7 +45,12 @@ function load_inspection_templates(): array
     }
     $contents = file_get_contents($path);
     $data = json_decode($contents, true);
-    return is_array($data) ? $data : [];
+    $data = is_array($data) ? $data : [];
+    $currentOffice = get_current_office_id();
+    return array_map(function ($report) use ($currentOffice) {
+        $report = ensure_record_office($report, $currentOffice);
+        return ensure_archival_defaults($report);
+    }, $data);
 }
 
 function save_inspection_templates(array $templates): void

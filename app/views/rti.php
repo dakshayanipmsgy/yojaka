@@ -127,6 +127,15 @@ if ($mode === 'view') {
             if ($officeReadOnly) {
                 $errors[] = 'This office is in read-only mode; changes are blocked.';
             }
+            if (empty($errors) && isset($_POST['archive_action']) && $canManage && empty($case['archived'])) {
+                archive_entity($case, trim($_POST['archive_reason'] ?? 'Manual archive'));
+                update_rti_case($cases, $case);
+                save_rti_cases($cases);
+                log_event('rti_archived', $user['username'] ?? null, ['rti_id' => $case['id']]);
+                write_audit_log('rti', $case['id'], 'archive');
+                header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=rti&mode=view&id=' . urlencode($case['id']));
+                exit;
+            }
             if (empty($errors) && isset($_POST['assign_to']) && $canManage) {
                 $assignTo = trim($_POST['assign_to']);
                 if ($assignTo !== '') {
@@ -198,11 +207,25 @@ if ($mode === 'list') {
     if (!in_array($statusFilter, $statusOptions, true)) {
         $statusFilter = '';
     }
+    $archivedFilter = $_GET['archived'] ?? 'active';
+    $archivedAllowed = ['active', 'archived', 'all'];
+    if (!in_array($archivedFilter, $archivedAllowed, true)) {
+        $archivedFilter = 'active';
+    }
 
     $visibleCases = filter_items_search($visibleCases, $searchTerm, ['reference_number', 'applicant_name', 'subject', 'details']);
     if ($statusFilter !== '') {
         $visibleCases = array_filter($visibleCases, function ($case) use ($statusFilter) {
             return ($case['status'] ?? '') === $statusFilter;
+        });
+    }
+    if ($archivedFilter === 'active') {
+        $visibleCases = array_filter($visibleCases, function ($case) {
+            return empty($case['archived']);
+        });
+    } elseif ($archivedFilter === 'archived') {
+        $visibleCases = array_filter($visibleCases, function ($case) {
+            return !empty($case['archived']);
         });
     }
 
@@ -249,6 +272,14 @@ if ($mode === 'list') {
                     <?php endforeach; ?>
                 </select>
             </div>
+            <div class="form-field">
+                <label for="archived">Archived</label>
+                <select id="archived" name="archived" onchange="this.form.submit()">
+                    <option value="active" <?= $archivedFilter === 'active' ? 'selected' : ''; ?>>Active only</option>
+                    <option value="archived" <?= $archivedFilter === 'archived' ? 'selected' : ''; ?>>Archived only</option>
+                    <option value="all" <?= $archivedFilter === 'all' ? 'selected' : ''; ?>>All</option>
+                </select>
+            </div>
             <button type="submit" class="btn">Search</button>
         </form>
     </div>
@@ -273,7 +304,7 @@ if ($mode === 'list') {
                     <?php foreach ($visibleCases as $case): ?>
                         <?php $overdue = is_rti_overdue($case); ?>
                         <tr>
-                            <td><?= htmlspecialchars($case['id']); ?></td>
+                            <td><?= htmlspecialchars($case['id']); ?><?= !empty($case['archived']) ? ' <span class="badge">Archived</span>' : ''; ?></td>
                             <td><?= htmlspecialchars($case['reference_number'] ?? ''); ?></td>
                             <td><?= htmlspecialchars($case['applicant_name'] ?? ''); ?></td>
                             <td><?= htmlspecialchars($case['subject'] ?? ''); ?></td>
@@ -375,6 +406,10 @@ if ($mode === 'list') {
                 <div><span class="badge badge-soft"><?= htmlspecialchars($case['status'] ?? ''); ?></span></div>
             </div>
             <div>
+                <div class="muted">Archived</div>
+                <div><?= !empty($case['archived']) ? 'Yes (since ' . htmlspecialchars($case['archived_at'] ?? '') . ')' : 'No'; ?></div>
+            </div>
+            <div>
                 <div class="muted">Assigned To</div>
                 <div><?= htmlspecialchars($case['assigned_to'] ?? ''); ?></div>
             </div>
@@ -436,6 +471,20 @@ if ($mode === 'list') {
                 </div>
             <?php endif; ?>
         </div>
+        <?php if ($canManage && empty($case['archived']) && !$officeReadOnly): ?>
+            <div class="card" style="margin-top:1rem;">
+                <h3>Archive Case</h3>
+                <form method="post">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+                    <input type="hidden" name="archive_action" value="1">
+                    <div class="form-field">
+                        <label>Reason (optional)</label>
+                        <input type="text" name="archive_reason" placeholder="Retention policy">
+                    </div>
+                    <button class="btn danger" type="submit">Archive this RTI</button>
+                </form>
+            </div>
+        <?php endif; ?>
         <div class="card" style="margin-top:1rem;">
             <h3>Attachments</h3>
             <?php if (!empty($attachmentErrors)): ?>
@@ -492,6 +541,9 @@ if ($mode === 'list') {
         </div>
         <div style="margin-top:1rem;">
             <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=rti">Back to list</a>
+            <?php if (user_has_permission('admin_backup')): ?>
+                <a class="btn" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=case_export&module=rti&id=<?= urlencode($case['id'] ?? ''); ?>">Export Case Bundle</a>
+            <?php endif; ?>
         </div>
     </div>
 <?php endif; ?>
