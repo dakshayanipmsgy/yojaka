@@ -75,3 +75,19 @@ a { text-decoration: none; color: inherit; }
 .access-denied { max-width: 520px; margin: 3rem auto; text-align: center; background: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,0.08); }
 
 .footer { text-align: center; padding: 1rem; color: var(--muted); font-size: 0.9rem; }
+
+.card.stat { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; }
+.card.stat .stat-label { color: var(--muted); font-size: 0.95rem; }
+.card.stat .stat-value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+.card.stat .stat-value.warn { color: #b71c1c; }
+
+.info { background: #e8f1fb; border: 1px solid #d0def5; padding: 0.75rem 1rem; border-radius: 8px; color: #1f2d3d; margin-bottom: 1rem; }
+
+.table-responsive { width: 100%; overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.table th, .table td { border: 1px solid var(--border); padding: 0.6rem 0.75rem; text-align: left; }
+.table th { background: #f3f6fb; font-weight: 700; }
+.table tr:nth-child(even) { background: #fafbfe; }
+.table .badge { background: var(--primary); color: #fff; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.85rem; }
+
+.grid.stats { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }

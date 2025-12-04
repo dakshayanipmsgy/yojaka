@@ -84,11 +84,18 @@ function create_default_admin_if_needed(array $config): void
 function login(string $username, string $password): bool
 {
     $user = find_user_by_username($username);
-    if (!$user || empty($user['active'])) {
+    if (!$user) {
+        log_event('login_failure', $username, ['reason' => 'user_not_found']);
+        return false;
+    }
+
+    if (empty($user['active'])) {
+        log_event('login_failure', $username, ['reason' => 'inactive_user']);
         return false;
     }
 
     if (!password_verify($password, $user['password_hash'])) {
+        log_event('login_failure', $username, ['reason' => 'invalid_password']);
         return false;
     }
 
@@ -97,17 +104,23 @@ function login(string $username, string $password): bool
     $_SESSION['role'] = $user['role'];
     $_SESSION['full_name'] = $user['full_name'];
 
+    log_event('login_success', $user['username']);
+
     return true;
 }
 
 function logout(): void
 {
+    $username = $_SESSION['username'] ?? null;
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
         $params = session_get_cookie_params();
         setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
     }
     session_destroy();
+    if ($username) {
+        log_event('logout', $username);
+    }
 }
 
 function is_logged_in(): bool
