@@ -10,7 +10,10 @@ $pageTitle = $route['title'] ?? 'Yojaka';
 $viewFile = $route['view'] ?? null;
 $activePage = $page;
 
-if (!empty($route['role'])) {
+if (!empty($route['permission'])) {
+    require_permission($route['permission']);
+} elseif (!empty($route['role'])) {
+    // Backward compatibility with older role-based routes
     require_role($route['role']);
 }
 

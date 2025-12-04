@@ -1,8 +1,20 @@
 <?php
+require_login();
 $user = current_user();
+$canManageDak = user_has_permission('manage_dak');
+$canViewAll = user_has_permission('view_all_records');
+if (!$canManageDak && !user_has_permission('view_reports_basic')) {
+    require_permission('manage_dak');
+}
 $mode = $_GET['mode'] ?? 'list';
 $entries = load_dak_entries();
 $errors = [];
+
+if ($mode === 'create') {
+    if (!$canManageDak) {
+        require_permission('manage_dak');
+    }
+}
 
 if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $reference_no = trim($_POST['reference_no'] ?? '');
@@ -152,13 +164,15 @@ $targetId = $_GET['id'] ?? null;
     <?php
     $userDak = [];
     foreach ($entries as $entry) {
-        if (($entry['assigned_to'] ?? null) === ($user['username'] ?? null) || ($entry['created_by'] ?? null) === ($user['username'] ?? null)) {
+        if ($canViewAll || $canManageDak || ($entry['assigned_to'] ?? null) === ($user['username'] ?? null) || ($entry['created_by'] ?? null) === ($user['username'] ?? null)) {
             $userDak[] = $entry;
         }
     }
     ?>
     <div class="actions">
-        <a class="btn primary" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dak&mode=create">Add New Dak</a>
+        <?php if ($canManageDak): ?>
+            <a class="btn primary" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dak&mode=create">Add New Dak</a>
+        <?php endif; ?>
     </div>
     <?php if (empty($userDak)): ?>
         <p>No dak entries assigned to you yet.</p>

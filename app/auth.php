@@ -60,12 +60,39 @@ function find_user_by_id($id): ?array
     return null;
 }
 
+function ensure_users_have_departments(): void
+{
+    $users = load_users();
+    if (empty($users)) {
+        return;
+    }
+    $departments = load_departments();
+    $defaultDept = get_default_department($departments);
+    if (!$defaultDept) {
+        return;
+    }
+    $defaultId = $defaultDept['id'];
+    $updated = false;
+    foreach ($users as &$user) {
+        if (empty($user['department_id'])) {
+            $user['department_id'] = $defaultId;
+            $updated = true;
+        }
+    }
+    unset($user);
+    if ($updated) {
+        save_users($users);
+    }
+}
+
 function create_default_admin_if_needed(array $config): void
 {
     $path = users_file_path();
     $users = load_users();
 
     if (!file_exists($path) || empty($users)) {
+        $departments = load_departments();
+        $defaultDept = get_default_department($departments);
         $admin = $config['default_admin'];
         $now = gmdate('c');
         $defaultUser = [
@@ -73,6 +100,7 @@ function create_default_admin_if_needed(array $config): void
             'username' => $admin['username'],
             'password_hash' => password_hash($admin['password'], PASSWORD_DEFAULT),
             'role' => 'admin',
+            'department_id' => $defaultDept['id'] ?? 'dept_default',
             'full_name' => $admin['full_name'],
             'created_at' => $now,
             'active' => true,
@@ -103,6 +131,7 @@ function login(string $username, string $password): bool
     $_SESSION['username'] = $user['username'];
     $_SESSION['role'] = $user['role'];
     $_SESSION['full_name'] = $user['full_name'];
+    $_SESSION['department_id'] = $user['department_id'] ?? null;
 
     log_event('login_success', $user['username']);
 
@@ -136,6 +165,25 @@ function current_user(): ?array
     return find_user_by_id($_SESSION['user_id']);
 }
 
+function get_current_user_role(): ?string
+{
+    return $_SESSION['role'] ?? (current_user()['role'] ?? null);
+}
+
+function user_has_permission(string $permission): bool
+{
+    global $config;
+    if (!is_logged_in()) {
+        return false;
+    }
+    $role = get_current_user_role();
+    $map = $config['roles_permissions'] ?? [];
+    if (!$role || empty($map[$role])) {
+        return false;
+    }
+    return in_array($permission, $map[$role], true);
+}
+
 function require_login(): void
 {
     if (!is_logged_in()) {
@@ -154,3 +202,13 @@ function require_role(string $role): void
         exit;
     }
 }
+
+function require_permission(string $permission): void
+{
+    if (!user_has_permission($permission)) {
+        include __DIR__ . '/views/access_denied.php';
+        exit;
+    }
+}
+
+?>

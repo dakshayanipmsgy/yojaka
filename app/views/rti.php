@@ -2,6 +2,11 @@
 require_login();
 
 $user = current_user();
+$canManage = user_has_permission('manage_rti');
+$canViewAll = user_has_permission('view_all_records');
+if (!$canManage && !user_has_permission('view_reports_basic')) {
+    require_permission('manage_rti');
+}
 $cases = load_rti_cases();
 $mode = $_GET['mode'] ?? 'list';
 $mode = in_array($mode, ['list', 'create', 'view'], true) ? $mode : 'list';
@@ -14,6 +19,12 @@ $_SESSION['rti_csrf_token'] = $csrfToken;
 function sanitize_field($value): string
 {
     return trim((string) $value);
+}
+
+if ($mode === 'create') {
+    if (!$canManage) {
+        require_permission('manage_rti');
+    }
 }
 
 if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -79,14 +90,14 @@ if ($mode === 'view') {
     $case = $id ? find_rti_by_id($cases, $id) : null;
     if (!$case) {
         $errors[] = 'RTI case not found.';
-    } elseif (($user['role'] ?? '') !== 'admin' && ($case['created_by'] ?? '') !== ($user['username'] ?? '')) {
+    } elseif (!$canViewAll && ($case['created_by'] ?? '') !== ($user['username'] ?? '')) {
         $errors[] = 'You are not allowed to view this RTI.';
         $case = null;
     }
 }
 
 if ($mode === 'list') {
-    if (($user['role'] ?? '') === 'admin') {
+    if ($canViewAll || $canManage) {
         $visibleCases = $cases;
     } else {
         $visibleCases = array_filter($cases, function ($case) use ($user) {
@@ -109,9 +120,11 @@ if ($mode === 'list') {
 <?php if ($mode === 'list'): ?>
     <div class="actions" style="margin-bottom: 1rem; display:flex; justify-content: space-between; align-items: center; gap: 1rem;">
         <div>
-            <strong>Your RTI cases</strong> <?= ($user['role'] ?? '') === 'admin' ? '(all cases shown for admin)' : ''; ?>
+            <strong>Your RTI cases</strong> <?= ($canViewAll || $canManage) ? '(all cases shown per your permissions)' : ''; ?>
         </div>
-        <a class="btn-primary" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=rti&mode=create">Create New RTI</a>
+        <?php if ($canManage): ?>
+            <a class="btn-primary" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=rti&mode=create">Create New RTI</a>
+        <?php endif; ?>
     </div>
     <div class="table-responsive">
         <table class="table">
