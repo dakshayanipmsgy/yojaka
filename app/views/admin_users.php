@@ -1,7 +1,6 @@
 <?php
 require_permission('manage_users');
 require_once __DIR__ . '/../auth.php';
-require_once __DIR__ . '/../departments.php';
 
 $currentUser = current_user();
 
@@ -14,12 +13,6 @@ $notice = '';
 $generatedPassword = '';
 
 $users = load_users();
-$departmentProfiles = load_departments();
-$departmentProfiles = array_column($departmentProfiles, null, 'id');
-$deptNames = [];
-foreach ($departmentProfiles as $deptId => $dept) {
-    $deptNames[$deptId] = $dept['name'] ?? $deptId;
-}
 $offices = load_offices_registry();
 $officeNames = [];
 foreach ($offices as $office) {
@@ -72,7 +65,6 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($erro
     $username = trim($_POST['username'] ?? '');
     $fullName = trim($_POST['full_name'] ?? '');
     $role = trim($_POST['role'] ?? '');
-    $departmentId = trim($_POST['department_id'] ?? '');
     $officeId = trim($_POST['office_id'] ?? get_default_office_id());
     $active = !empty($_POST['active']);
     $password = trim($_POST['password'] ?? '');
@@ -85,9 +77,6 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($erro
     }
     if (!admin_users_validate_role($role, $roleOptions)) {
         $errors[] = 'Invalid role selected.';
-    }
-    if ($departmentId !== '' && !isset($deptNames[$departmentId])) {
-        $errors[] = 'Invalid department selected.';
     }
     if ($officeId === '') {
         $officeId = get_default_office_id();
@@ -107,7 +96,6 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($erro
             'username' => $username,
             'full_name' => $fullName !== '' ? $fullName : $username,
             'role' => $role,
-            'department_id' => $departmentId ?: null,
             'office_id' => $officeId,
             'active' => $active,
             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
@@ -135,15 +123,11 @@ if ($action === 'edit' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors
     } else {
         $fullName = trim($_POST['full_name'] ?? '');
         $role = trim($_POST['role'] ?? '');
-        $departmentId = trim($_POST['department_id'] ?? '');
         $officeId = trim($_POST['office_id'] ?? get_default_office_id());
         $active = !empty($_POST['active']);
 
         if (!admin_users_validate_role($role, $roleOptions)) {
             $errors[] = 'Invalid role selected.';
-        }
-        if ($departmentId !== '' && !isset($deptNames[$departmentId])) {
-            $errors[] = 'Invalid department selected.';
         }
         $adminCount = admin_users_count_active_admins($users);
         $demotingLastAdmin = (($targetUser['role'] ?? '') === 'admin' && $role !== 'admin' && $adminCount <= 1) || (($targetUser['role'] ?? '') === 'admin' && !$active && $adminCount <= 1);
@@ -154,7 +138,6 @@ if ($action === 'edit' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors
         if (empty($errors)) {
             $targetUser['full_name'] = $fullName !== '' ? $fullName : ($targetUser['full_name'] ?? $username);
             $targetUser['role'] = $role;
-            $targetUser['department_id'] = $departmentId ?: null;
             $targetUser['office_id'] = $officeId;
             $targetUser['active'] = $active;
             $targetUser['updated_at'] = gmdate('c');
@@ -260,15 +243,6 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
             </select>
         </div>
         <div class="form-field">
-            <label for="department_id"><?= htmlspecialchars(i18n_get('users.department')); ?></label>
-            <select name="department_id" id="department_id">
-                <option value="">--</option>
-                <?php foreach ($departmentProfiles as $deptId => $dept): ?>
-                    <option value="<?= htmlspecialchars($deptId); ?>" <?= ($targetUser['department_id'] ?? '') === $deptId ? 'selected' : ''; ?>><?= htmlspecialchars($dept['name'] ?? $deptId); ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="form-field">
             <label for="office_id"><?= htmlspecialchars(i18n_get('users.office')); ?></label>
             <select name="office_id" id="office_id">
                 <?php foreach ($officeNames as $id => $name): ?>
@@ -308,7 +282,6 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
                 <th><?= htmlspecialchars(i18n_get('users.username')); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.full_name')); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.role')); ?></th>
-                <th><?= htmlspecialchars(i18n_get('users.department')); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.active')); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.created_at') ?? 'Created'); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.actions') ?? 'Actions'); ?></th>
@@ -316,18 +289,13 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
         </thead>
         <tbody>
             <?php if (empty($users)): ?>
-                <tr><td colspan="7">No users found.</td></tr>
+                <tr><td colspan="6">No users found.</td></tr>
             <?php else: ?>
                 <?php foreach ($users as $listedUser): ?>
                     <tr>
                         <td><?= htmlspecialchars($listedUser['username'] ?? ''); ?></td>
                         <td><?= htmlspecialchars($listedUser['full_name'] ?? ''); ?></td>
                         <td><span class="badge"><?= htmlspecialchars($listedUser['role'] ?? ''); ?></span></td>
-                        <?php 
-                        $deptId = $listedUser['department_id'] ?? ''; 
-                        $deptName = $departmentProfiles[$deptId]['name'] ?? ''; 
-                        ?>
-                        <td><?= htmlspecialchars($deptName); ?></td>
                         <td><?= !empty($listedUser['active']) ? i18n_get('portal.yes') : i18n_get('portal.no'); ?></td>
                         <td><?= htmlspecialchars($listedUser['created_at'] ?? ''); ?></td>
                         <td>
@@ -365,15 +333,6 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
         <select name="office_id" id="office_id">
             <?php foreach ($officeNames as $id => $name): ?>
                 <option value="<?= htmlspecialchars($id); ?>" <?= $id === get_default_office_id() ? 'selected' : ''; ?>><?= htmlspecialchars($name); ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-    <div class="form-field">
-        <label for="department_id"><?= htmlspecialchars(i18n_get('users.department')); ?></label>
-        <select name="department_id" id="department_id">
-            <option value="">--</option>
-            <?php foreach ($departmentProfiles as $deptId => $dept): ?>
-                <option value="<?= htmlspecialchars($deptId); ?>"><?= htmlspecialchars($dept['name'] ?? $deptId); ?></option>
             <?php endforeach; ?>
         </select>
     </div>
