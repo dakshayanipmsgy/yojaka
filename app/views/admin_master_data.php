@@ -7,10 +7,8 @@ $notices = [];
 $csrf = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(16));
 $_SESSION['csrf_token'] = $csrf;
 
-$officeId = get_current_office_id();
-
 $contractors = load_contractors();
-$staff = load_staff($officeId);
+$staff = load_staff();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['csrf_token'] ?? '';
@@ -25,9 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if (!empty($_FILES['staff_csv']['tmp_name'])) {
             $tmp = $_FILES['staff_csv']['tmp_name'];
-            $imported = import_staff_from_csv($officeId, $tmp);
+            $imported = import_staff_from_csv($tmp);
             $notices[] = $imported . ' staff records imported.';
-            $staff = load_staff($officeId);
+            $staff = load_staff();
         }
     }
 }
@@ -86,8 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php else: ?>
                         <?php foreach ($staff as $person): ?>
                             <tr>
-                                <td><?= htmlspecialchars($person['staff_id'] ?? ($person['id'] ?? '')); ?></td>
-                                <td><?= htmlspecialchars($person['full_name'] ?? ($person['name'] ?? '')); ?></td>
+                                <td><?= htmlspecialchars($person['id'] ?? ''); ?></td>
+                                <td><?= htmlspecialchars($person['name'] ?? ''); ?></td>
                                 <td><?= htmlspecialchars($person['designation'] ?? ''); ?></td>
                                 <td><?= htmlspecialchars($person['role'] ?? ''); ?></td>
                                 <td><?= htmlspecialchars($person['department_id'] ?? ''); ?></td>
