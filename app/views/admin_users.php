@@ -55,6 +55,7 @@ function admin_users_validate_role(string $role, array $roleOptions): bool
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    unset($_POST['department_id'], $_POST['department']);
     $submittedToken = $_POST['csrf_token'] ?? '';
     if (!$submittedToken || !hash_equals($_SESSION['user_admin_csrf'], $submittedToken)) {
         $errors[] = 'Security token mismatch. Please retry.';
