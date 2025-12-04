@@ -14,6 +14,16 @@ $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['us
 $menuConfig = get_office_menu_config();
 $availableLanguages = i18n_available_languages();
 $currentLanguage = i18n_current_language();
+
+// Render the requested view before sending any layout markup so redirects can run safely.
+$viewContent = '';
+if (!empty($viewFile) && file_exists($viewFile)) {
+    ob_start();
+    include $viewFile;
+    $viewContent = ob_get_clean();
+} else {
+    $viewContent = '<p>Page not found.</p>';
+}
 ?>
 <!DOCTYPE html>
 <html lang="<?= htmlspecialchars($currentLanguage); ?>">
@@ -135,9 +145,7 @@ $currentLanguage = i18n_current_language();
             <div class="breadcrumb">Home &gt; <?= htmlspecialchars($pageTitle); ?></div>
             <h1><?= htmlspecialchars($pageTitle); ?></h1>
             <section class="panel">
-                <?php if (!empty($viewFile) && file_exists($viewFile)) { include $viewFile; } else { ?>
-                    <p>Page not found.</p>
-                <?php } ?>
+                <?= $viewContent; ?>
             </section>
         </main>
     </div>
