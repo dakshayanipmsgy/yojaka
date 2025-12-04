@@ -36,6 +36,15 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_rti.php',
             'role' => 'admin',
         ],
+        'dak' => [
+            'title' => 'Dak & File Movement',
+            'view' => __DIR__ . '/views/dak.php',
+        ],
+        'admin_dak' => [
+            'title' => 'Dak Management',
+            'view' => __DIR__ . '/views/admin_dak.php',
+            'role' => 'admin',
+        ],
     ];
 
     if (isset($routes[$page])) {
