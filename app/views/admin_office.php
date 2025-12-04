@@ -33,6 +33,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        $office['portal']['enabled'] = isset($_POST['portal']['enabled']);
+        $office['portal']['features']['rti_status'] = isset($_POST['portal']['features']['rti_status']);
+        $office['portal']['features']['dak_status'] = isset($_POST['portal']['features']['dak_status']);
+        $office['portal']['features']['request'] = isset($_POST['portal']['features']['request']);
+        $office['portal']['kiosk']['enabled'] = isset($_POST['portal']['kiosk']['enabled']);
+        $office['portal']['kiosk']['default_action'] = trim($_POST['portal']['kiosk']['default_action'] ?? ($office['portal']['kiosk']['default_action'] ?? ''));
+        $idleTimeout = (int) ($_POST['portal']['kiosk']['idle_timeout_seconds'] ?? ($office['portal']['kiosk']['idle_timeout_seconds'] ?? 300));
+        $office['portal']['kiosk']['idle_timeout_seconds'] = $idleTimeout > 0 ? $idleTimeout : 300;
+
         if (save_office_config($currentOfficeId, $office)) {
             echo '<div class="info">Office configuration updated successfully.</div>';
         } else {
@@ -97,6 +106,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php foreach (['rti' => 'RTI', 'dak' => 'Dak & File', 'inspection' => 'Inspection', 'bills' => 'Contractor Bills', 'meeting_minutes' => 'Meeting Minutes', 'work_orders' => 'Work Orders', 'guc' => 'GUC'] as $key => $label): ?>
             <label><input type="checkbox" name="modules[enable_<?= htmlspecialchars($key); ?>]" <?= !empty($office['modules']['enable_' . $key]) ? 'checked' : ''; ?>> Enable <?= htmlspecialchars($label); ?></label>
         <?php endforeach; ?>
+    </div>
+
+    <h3>Public Portal</h3>
+    <div class="grid">
+        <label><input type="checkbox" name="portal[enabled]" <?= !empty($office['portal']['enabled']) ? 'checked' : ''; ?>> Enable public portal for this office</label>
+        <label><input type="checkbox" name="portal[features][rti_status]" <?= !empty($office['portal']['features']['rti_status']) ? 'checked' : ''; ?>> Allow RTI status checks</label>
+        <label><input type="checkbox" name="portal[features][dak_status]" <?= !empty($office['portal']['features']['dak_status']) ? 'checked' : ''; ?>> Allow Dak/File status checks</label>
+        <label><input type="checkbox" name="portal[features][request]" <?= !empty($office['portal']['features']['request']) ? 'checked' : ''; ?>> Allow public requests / grievances</label>
+    </div>
+    <p><strong>Public portal URL:</strong> <?= htmlspecialchars(YOJAKA_BASE_URL . '/portal.php?office=' . urlencode($currentOfficeId)); ?></p>
+
+    <h4>Kiosk Mode</h4>
+    <div class="grid">
+        <label><input type="checkbox" name="portal[kiosk][enabled]" <?= !empty($office['portal']['kiosk']['enabled']) ? 'checked' : ''; ?>> Enable kiosk layout</label>
+        <div class="form-field">
+            <label>Default kiosk action</label>
+            <select name="portal[kiosk][default_action]">
+                <option value="" <?= empty($office['portal']['kiosk']['default_action']) ? 'selected' : ''; ?>>Landing page</option>
+                <option value="rti_status" <?= ($office['portal']['kiosk']['default_action'] ?? '') === 'rti_status' ? 'selected' : ''; ?>>RTI Status</option>
+                <option value="dak_status" <?= ($office['portal']['kiosk']['default_action'] ?? '') === 'dak_status' ? 'selected' : ''; ?>>Dak / File Status</option>
+                <option value="request" <?= ($office['portal']['kiosk']['default_action'] ?? '') === 'request' ? 'selected' : ''; ?>>Request / Grievance</option>
+            </select>
+        </div>
+        <div class="form-field">
+            <label>Idle timeout (seconds)</label>
+            <input type="number" name="portal[kiosk][idle_timeout_seconds]" min="30" value="<?= htmlspecialchars($office['portal']['kiosk']['idle_timeout_seconds'] ?? 300); ?>">
+        </div>
     </div>
 
     <div class="form-actions">

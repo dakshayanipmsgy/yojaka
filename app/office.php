@@ -75,6 +75,19 @@ function default_office_config(): array
             ],
             'dashboard_widgets' => function_exists('default_dashboard_widgets') ? default_dashboard_widgets() : [],
         ],
+        'portal' => [
+            'enabled' => false,
+            'features' => [
+                'rti_status' => true,
+                'dak_status' => true,
+                'request' => true,
+            ],
+            'kiosk' => [
+                'enabled' => false,
+                'default_action' => '',
+                'idle_timeout_seconds' => 300,
+            ],
+        ],
     ];
 }
 
@@ -279,6 +292,9 @@ function get_default_office_id(): string
 
 function get_current_office_id(): string
 {
+    if (!empty($GLOBALS['current_office_id_override'])) {
+        return $GLOBALS['current_office_id_override'];
+    }
     $user = current_user();
     if ($user && !empty($user['office_id'])) {
         return $user['office_id'];
@@ -304,6 +320,17 @@ function ensure_record_office(array $record, string $officeId): array
 function get_current_office_config(): array
 {
     return $GLOBALS['current_office_config'] ?? load_office_config_by_id(get_current_office_id());
+}
+
+function find_office_registry_entry(string $officeId): ?array
+{
+    $registry = load_offices_registry();
+    foreach ($registry as $office) {
+        if (($office['id'] ?? '') === $officeId) {
+            return $office;
+        }
+    }
+    return null;
 }
 
 
