@@ -12,6 +12,10 @@ function org_posts_file(): string
 
 function org_positions_file(): string
 {
+    $modern = org_data_dir() . '/positions.json';
+    if (file_exists($modern)) {
+        return $modern;
+    }
     return org_data_dir() . '/hierarchy.json';
 }
 
@@ -59,25 +63,29 @@ function save_posts(string $officeId, array $posts): bool
     return org_save_json(org_posts_file(), $filtered);
 }
 
-function load_positions(string $officeId): array
-{
-    $positions = org_load_json(org_positions_file());
-    return array_values(array_filter($positions, static function ($pos) use ($officeId) {
-        return ($pos['office_id'] ?? null) === $officeId;
-    }));
+if (!function_exists('load_positions')) {
+    function load_positions(string $officeId): array
+    {
+        $positions = org_load_json(org_positions_file());
+        return array_values(array_filter($positions, static function ($pos) use ($officeId) {
+            return ($pos['office_id'] ?? null) === $officeId;
+        }));
+    }
 }
 
-function save_positions(string $officeId, array $positions): bool
-{
-    $existing = org_load_json(org_positions_file());
-    $filtered = array_values(array_filter($existing, static function ($pos) use ($officeId) {
-        return ($pos['office_id'] ?? null) !== $officeId;
-    }));
-    foreach ($positions as $pos) {
-        $pos['office_id'] = $officeId;
-        $filtered[] = $pos;
+if (!function_exists('save_positions')) {
+    function save_positions(string $officeId, array $positions): bool
+    {
+        $existing = org_load_json(org_positions_file());
+        $filtered = array_values(array_filter($existing, static function ($pos) use ($officeId) {
+            return ($pos['office_id'] ?? null) !== $officeId;
+        }));
+        foreach ($positions as $pos) {
+            $pos['office_id'] = $officeId;
+            $filtered[] = $pos;
+        }
+        return org_save_json(org_positions_file(), $filtered);
     }
-    return org_save_json(org_positions_file(), $filtered);
 }
 
 function load_routes(string $officeId): array
@@ -123,9 +131,24 @@ function get_route_by_id(string $officeId, string $routeId)
 
 function get_user_position(string $username, string $officeId): ?array
 {
-    foreach (load_positions($officeId) as $pos) {
+    $staff = function_exists('find_staff_by_username') ? find_staff_by_username($officeId, $username) : null;
+    $positions = load_positions($officeId);
+    foreach ($positions as $pos) {
         if (isset($pos['user_username']) && strtolower((string) $pos['user_username']) === strtolower($username)) {
             return $pos;
+        }
+    }
+    if ($staff && !empty($staff['staff_id']) && function_exists('load_position_assignments')) {
+        $assignments = load_position_assignments($officeId);
+        foreach ($assignments as $assignment) {
+            if (($assignment['staff_id'] ?? null) === $staff['staff_id'] && ($assignment['effective_to'] ?? null) === null) {
+                foreach ($positions as $pos) {
+                    $pid = $pos['position_id'] ?? ($pos['id'] ?? null);
+                    if ($pid === ($assignment['position_id'] ?? null)) {
+                        return $pos;
+                    }
+                }
+            }
         }
     }
     return null;

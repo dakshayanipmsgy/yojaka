@@ -108,6 +108,11 @@ if (!empty($viewFile) && file_exists($viewFile)) {
                     $permissionMap = [
                         'admin_users' => 'manage_users',
                         'admin_roles' => 'manage_users',
+                        'admin_org_people' => 'manage_users',
+                        'admin_org_roles' => 'manage_users',
+                        'admin_org_positions' => 'manage_office_config',
+                        'admin_org_routes' => 'manage_office_config',
+                        'admin_org_onboarding' => 'manage_office_config',
                         'admin_departments' => 'manage_departments',
                         'admin_office' => 'manage_office_config',
                         'admin_license' => 'manage_office_config',

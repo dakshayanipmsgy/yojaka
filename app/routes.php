@@ -19,6 +19,31 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_users.php',
             'permission' => 'manage_users',
         ],
+        'admin_org_people' => [
+            'title' => 'Organization & Access: People & Users',
+            'view' => __DIR__ . '/views/admin_org_people.php',
+            'permission' => 'manage_users',
+        ],
+        'admin_org_roles' => [
+            'title' => 'Organization & Access: Roles',
+            'view' => __DIR__ . '/views/admin_org_roles.php',
+            'permission' => 'manage_users',
+        ],
+        'admin_org_positions' => [
+            'title' => 'Organization & Access: Positions',
+            'view' => __DIR__ . '/views/admin_org_positions.php',
+            'permission' => 'manage_office_config',
+        ],
+        'admin_org_routes' => [
+            'title' => 'Organization & Access: Routes',
+            'view' => __DIR__ . '/views/admin_org_routes.php',
+            'permission' => 'manage_office_config',
+        ],
+        'admin_org_onboarding' => [
+            'title' => 'Department Onboarding',
+            'view' => __DIR__ . '/views/admin_org_onboarding.php',
+            'permission' => 'manage_office_config',
+        ],
         'admin_logs' => [
             'title' => 'Usage Logs',
             'view' => __DIR__ . '/views/admin_logs.php',
