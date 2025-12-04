@@ -1,5 +1,6 @@
 <?php
 require_permission('manage_users');
+require_once __DIR__ . '/../auth.php';
 
 $csrfToken = $_SESSION['user_admin_csrf'] ?? bin2hex(random_bytes(16));
 $_SESSION['user_admin_csrf'] = $csrfToken;
@@ -23,10 +24,16 @@ foreach ($offices as $office) {
 if (empty($officeNames)) {
     $officeNames[get_default_office_id()] = 'Default Office';
 }
-$permissions = load_permissions_config();
-$roleOptions = array_keys($permissions['roles'] ?? []);
+$allRoles = get_all_roles_for_dropdown();
+$roleOptions = array_column($allRoles, 'id');
 if (empty($roleOptions) && !empty($config['roles_permissions'])) {
     $roleOptions = array_keys($config['roles_permissions']);
+    $allRoles = array_map(static function ($roleId) {
+        return [
+            'id' => $roleId,
+            'label' => ucfirst(str_replace('_', ' ', $roleId)),
+        ];
+    }, $roleOptions);
 }
 
 function admin_users_generate_password(): string
@@ -243,8 +250,8 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
         <div class="form-field">
             <label for="role"><?= htmlspecialchars(i18n_get('users.role')); ?></label>
             <select name="role" id="role" required>
-                <?php foreach ($roleOptions as $roleKey): ?>
-                    <option value="<?= htmlspecialchars($roleKey); ?>" <?= ($targetUser['role'] ?? '') === $roleKey ? 'selected' : ''; ?>><?= htmlspecialchars(ucfirst($roleKey)); ?></option>
+                <?php foreach ($allRoles as $role): ?>
+                    <option value="<?= htmlspecialchars($role['id']); ?>" <?= ($targetUser['role'] ?? '') === ($role['id'] ?? '') ? 'selected' : ''; ?>><?= htmlspecialchars($role['label'] ?? $role['id']); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
@@ -298,7 +305,6 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
                 <th><?= htmlspecialchars(i18n_get('users.full_name')); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.role')); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.department')); ?></th>
-                <th><?= htmlspecialchars(i18n_get('users.office')); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.active')); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.created_at') ?? 'Created'); ?></th>
                 <th><?= htmlspecialchars(i18n_get('users.actions') ?? 'Actions'); ?></th>
@@ -306,7 +312,7 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
         </thead>
         <tbody>
             <?php if (empty($users)): ?>
-                <tr><td colspan="8">No users found.</td></tr>
+                <tr><td colspan="7">No users found.</td></tr>
             <?php else: ?>
                 <?php foreach ($users as $user): ?>
                     <tr>
@@ -314,7 +320,6 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
                         <td><?= htmlspecialchars($user['full_name'] ?? ''); ?></td>
                         <td><span class="badge"><?= htmlspecialchars($user['role'] ?? ''); ?></span></td>
                         <td><?= htmlspecialchars($deptNames[$user['department_id'] ?? ''] ?? ''); ?></td>
-                        <td><?= htmlspecialchars($officeNames[$user['office_id'] ?? ''] ?? ($user['office_id'] ?? '')); ?></td>
                         <td><?= !empty($user['active']) ? i18n_get('portal.yes') : i18n_get('portal.no'); ?></td>
                         <td><?= htmlspecialchars($user['created_at'] ?? ''); ?></td>
                         <td>
@@ -342,8 +347,8 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
     <div class="form-field">
         <label for="role"><?= htmlspecialchars(i18n_get('users.role')); ?></label>
         <select name="role" id="role" required>
-            <?php foreach ($roleOptions as $roleKey): ?>
-                <option value="<?= htmlspecialchars($roleKey); ?>"><?= htmlspecialchars(ucfirst($roleKey)); ?></option>
+            <?php foreach ($allRoles as $role): ?>
+                <option value="<?= htmlspecialchars($role['id']); ?>"><?= htmlspecialchars($role['label'] ?? $role['id']); ?></option>
             <?php endforeach; ?>
         </select>
     </div>

@@ -1,19 +1,35 @@
 <?php
 // Authentication and user helper functions for Yojaka.
 
-function permissions_file_path(): string
+function permissions_config_path(): string
 {
     return YOJAKA_DATA_PATH . '/org/permissions.json';
 }
 
+function permissions_file_path(): string
+{
+    return permissions_config_path();
+}
+
 function load_permissions_config(): array
 {
-    $path = permissions_file_path();
+    $path = permissions_config_path();
     if (!file_exists($path)) {
         return ['roles' => [], 'custom_roles' => []];
     }
     $data = json_decode((string) file_get_contents($path), true);
-    return is_array($data) ? $data : ['roles' => [], 'custom_roles' => []];
+    if (!is_array($data)) {
+        return ['roles' => [], 'custom_roles' => []];
+    }
+
+    if (!isset($data['roles']) || !is_array($data['roles'])) {
+        $data['roles'] = [];
+    }
+    if (!isset($data['custom_roles']) || !is_array($data['custom_roles'])) {
+        $data['custom_roles'] = [];
+    }
+
+    return $data;
 }
 
 function save_permissions_config(array $data): void
@@ -31,6 +47,37 @@ function save_permissions_config(array $data): void
         flock($handle, LOCK_UN);
     }
     fclose($handle);
+}
+
+function get_all_roles_for_dropdown(): array
+{
+    $config = load_permissions_config();
+    $roles = $config['roles'] ?? [];
+    $customRoles = $config['custom_roles'] ?? [];
+    $list = [];
+
+    foreach ([$roles, $customRoles] as $roleSet) {
+        foreach ($roleSet as $roleId => $roleDef) {
+            $label = null;
+            if (is_array($roleDef) && isset($roleDef['label'])) {
+                $label = $roleDef['label'];
+            }
+            $label = $label ?: ucfirst(str_replace('_', ' ', (string) $roleId));
+            $list[$roleId] = [
+                'id' => (string) $roleId,
+                'label' => $label,
+            ];
+        }
+    }
+
+    if (!array_key_exists('admin', $list)) {
+        $list['admin'] = [
+            'id' => 'admin',
+            'label' => 'Admin',
+        ];
+    }
+
+    return array_values($list);
 }
 
 function ensure_users_have_departments(): void
