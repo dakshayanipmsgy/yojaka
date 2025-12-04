@@ -117,7 +117,6 @@ if (!empty($viewFile) && file_exists($viewFile)) {
                         'admin_dak' => 'manage_dak',
                         'admin_inspection' => 'manage_inspection',
                         'admin_master_data' => 'manage_office_config',
-                        'admin_hierarchy' => 'manage_office_config',
                         'admin_routes' => 'manage_office_config',
                         'admin_ai' => 'manage_ai_settings',
                         'admin_replies' => 'manage_reply_templates',

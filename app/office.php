@@ -256,7 +256,10 @@ function load_office_config_by_id(string $officeId): array
 
 function load_office_config(): array
 {
-    return load_office_config_by_id(get_current_office_id());
+    // Department is now the larger unit (legacy "office" scope). We keep the
+    // physical directory naming for backward compatibility but clarify the
+    // meaning here so other helpers can map appropriately.
+    return load_office_config_by_id(get_current_department_id());
 }
 
 function office_print_config(string $officeId): array
@@ -321,12 +324,32 @@ function get_default_office_id(): string
     return 'office_001';
 }
 
+function get_current_department_id(): string
+{
+    // Department (big unit) maps to the legacy office identifier used for
+    // folder naming. We preserve the stored value but clarify semantics.
+    if (!empty($GLOBALS['current_department_id_override'])) {
+        return $GLOBALS['current_department_id_override'];
+    }
+    $user = current_user();
+    if ($user && !empty($user['office_id'])) {
+        return $user['office_id'];
+    }
+    return get_default_office_id();
+}
+
 function get_current_office_id(): string
 {
+    // Office (smaller unit within a department) now maps to what was
+    // previously stored as department_id. We fall back to the department id to
+    // remain compatible with older data where no inner office was captured.
     if (!empty($GLOBALS['current_office_id_override'])) {
         return $GLOBALS['current_office_id_override'];
     }
     $user = current_user();
+    if ($user && !empty($user['department_id'])) {
+        return $user['department_id'];
+    }
     if ($user && !empty($user['office_id'])) {
         return $user['office_id'];
     }
@@ -350,7 +373,7 @@ function ensure_record_office(array $record, string $officeId): array
 
 function get_current_office_config(): array
 {
-    return $GLOBALS['current_office_config'] ?? load_office_config_by_id(get_current_office_id());
+    return $GLOBALS['current_office_config'] ?? load_office_config_by_id(get_current_department_id());
 }
 
 function find_office_registry_entry(string $officeId): ?array
