@@ -56,6 +56,20 @@ return [
     'inspection_templates_file' => 'templates.json',
     'inspection_reports_file' => 'reports.json',
 
+    // SLA configuration
+    'sla' => [
+        'rti_reply_days' => 30,
+        'rti_reminder_before_days' => 5,
+        'dak_process_days' => 7,
+        'dak_reminder_before_days' => 2,
+        'bill_approval_days' => 10,
+        'bill_reminder_before_days' => 3,
+    ],
+
+    // Notification hooks
+    'email_notifications_enabled' => false,
+    'email_from_address' => 'no-reply@example.com',
+
     // Pagination defaults
     'pagination_per_page' => 10,
     'logs_pagination_per_page' => 50,

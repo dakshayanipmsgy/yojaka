@@ -12,6 +12,7 @@ $_SESSION['csrf_token'] = $csrf_token;
 $attachmentErrors = [];
 $attachmentNotice = '';
 $attachmentToken = '';
+$usersList = load_users();
 
 $canViewAll = user_has_permission('view_all_records');
 
@@ -87,6 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mode === 'create') {
             'department_id' => $user['department_id'] ?? null,
             'created_at' => gmdate('c'),
             'updated_at' => gmdate('c'),
+            'workflow_state' => get_default_workflow_state('bills'),
+            'current_approver' => null,
+            'assigned_to' => $user['username'] ?? null,
+            'approver_chain' => [],
+            'last_action' => 'created',
+            'last_action_at' => gmdate('c'),
         ];
 
         $bills[] = $newBill;
@@ -112,6 +119,67 @@ if ($mode === 'view') {
         return;
     }
 
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['attachment_upload'])) {
+        $submittedToken = $_POST['csrf_token'] ?? '';
+        if (!$submittedToken || !hash_equals($_SESSION['csrf_token'], $submittedToken)) {
+            echo '<div class="alert alert-danger">Security token mismatch.</div>';
+        } else {
+            if (isset($_POST['assign_to'])) {
+                $assignTo = trim($_POST['assign_to']);
+                $bill['assigned_to'] = $assignTo !== '' ? $assignTo : null;
+                $bill['last_action'] = 'assigned';
+                $bill['last_action_at'] = gmdate('c');
+                $bill['updated_at'] = gmdate('c');
+                foreach ($bills as &$entry) {
+                    if (($entry['id'] ?? '') === $bill['id']) {
+                        $entry = $bill;
+                        break;
+                    }
+                }
+                unset($entry);
+                save_bills($bills);
+                if (!empty($bill['assigned_to'])) {
+                    create_notification($bill['assigned_to'], 'bills', $bill['id'], 'bill_assigned', 'Bill assigned to you', ($bill['bill_no'] ?? $bill['id']) . ' has been assigned.');
+                }
+                log_event('bill_workflow_changed', $user['username'] ?? null, ['bill_id' => $bill['id'], 'action' => 'assigned', 'assigned_to' => $assignTo]);
+                header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=bills&mode=view&id=' . urlencode($bill['id']));
+                exit;
+            }
+            if (isset($_POST['new_state'])) {
+                $newState = $_POST['new_state'];
+                $currentState = $bill['workflow_state'] ?? get_default_workflow_state('bills');
+                if (can_transition_workflow('bills', $currentState, $newState, $user)) {
+                    $bill['workflow_state'] = $newState;
+                    if ($newState === 'submitted') {
+                        $bill['submitted_at'] = gmdate('c');
+                    }
+                    if ($newState === 'approved') {
+                        $bill['status'] = 'Final';
+                    }
+                    $bill['last_action'] = 'workflow_changed';
+                    $bill['last_action_at'] = gmdate('c');
+                    $bill['updated_at'] = gmdate('c');
+                    foreach ($bills as &$entry) {
+                        if (($entry['id'] ?? '') === $bill['id']) {
+                            $entry = $bill;
+                            break;
+                        }
+                    }
+                    unset($entry);
+                    save_bills($bills);
+                    log_event('bill_workflow_changed', $user['username'] ?? null, ['bill_id' => $bill['id'], 'new_state' => $newState]);
+                    if (!empty($bill['created_by'])) {
+                        create_notification($bill['created_by'], 'bills', $bill['id'], 'bill_workflow_changed', 'Bill status updated', ($bill['bill_no'] ?? $bill['id']) . ' moved to ' . $newState);
+                    }
+                    header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=bills&mode=view&id=' . urlencode($bill['id']));
+                    exit;
+                } else {
+                    echo '<div class="alert alert-danger">You cannot change to that workflow state.</div>';
+                }
+            }
+        }
+    }
+
     $canUploadAttachments = user_has_permission('manage_bills') || user_has_permission('create_documents') || $canViewAll;
     [$attachmentErrors, $attachmentNotice, $attachmentToken] = handle_attachment_upload('bills', $bill['id'], 'bills_attachment_csrf', $canUploadAttachments);
     if (!empty($attachmentNotice) && empty($attachmentErrors)) {
@@ -131,6 +199,36 @@ if ($mode === 'view') {
         <div><div class="muted">Contractor</div><div><?= htmlspecialchars($bill['contractor_name']); ?></div></div>
         <div><div class="muted">Work Order</div><div><?= htmlspecialchars($bill['work_order_no']); ?> (<?= htmlspecialchars(format_date_for_display($bill['work_order_date'])); ?>)</div></div>
         <div><div class="muted">Status</div><div class="badge"><?= htmlspecialchars($bill['status']); ?></div></div>
+    </div>
+    <div class="card" style="margin:1rem 0;">
+        <h3>Workflow &amp; Approvals</h3>
+        <p><strong>Workflow State:</strong> <?= htmlspecialchars($bill['workflow_state'] ?? get_default_workflow_state('bills')); ?></p>
+        <p><strong>Assigned To:</strong> <?= htmlspecialchars($bill['assigned_to'] ?? 'Unassigned'); ?></p>
+        <p><strong>Current Approver:</strong> <?= htmlspecialchars($bill['current_approver'] ?? '—'); ?></p>
+        <form method="post" class="form-inline" style="gap:0.5rem;">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
+            <label>Assign to
+                <select name="assign_to">
+                    <option value="">Select user</option>
+                    <?php foreach ($usersList as $u): ?>
+                        <option value="<?= htmlspecialchars($u['username'] ?? ''); ?>" <?= ($bill['assigned_to'] ?? '') === ($u['username'] ?? '') ? 'selected' : ''; ?>><?= htmlspecialchars($u['full_name'] ?? ($u['username'] ?? '')); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <button class="btn" type="submit">Assign</button>
+        </form>
+        <?php $billTransitions = workflow_definitions()['bills']['transitions'][$bill['workflow_state'] ?? get_default_workflow_state('bills')] ?? []; ?>
+        <?php if (!empty($billTransitions)): ?>
+            <div class="form-actions" style="margin-top:0.5rem;">
+                <?php foreach ($billTransitions as $state): ?>
+                    <form method="post" style="margin:0;">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
+                        <input type="hidden" name="new_state" value="<?= htmlspecialchars($state); ?>">
+                        <button class="btn" type="submit">Mark <?= htmlspecialchars($state); ?></button>
+                    </form>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </div>
     <h3>Measurements / Items</h3>
     <div class="table-responsive">

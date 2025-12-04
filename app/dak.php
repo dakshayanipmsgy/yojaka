@@ -58,7 +58,10 @@ function load_dak_entries(): array
 
     $json = file_get_contents($path);
     $data = json_decode($json, true);
-    return is_array($data) ? $data : [];
+    $data = is_array($data) ? $data : [];
+    return array_map(function ($entry) {
+        return enrich_workflow_defaults('dak', $entry);
+    }, $data);
 }
 
 function save_dak_entries(array $entries): void

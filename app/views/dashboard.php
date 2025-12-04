@@ -18,6 +18,7 @@ $workOrdersDocs = load_document_records('work_order');
 $gucDocs = load_document_records('guc');
 $bills = load_bills();
 $officeConfig = load_office_config();
+run_sla_checks();
 
 $yourPendingRtis = 0;
 $yourOverdueRtis = 0;

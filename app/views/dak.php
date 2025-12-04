@@ -12,6 +12,9 @@ $errors = [];
 $attachmentErrors = [];
 $attachmentNotice = '';
 $attachmentToken = '';
+$csrfToken = $_SESSION['dak_csrf_token'] ?? bin2hex(random_bytes(16));
+$_SESSION['dak_csrf_token'] = $csrfToken;
+$usersList = load_users();
 
 if ($mode === 'create') {
     if (!$canManageDak) {
@@ -45,6 +48,11 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             'created_by' => $user['username'] ?? null,
             'created_at' => $now,
             'updated_at' => $now,
+            'workflow_state' => get_default_workflow_state('dak'),
+            'current_approver' => null,
+            'approver_chain' => [],
+            'last_action' => 'created',
+            'last_action_at' => $now,
         ];
 
         save_dak_entries($entries);
@@ -104,6 +112,60 @@ $targetId = $_GET['id'] ?? null;
         <a class="btn" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dak">Back to list</a>
     <?php else: ?>
         <?php
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['attachment_upload'])) {
+            $submittedToken = $_POST['csrf_token'] ?? '';
+            if (!$submittedToken || !hash_equals($csrfToken, $submittedToken)) {
+                $errors[] = 'Security token mismatch. Please try again.';
+            }
+            if (empty($errors) && isset($_POST['assign_to']) && $canManageDak) {
+                $assignTo = trim($_POST['assign_to']);
+                if ($assignTo !== '') {
+                    $entry['assigned_to'] = $assignTo;
+                    $entry['workflow_state'] = $entry['workflow_state'] === 'received' ? 'assigned' : $entry['workflow_state'];
+                    $entry['last_action'] = 'assigned';
+                    $entry['last_action_at'] = gmdate('c');
+                    $entry['updated_at'] = gmdate('c');
+                    foreach ($entries as &$item) {
+                        if (($item['id'] ?? '') === $entry['id']) {
+                            $item = $entry;
+                            break;
+                        }
+                    }
+                    unset($item);
+                    save_dak_entries($entries);
+                    create_notification($assignTo, 'dak', $entry['id'], 'dak_assigned', 'Dak assigned to you', ($entry['id'] ?? '') . ' has been assigned.');
+                    log_event('dak_assigned', $user['username'] ?? null, ['dak_id' => $entry['id'], 'assigned_to' => $assignTo]);
+                    header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=dak&mode=view&id=' . urlencode($entry['id']));
+                    exit;
+                }
+            }
+            if (empty($errors) && isset($_POST['new_state'])) {
+                $newState = $_POST['new_state'];
+                $currentState = $entry['workflow_state'] ?? get_default_workflow_state('dak');
+                if (can_transition_workflow('dak', $currentState, $newState, $user)) {
+                    $entry['workflow_state'] = $newState;
+                    if ($newState === 'closed') {
+                        $entry['status'] = 'Closed';
+                    }
+                    $entry['last_action'] = 'workflow_changed';
+                    $entry['last_action_at'] = gmdate('c');
+                    $entry['updated_at'] = gmdate('c');
+                    foreach ($entries as &$item) {
+                        if (($item['id'] ?? '') === $entry['id']) {
+                            $item = $entry;
+                            break;
+                        }
+                    }
+                    unset($item);
+                    save_dak_entries($entries);
+                    log_event('dak_workflow_changed', $user['username'] ?? null, ['dak_id' => $entry['id'], 'new_state' => $newState]);
+                    header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=dak&mode=view&id=' . urlencode($entry['id']));
+                    exit;
+                } else {
+                    $errors[] = 'You are not allowed to move this Dak entry to the selected state.';
+                }
+            }
+        }
         $canUploadAttachments = $canManageDak || user_has_permission('create_documents');
         [$attachmentErrors, $attachmentNotice, $attachmentToken] = handle_attachment_upload('dak', $entry['id'], 'dak_attachment_csrf', $canUploadAttachments);
         if (!empty($attachmentNotice) && empty($attachmentErrors)) {
@@ -124,6 +186,36 @@ $targetId = $_GET['id'] ?? null;
                 <p><strong>Assigned To:</strong> <?= htmlspecialchars($entry['assigned_to'] ?? 'Unassigned'); ?></p>
                 <p><strong>Details:</strong><br><?= nl2br(htmlspecialchars($entry['details'] ?? '')); ?></p>
                 <p><strong>Created By:</strong> <?= htmlspecialchars($entry['created_by'] ?? ''); ?></p>
+            </div>
+            <div class="card">
+                <h3>Workflow &amp; Assignment</h3>
+                <p><strong>Workflow State:</strong> <?= htmlspecialchars($entry['workflow_state'] ?? get_default_workflow_state('dak')); ?></p>
+                <?php if ($canManageDak): ?>
+                    <form method="post" class="form-inline" style="gap:0.5rem;">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+                        <label>Assign to
+                            <select name="assign_to">
+                                <option value="">Select user</option>
+                                <?php foreach ($usersList as $u): ?>
+                                    <option value="<?= htmlspecialchars($u['username'] ?? ''); ?>" <?= ($entry['assigned_to'] ?? '') === ($u['username'] ?? '') ? 'selected' : ''; ?>><?= htmlspecialchars($u['full_name'] ?? ($u['username'] ?? '')); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <button class="btn" type="submit">Assign</button>
+                    </form>
+                <?php endif; ?>
+                <?php $dakTransitions = workflow_definitions()['dak']['transitions'][$entry['workflow_state'] ?? get_default_workflow_state('dak')] ?? []; ?>
+                <?php if (!empty($dakTransitions)): ?>
+                    <div class="form-actions" style="margin-top:0.5rem;">
+                        <?php foreach ($dakTransitions as $state): ?>
+                            <form method="post" style="margin:0;">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+                                <input type="hidden" name="new_state" value="<?= htmlspecialchars($state); ?>">
+                                <button class="btn" type="submit">Mark <?= htmlspecialchars($state); ?></button>
+                            </form>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="card">
                 <h3>Movement History</h3>

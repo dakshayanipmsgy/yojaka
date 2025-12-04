@@ -16,6 +16,7 @@ $pagination = null;
 $attachmentErrors = [];
 $attachmentNotice = '';
 $attachmentToken = '';
+$usersList = load_users();
 
 $csrfToken = $_SESSION['rti_csrf_token'] ?? bin2hex(random_bytes(16));
 $_SESSION['rti_csrf_token'] = $csrfToken;
@@ -77,6 +78,11 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             'created_by' => $user['username'] ?? null,
             'created_at' => $now,
             'updated_at' => $now,
+            'workflow_state' => get_default_workflow_state('rti'),
+            'current_approver' => null,
+            'approver_chain' => [],
+            'last_action' => 'created',
+            'last_action_at' => $now,
         ];
         $cases[] = $newCase;
         save_rti_cases($cases);
@@ -100,6 +106,51 @@ if ($mode === 'view') {
     }
 
     if ($case) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['attachment_upload'])) {
+            $submittedToken = $_POST['csrf_token'] ?? '';
+            if (!$submittedToken || !hash_equals($_SESSION['rti_csrf_token'], $submittedToken)) {
+                $errors[] = 'Security token mismatch. Please try again.';
+            }
+            if (empty($errors) && isset($_POST['assign_to']) && $canManage) {
+                $assignTo = trim($_POST['assign_to']);
+                if ($assignTo !== '') {
+                    $case['assigned_to'] = $assignTo;
+                    $case['workflow_state'] = $case['workflow_state'] === 'new' ? 'assigned' : $case['workflow_state'];
+                    $case['last_action'] = 'assigned';
+                    $case['last_action_at'] = gmdate('c');
+                    $case['updated_at'] = gmdate('c');
+                    update_rti_case($cases, $case);
+                    save_rti_cases($cases);
+                    create_notification($assignTo, 'rti', $case['id'], 'rti_assigned', 'RTI case assigned to you', ($case['id'] ?? '') . ' has been assigned.');
+                    log_event('rti_assigned', $user['username'] ?? null, ['rti_id' => $case['id'], 'assigned_to' => $assignTo]);
+                    header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=rti&mode=view&id=' . urlencode($case['id']));
+                    exit;
+                }
+            }
+            if (empty($errors) && isset($_POST['new_state'])) {
+                $newState = $_POST['new_state'];
+                $currentState = $case['workflow_state'] ?? get_default_workflow_state('rti');
+                if (can_transition_workflow('rti', $currentState, $newState, $user)) {
+                    $case['workflow_state'] = $newState;
+                    if ($newState === 'closed') {
+                        $case['status'] = 'Closed';
+                    }
+                    $case['last_action'] = 'workflow_changed';
+                    $case['last_action_at'] = gmdate('c');
+                    $case['updated_at'] = gmdate('c');
+                    update_rti_case($cases, $case);
+                    save_rti_cases($cases);
+                    log_event('rti_workflow_changed', $user['username'] ?? null, ['rti_id' => $case['id'], 'new_state' => $newState]);
+                    if (!empty($case['created_by'])) {
+                        create_notification($case['created_by'], 'rti', $case['id'], 'rti_workflow_changed', 'RTI updated', 'RTI ' . ($case['id'] ?? '') . ' moved to ' . $newState);
+                    }
+                    header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=rti&mode=view&id=' . urlencode($case['id']));
+                    exit;
+                } else {
+                    $errors[] = 'You are not allowed to move this RTI to the selected state.';
+                }
+            }
+        }
         $canUploadAttachments = $canManage || user_has_permission('create_documents');
         [$attachmentErrors, $attachmentNotice, $attachmentToken] = handle_attachment_upload('rti', $case['id'], 'rti_attachment_csrf', $canUploadAttachments);
         if (!empty($attachmentNotice) && empty($attachmentErrors)) {
@@ -327,6 +378,39 @@ if ($mode === 'list') {
         <div class="card" style="margin-top:1rem;">
             <h3>Details</h3>
             <p><?= nl2br(htmlspecialchars($case['details'] ?? '')); ?></p>
+        </div>
+        <div class="card" style="margin-top:1rem;">
+            <h3>Workflow &amp; Assignment</h3>
+            <p><strong>Workflow State:</strong> <?= htmlspecialchars($case['workflow_state'] ?? get_default_workflow_state('rti')); ?></p>
+            <p><strong>Assigned To:</strong> <?= htmlspecialchars($case['assigned_to'] ?? 'Unassigned'); ?></p>
+            <?php if ($canManage): ?>
+                <form method="post" class="form-inline" style="gap:0.5rem;">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+                    <label>Assign to
+                        <select name="assign_to">
+                            <option value="">Select user</option>
+                            <?php foreach ($usersList as $u): ?>
+                                <option value="<?= htmlspecialchars($u['username'] ?? ''); ?>" <?= ($case['assigned_to'] ?? '') === ($u['username'] ?? '') ? 'selected' : ''; ?>><?= htmlspecialchars($u['full_name'] ?? ($u['username'] ?? '')); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <button class="btn" type="submit">Assign</button>
+                </form>
+            <?php endif; ?>
+            <?php
+            $availableTransitions = workflow_definitions()['rti']['transitions'][$case['workflow_state'] ?? get_default_workflow_state('rti')] ?? [];
+            ?>
+            <?php if (!empty($availableTransitions)): ?>
+                <div class="form-actions" style="margin-top:0.5rem;">
+                    <?php foreach ($availableTransitions as $state): ?>
+                        <form method="post" style="margin:0;">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+                            <input type="hidden" name="new_state" value="<?= htmlspecialchars($state); ?>">
+                            <button class="btn" type="submit">Mark <?= htmlspecialchars($state); ?></button>
+                        </form>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
         </div>
         <div class="card" style="margin-top:1rem;">
             <h3>Attachments</h3>
