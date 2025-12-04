@@ -44,6 +44,7 @@ require_once __DIR__ . '/dak.php';
 require_once __DIR__ . '/inspection.php';
 require_once __DIR__ . '/mis_helpers.php';
 require_once __DIR__ . '/backup.php';
+require_once __DIR__ . '/attachments.php';
 
 // Ensure logs directory exists early
 ensure_logs_directory();
@@ -68,6 +69,7 @@ if (YOJAKA_INSTALLED) {
     ensure_inspection_storage();
     ensure_documents_storage();
     ensure_bills_storage();
+    ensure_attachments_storage();
 
     // Seed default admin user if necessary
     create_default_admin_if_needed($config);

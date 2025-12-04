@@ -21,6 +21,9 @@ $mode = $_GET['mode'] ?? 'list';
 $errors = [];
 $csrfToken = $_SESSION['work_order_csrf'] ?? bin2hex(random_bytes(16));
 $_SESSION['work_order_csrf'] = $csrfToken;
+$attachmentErrors = [];
+$attachmentNotice = '';
+$attachmentToken = '';
 
 if ($mode === 'view') {
     $id = $_GET['id'] ?? '';
@@ -41,6 +44,14 @@ if ($mode === 'view') {
         echo '<p class="error">You do not have access to this record.</p>';
         return;
     }
+
+    $canUploadAttachments = user_has_permission('create_documents') || user_has_permission('view_all_records');
+    [$attachmentErrors, $attachmentNotice, $attachmentToken] = handle_attachment_upload('documents', $record['id'], 'work_order_attachment_csrf', $canUploadAttachments);
+    if (!empty($attachmentNotice) && empty($attachmentErrors)) {
+        header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=work_orders&mode=view&id=' . urlencode($record['id']));
+        exit;
+    }
+    $recordAttachments = find_attachments_for_entity('documents', $record['id']);
 
     if ($download) {
         $filename = preg_replace('/[^a-zA-Z0-9_-]+/', '_', strtolower($record['id'] ?? 'work_order')) ?: 'work_order';
@@ -64,6 +75,60 @@ if ($mode === 'view') {
             <button type="button" onclick="window.print();">Print</button>
             <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=work_orders&amp;mode=view&amp;id=<?= urlencode($record['id'] ?? ''); ?>&amp;download=1">Download HTML</a>
         </div>
+    </div>
+    <div class="card" style="margin-top:1rem;">
+        <h3>Attachments</h3>
+        <?php if (!empty($attachmentErrors)): ?>
+            <div class="alert alert-danger">
+                <ul>
+                    <?php foreach ($attachmentErrors as $err): ?>
+                        <li><?= htmlspecialchars($err); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php elseif ($attachmentNotice !== ''): ?>
+            <div class="alert alert-success"><?= htmlspecialchars($attachmentNotice); ?></div>
+        <?php endif; ?>
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr><th>Description</th><th>File</th><th>Size</th><th>Uploaded By</th><th>Uploaded At</th><th></th></tr></thead>
+                <tbody>
+                    <?php if (empty($recordAttachments)): ?>
+                        <tr><td colspan="6">No attachments yet.</td></tr>
+                    <?php else: ?>
+                        <?php foreach ($recordAttachments as $att): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($att['description'] ?? ''); ?></td>
+                                <td><?= htmlspecialchars($att['original_name'] ?? ''); ?></td>
+                                <td><?= format_attachment_size((int) ($att['size_bytes'] ?? 0)); ?></td>
+                                <td><?= htmlspecialchars($att['uploaded_by'] ?? ''); ?></td>
+                                <td><?= htmlspecialchars($att['uploaded_at'] ?? ''); ?></td>
+                                <td><a class="btn" href="<?= YOJAKA_BASE_URL; ?>/download_attachment.php?id=<?= urlencode($att['id'] ?? ''); ?>">Download</a></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php if ($canUploadAttachments): ?>
+            <form method="post" enctype="multipart/form-data" style="margin-top:1rem;">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($attachmentToken); ?>">
+                <input type="hidden" name="attachment_upload" value="1">
+                <div class="form-field">
+                    <label>Attachment File</label>
+                    <input type="file" name="attachment_file" required>
+                </div>
+                <div class="form-field">
+                    <label>Description</label>
+                    <input type="text" name="attachment_description" placeholder="Short description">
+                </div>
+                <div class="form-field">
+                    <label>Tags (comma separated)</label>
+                    <input type="text" name="attachment_tags" placeholder="tag1, tag2">
+                </div>
+                <button type="submit" class="btn primary">Upload Attachment</button>
+            </form>
+        <?php endif; ?>
     </div>
     <?php
     return;

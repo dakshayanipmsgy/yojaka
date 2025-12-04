@@ -6,7 +6,7 @@ $department = $user ? get_user_department($user) : null;
 $officeConfig = load_office_config();
 $primaryColor = $officeConfig['theme']['primary_color'] ?? '#0f5aa5';
 $secondaryColor = $officeConfig['theme']['secondary_color'] ?? '#f5f7fb';
-$hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup') || user_has_permission('manage_office_config') || user_has_permission('view_mis_reports');
+$hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup') || user_has_permission('manage_office_config') || user_has_permission('view_mis_reports') || user_has_permission('view_all_records');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -50,6 +50,7 @@ $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('mana
             <?php if (user_has_permission('create_documents')): ?>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=letters" class="nav-item<?= ($activePage ?? '') === 'letters' ? ' active' : ''; ?>">Letters &amp; Notices</a>
             <?php endif; ?>
+            <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=global_search" class="nav-item<?= ($activePage ?? '') === 'global_search' ? ' active' : ''; ?>">Global Search</a>
             <?php if (is_module_enabled('rti') && (user_has_permission('manage_rti') || user_has_permission('view_reports_basic'))): ?>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=rti" class="nav-item<?= ($activePage ?? '') === 'rti' ? ' active' : ''; ?>">RTI Cases</a>
             <?php endif; ?>
@@ -95,6 +96,9 @@ $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('mana
                 <?php if (user_has_permission('manage_inspection')): ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_inspection" class="nav-item<?= ($activePage ?? '') === 'admin_inspection' ? ' active' : ''; ?>">Inspection Management</a>
                 <?php endif; ?>
+                <?php if (user_has_permission('view_all_records') || user_has_permission('manage_documents_repository')): ?>
+                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_repository" class="nav-item<?= ($activePage ?? '') === 'admin_repository' ? ' active' : ''; ?>">Documents Repository</a>
+                <?php endif; ?>
                 <?php if (user_has_permission('view_logs')): ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_logs" class="nav-item<?= ($activePage ?? '') === 'admin_logs' ? ' active' : ''; ?>">Usage Logs</a>
                 <?php endif; ?>
@@ -117,7 +121,7 @@ $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('mana
         </main>
     </div>
     <footer class="footer">
-        Powered by Dakshayani &bull; Yojaka v1.0
+        Powered by Dakshayani &bull; Yojaka v1.2
     </footer>
     <script>
         document.addEventListener('click', function (e) {

@@ -23,6 +23,12 @@ return [
     'documents_work_orders_file' => 'work_orders.json',
     'documents_guc_file' => 'guc.json',
 
+    // Attachments storage
+    'attachments_data_path' => __DIR__ . '/../data/attachments',
+    'attachments_meta_file' => 'meta.json',
+    'attachments_allowed_extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'],
+    'attachments_max_size_bytes' => 5 * 1024 * 1024, // 5 MB
+
     // Office / instance configuration
     'office_data_path' => __DIR__ . '/../data/office',
     'office_config_file' => 'office.json',
@@ -76,6 +82,7 @@ return [
             'admin_backup',
             'manage_office_config',
             'manage_bills',
+            'manage_documents_repository',
         ],
         'officer' => [
             'create_documents',
@@ -84,6 +91,7 @@ return [
             'manage_inspection',
             'view_reports_basic',
             'manage_bills',
+            'manage_documents_repository',
         ],
         'clerk' => [
             'create_documents',

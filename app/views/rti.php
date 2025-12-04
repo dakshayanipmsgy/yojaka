@@ -13,6 +13,9 @@ $mode = in_array($mode, ['list', 'create', 'view'], true) ? $mode : 'list';
 $errors = [];
 $notice = '';
 $pagination = null;
+$attachmentErrors = [];
+$attachmentNotice = '';
+$attachmentToken = '';
 
 $csrfToken = $_SESSION['rti_csrf_token'] ?? bin2hex(random_bytes(16));
 $_SESSION['rti_csrf_token'] = $csrfToken;
@@ -94,6 +97,16 @@ if ($mode === 'view') {
     } elseif (!$canViewAll && ($case['created_by'] ?? '') !== ($user['username'] ?? '')) {
         $errors[] = 'You are not allowed to view this RTI.';
         $case = null;
+    }
+
+    if ($case) {
+        $canUploadAttachments = $canManage || user_has_permission('create_documents');
+        [$attachmentErrors, $attachmentNotice, $attachmentToken] = handle_attachment_upload('rti', $case['id'], 'rti_attachment_csrf', $canUploadAttachments);
+        if (!empty($attachmentNotice) && empty($attachmentErrors)) {
+            header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=rti&mode=view&id=' . urlencode($case['id']));
+            exit;
+        }
+        $caseAttachments = find_attachments_for_entity('rti', $case['id']);
     }
 }
 
@@ -314,6 +327,60 @@ if ($mode === 'list') {
         <div class="card" style="margin-top:1rem;">
             <h3>Details</h3>
             <p><?= nl2br(htmlspecialchars($case['details'] ?? '')); ?></p>
+        </div>
+        <div class="card" style="margin-top:1rem;">
+            <h3>Attachments</h3>
+            <?php if (!empty($attachmentErrors)): ?>
+                <div class="alert alert-danger">
+                    <ul>
+                        <?php foreach ($attachmentErrors as $err): ?>
+                            <li><?= htmlspecialchars($err); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php elseif ($attachmentNotice !== ''): ?>
+                <div class="alert alert-success"><?= htmlspecialchars($attachmentNotice); ?></div>
+            <?php endif; ?>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Description</th><th>File</th><th>Size</th><th>Uploaded By</th><th>Uploaded At</th><th></th></tr></thead>
+                    <tbody>
+                        <?php if (empty($caseAttachments)): ?>
+                            <tr><td colspan="6">No attachments yet.</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($caseAttachments as $att): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($att['description'] ?? ''); ?></td>
+                                    <td><?= htmlspecialchars($att['original_name'] ?? ''); ?></td>
+                                    <td><?= format_attachment_size((int) ($att['size_bytes'] ?? 0)); ?></td>
+                                    <td><?= htmlspecialchars($att['uploaded_by'] ?? ''); ?></td>
+                                    <td><?= htmlspecialchars($att['uploaded_at'] ?? ''); ?></td>
+                                    <td><a class="btn" href="<?= YOJAKA_BASE_URL; ?>/download_attachment.php?id=<?= urlencode($att['id'] ?? ''); ?>">Download</a></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php if ($canManage || user_has_permission('create_documents')): ?>
+                <form method="post" enctype="multipart/form-data" style="margin-top:1rem;">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($attachmentToken); ?>">
+                    <input type="hidden" name="attachment_upload" value="1">
+                    <div class="form-field">
+                        <label>Attachment File</label>
+                        <input type="file" name="attachment_file" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Description</label>
+                        <input type="text" name="attachment_description" placeholder="Short description">
+                    </div>
+                    <div class="form-field">
+                        <label>Tags (comma separated)</label>
+                        <input type="text" name="attachment_tags" placeholder="tag1, tag2">
+                    </div>
+                    <button type="submit" class="btn primary">Upload Attachment</button>
+                </form>
+            <?php endif; ?>
         </div>
         <div style="margin-top:1rem;">
             <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=rti">Back to list</a>
