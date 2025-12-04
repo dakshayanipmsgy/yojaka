@@ -117,11 +117,14 @@ function standardize_user_record(array $user): array
     unset($user['password']);
 
     $user['username'] = $user['username'] ?? ($user['email'] ?? null);
-    $user['role'] = $user['role'] ?? 'user';
+    $user['primary_role'] = $user['primary_role'] ?? ($user['role'] ?? 'user');
+    $user['extra_roles'] = isset($user['extra_roles']) && is_array($user['extra_roles']) ? $user['extra_roles'] : [];
+    $user['role'] = $user['primary_role'];
     $user['full_name'] = $user['full_name'] ?? ($user['username'] ?? '');
     $defaultOffice = function_exists('get_default_office_id') ? get_default_office_id() : 'office_001';
     $user['office_id'] = $user['office_id'] ?? $defaultOffice;
     $user['department_id'] = $user['department_id'] ?? ($user['department'] ?? 'dept_default');
+    $user['staff_id'] = $user['staff_id'] ?? null;
     $user['active'] = array_key_exists('active', $user) ? (bool) $user['active'] : true;
     $user['force_password_change'] = !empty($user['force_password_change']);
     $user['password_hash'] = $user['password_hash'] ?? password_hash('changeme', PASSWORD_DEFAULT);
