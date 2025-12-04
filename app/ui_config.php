@@ -26,11 +26,6 @@ function default_menu_config(): array
             return $item;
         }, default_main_menu_items()),
         'admin' => [
-            ['page' => 'admin_org_people', 'visible' => true, 'label_key' => 'Organization & Access: People & Users'],
-            ['page' => 'admin_org_roles', 'visible' => true, 'label_key' => 'Organization & Access: Roles'],
-            ['page' => 'admin_org_positions', 'visible' => true, 'label_key' => 'Organization & Access: Positions'],
-            ['page' => 'admin_org_routes', 'visible' => true, 'label_key' => 'Organization & Access: Routes'],
-            ['page' => 'admin_org_onboarding', 'visible' => true, 'label_key' => 'Organization & Access: Onboarding'],
             ['page' => 'admin_users', 'visible' => true, 'label_key' => 'nav.admin_users'],
             ['page' => 'admin_departments', 'visible' => true, 'label_key' => 'nav.admin_departments'],
             ['page' => 'admin_office', 'visible' => true, 'label_key' => 'nav.admin_office'],

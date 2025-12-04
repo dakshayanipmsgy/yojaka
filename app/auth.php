@@ -111,8 +111,7 @@ function login(string $username, string $password): array
 
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['username'] = $user['username'];
-    $_SESSION['role'] = $user['primary_role'] ?? ($user['role'] ?? null);
-    $_SESSION['roles'] = get_user_roles($user['username']);
+    $_SESSION['role'] = $user['role'];
     $_SESSION['full_name'] = $user['full_name'];
     $_SESSION['department_id'] = $user['department_id'] ?? null;
     $_SESSION['office_id'] = $user['office_id'] ?? get_default_office_id();
@@ -160,30 +159,7 @@ function current_user(): ?array
 
 function get_current_user_role(): ?string
 {
-    $user = current_user();
-    return $_SESSION['role'] ?? ($user['primary_role'] ?? ($user['role'] ?? null));
-}
-
-function get_user_roles(string $username): array
-{
-    $user = find_user_by_username($username);
-    if (!$user) {
-        return [];
-    }
-    $roles = [];
-    if (!empty($user['primary_role'])) {
-        $roles[] = $user['primary_role'];
-    } elseif (!empty($user['role'])) {
-        $roles[] = $user['role'];
-    }
-    if (!empty($user['extra_roles']) && is_array($user['extra_roles'])) {
-        foreach ($user['extra_roles'] as $role) {
-            if ($role !== null && $role !== '') {
-                $roles[] = $role;
-            }
-        }
-    }
-    return array_values(array_unique($roles));
+    return $_SESSION['role'] ?? (current_user()['role'] ?? null);
 }
 
 function get_user_role_permissions(?string $username = null): array
@@ -193,26 +169,21 @@ function get_user_role_permissions(?string $username = null): array
         return [];
     }
 
-    $roles = get_user_roles($user['username'] ?? '');
+    $role = $user['role'] ?? null;
     $permissionsConfig = load_permissions_config();
     $rolePermissions = [];
-    foreach ($roles as $role) {
-        if ($role && !empty($permissionsConfig['roles'][$role])) {
-            $rolePermissions = array_merge($rolePermissions, $permissionsConfig['roles'][$role]);
-        }
-        if ($role && !empty($permissionsConfig['custom_roles'][$role])) {
-            $rolePermissions = array_merge($rolePermissions, $permissionsConfig['custom_roles'][$role]);
-        }
+    if ($role && !empty($permissionsConfig['roles'][$role])) {
+        $rolePermissions = $permissionsConfig['roles'][$role];
+    }
+
+    if ($role && !empty($permissionsConfig['custom_roles'][$role])) {
+        $rolePermissions = array_merge($rolePermissions, $permissionsConfig['custom_roles'][$role]);
     }
 
     // Backward compatibility with config-based permissions
     global $config;
-    if (empty($rolePermissions) && !empty($roles)) {
-        foreach ($roles as $role) {
-            if (!empty($config['roles_permissions'][$role])) {
-                $rolePermissions = array_merge($rolePermissions, $config['roles_permissions'][$role]);
-            }
-        }
+    if (empty($rolePermissions) && !empty($config['roles_permissions'][$role])) {
+        $rolePermissions = $config['roles_permissions'][$role];
     }
 
     return array_values(array_unique($rolePermissions));

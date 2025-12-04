@@ -43,40 +43,6 @@ function file_flow_get_current_node(array $fileEntity): ?array
     return $route['nodes'][$route['current_node_index']] ?? null;
 }
 
-function file_flow_snapshot_user(string $username, string $officeId): array
-{
-    $staff = find_staff_by_username($officeId, $username);
-    $roles = get_user_roles($username);
-    $position = get_user_position($username, $officeId);
-    $positionId = $position['position_id'] ?? ($position['id'] ?? null);
-    $title = $position['title'] ?? null;
-    $assignment = $positionId ? get_current_assignment($officeId, $positionId) : null;
-    if ($assignment && !empty($assignment['position_id'])) {
-        $positionId = $assignment['position_id'];
-    }
-    return [
-        'username' => $username,
-        'staff_id' => $staff['staff_id'] ?? null,
-        'position_id' => $positionId,
-        'position_title' => $title,
-        'roles' => $roles,
-    ];
-}
-
-function file_flow_position_title(string $officeId, ?string $positionId): ?string
-{
-    if (!$positionId) {
-        return null;
-    }
-    foreach (load_positions($officeId) as $pos) {
-        $pid = $pos['position_id'] ?? ($pos['id'] ?? '');
-        if ($pid === $positionId) {
-            return $pos['title'] ?? null;
-        }
-    }
-    return null;
-}
-
 function file_flow_forward(array &$fileEntity, string $user, string $remarks = ''): bool
 {
     if (empty($fileEntity['route']) || $fileEntity['route']['current_node_index'] === null) {
@@ -99,28 +65,19 @@ function file_flow_forward(array &$fileEntity, string $user, string $remarks = '
     } else {
         $fileEntity['route']['current_node_index'] = null;
     }
-    $officeId = $fileEntity['office_id'] ?? get_current_office_id();
-    $fromSnapshot = file_flow_snapshot_user($user, $officeId);
-    $toUser = $nextNode['user_username'] ?? null;
-    $toSnapshot = $toUser ? file_flow_snapshot_user($toUser, $officeId) : null;
     $historyEntry = [
-        'timestamp' => date('c'),
-        'from_username' => $user,
-        'from_staff_id' => $fromSnapshot['staff_id'] ?? null,
-        'from_position_id' => $from['position_id'] ?? ($fromSnapshot['position_id'] ?? null),
-        'from_position_title' => $from['title'] ?? ($fromSnapshot['position_title'] ?? file_flow_position_title($officeId, $from['position_id'] ?? null)),
-        'from_role_snapshot' => $fromSnapshot['roles'] ?? [],
-        'to_username' => $toUser,
-        'to_staff_id' => $toSnapshot['staff_id'] ?? null,
-        'to_position_id' => $toPosition ?? ($toSnapshot['position_id'] ?? null),
-        'to_position_title' => $nextNode['title'] ?? ($toSnapshot['position_title'] ?? file_flow_position_title($officeId, $toPosition)),
-        'to_role_snapshot' => $toSnapshot['roles'] ?? [],
+        'timestamp' => gmdate('c'),
+        'from_position_id' => $from['position_id'] ?? null,
+        'to_position_id' => $toPosition,
         'action' => 'forward',
+        'user' => $user,
+        'from_user' => $user,
+        'to_user' => $nextNode['user_username'] ?? null,
         'remarks' => $remarks,
         'acceptance' => [
             'status' => 'accepted',
             'accepted_by' => $nextNode['user_username'] ?? $user,
-            'accepted_at' => date('c'),
+            'accepted_at' => gmdate('c'),
             'rejected_reason' => null,
         ],
     ];
@@ -182,21 +139,16 @@ function file_flow_forward_with_handover(array &$fileEntity, string $fromUser, s
         $fileEntity['route']['current_node_index'] = null;
     }
 
-    $fromSnapshot = file_flow_snapshot_user($fromUser, $officeId);
-    $toSnapshot = file_flow_snapshot_user($toUser, $officeId);
+    $fromPos = get_user_position($fromUser, $officeId);
+    $toPos = get_user_position($toUser, $officeId);
     $historyEntry = [
-        'timestamp' => date('c'),
-        'from_username' => $fromUser,
-        'from_staff_id' => $fromSnapshot['staff_id'] ?? null,
-        'from_position_id' => $from['position_id'] ?? ($fromSnapshot['position_id'] ?? null),
-        'from_position_title' => $from['title'] ?? ($fromSnapshot['position_title'] ?? file_flow_position_title($officeId, $from['position_id'] ?? null)),
-        'from_role_snapshot' => $fromSnapshot['roles'] ?? [],
-        'to_username' => $toUser,
-        'to_staff_id' => $toSnapshot['staff_id'] ?? null,
-        'to_position_id' => $toPosition ?? ($toSnapshot['position_id'] ?? null),
-        'to_position_title' => $nextNode['title'] ?? ($toSnapshot['position_title'] ?? file_flow_position_title($officeId, $toPosition)),
-        'to_role_snapshot' => $toSnapshot['roles'] ?? [],
+        'timestamp' => gmdate('c'),
+        'from_position_id' => $from['position_id'] ?? ($fromPos['id'] ?? null),
+        'to_position_id' => $toPosition ?? ($toPos['id'] ?? null),
         'action' => 'forward',
+        'user' => $fromUser,
+        'from_user' => $fromUser,
+        'to_user' => $toUser,
         'remarks' => $remarks,
         'acceptance' => [
             'status' => 'pending',
