@@ -69,7 +69,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <div class="card">
-    <h3>File Route Templates</h3>
+    <div class="flex" style="justify-content: space-between; align-items:center;">
+        <h3>File Route Templates</h3>
+        <a class="btn ghost" target="_blank" href="<?= YOJAKA_BASE_URL ?>/app.php?page=help_user_roles">Help</a>
+    </div>
     <?php if ($success): ?><div class="alert success"><?= htmlspecialchars($success); ?></div><?php endif; ?>
     <?php if (!empty($errors)): ?><div class="alert error"><?= htmlspecialchars(implode(' ', $errors)); ?></div><?php endif; ?>
     <table class="table">

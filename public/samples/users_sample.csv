@@ -1,0 +1,3 @@
+username,full_name,role,office_id,department_id,staff_id,active
+admin,System Administrator,admin,office_001,,S-0001,true
+ae_rohan,Rohan Gupta,officer,office_001,dept_civil,S-0002,true
