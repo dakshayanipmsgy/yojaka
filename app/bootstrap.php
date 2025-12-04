@@ -26,7 +26,11 @@ if (!defined('YOJAKA_BASE_URL')) {
     define('YOJAKA_BASE_URL', rtrim($config['base_url'], '/'));
 }
 
+require_once __DIR__ . '/logging.php';
 require_once __DIR__ . '/auth.php';
+
+// Ensure logs directory exists early
+ensure_logs_directory();
 
 // Seed default admin user if necessary
 create_default_admin_if_needed($config);

@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $submittedToken = $_POST['csrf_token'] ?? '';
     if (!$submittedToken || !hash_equals($_SESSION['csrf_token'], $submittedToken)) {
         $error = true;
+        log_event('login_failure', $_POST['username'] ?? null, ['reason' => 'csrf_mismatch']);
     } else {
         $username = trim($_POST['username'] ?? '');
         $password = trim($_POST['password'] ?? '');
@@ -24,6 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         $error = true;
+        if ($username === '' || $password === '') {
+            log_event('login_failure', $username ?: null, ['reason' => 'missing_credentials']);
+        }
     }
 }
 

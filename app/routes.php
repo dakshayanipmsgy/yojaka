@@ -8,6 +8,16 @@ function resolve_route(string $page): array
             'title' => 'Dashboard',
             'view' => __DIR__ . '/views/dashboard.php',
         ],
+        'admin_users' => [
+            'title' => 'User List',
+            'view' => __DIR__ . '/views/admin_users.php',
+            'role' => 'admin',
+        ],
+        'admin_logs' => [
+            'title' => 'Usage Logs',
+            'view' => __DIR__ . '/views/admin_logs.php',
+            'role' => 'admin',
+        ],
     ];
 
     if (isset($routes[$page])) {
