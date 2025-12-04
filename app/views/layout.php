@@ -3,7 +3,9 @@
 $user = current_user();
 $pageTitle = $pageTitle ?? 'Yojaka';
 $department = $user ? get_user_department($user) : null;
-$officeConfig = load_office_config();
+$officeConfig = get_current_office_config();
+$currentLicense = get_current_office_license();
+$officeReadOnly = office_is_read_only($currentLicense);
 $primaryColor = $officeConfig['theme']['primary_color'] ?? '#0f5aa5';
 $secondaryColor = $officeConfig['theme']['secondary_color'] ?? '#f5f7fb';
 $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup') || user_has_permission('manage_office_config') || user_has_permission('view_mis_reports') || user_has_permission('view_all_records');
@@ -45,6 +47,11 @@ $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['us
             <a class="logout" href="<?= YOJAKA_BASE_URL; ?>/logout.php">Logout</a>
         </div>
     </header>
+    <?php if ($officeReadOnly): ?>
+        <div class="alert alert-danger" style="margin:0; border-radius:0;">Trial expired or license invalid for this office. System is read-only.</div>
+    <?php elseif (is_license_trial($currentLicense ?? [])): ?>
+        <div class="alert info" style="margin:0; border-radius:0;">Trial version – not for production use.</div>
+    <?php endif; ?>
     <div class="body">
         <nav class="sidebar">
             <div class="nav-section">Main</div>
@@ -85,6 +92,7 @@ $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['us
                 <?php endif; ?>
                 <?php if (user_has_permission('manage_office_config')): ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_office" class="nav-item<?= ($activePage ?? '') === 'admin_office' ? ' active' : ''; ?>">Office Settings</a>
+                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_license" class="nav-item<?= ($activePage ?? '') === 'admin_license' ? ' active' : ''; ?>">License &amp; Trial Status</a>
                 <?php endif; ?>
                 <?php if (user_has_permission('manage_templates')): ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_letter_templates" class="nav-item<?= ($activePage ?? '') === 'admin_letter_templates' ? ' active' : ''; ?>">Letter Templates</a>
@@ -109,7 +117,11 @@ $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['us
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_mis" class="nav-item<?= ($activePage ?? '') === 'admin_mis' ? ' active' : ''; ?>">Reports &amp; Analytics (MIS)</a>
                 <?php endif; ?>
                 <?php if (user_has_permission('admin_backup')): ?>
-                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_backup" class="nav-item<?= ($activePage ?? '') === 'admin_backup' ? ' active' : ''; ?>">Backup &amp; Export</a>
+                    <?php if (license_feature_enabled($currentLicense, 'enable_backup')): ?>
+                        <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_backup" class="nav-item<?= ($activePage ?? '') === 'admin_backup' ? ' active' : ''; ?>">Backup &amp; Export</a>
+                    <?php else: ?>
+                        <span class="nav-item muted">Backup disabled by license</span>
+                    <?php endif; ?>
                 <?php endif; ?>
             <?php endif; ?>
         </nav>
@@ -124,8 +136,13 @@ $unreadNotifications = $user ? count(get_unread_notifications_for_user($user['us
         </main>
     </div>
     <footer class="footer">
-        Powered by Dakshayani &bull; Yojaka v1.3
+        Powered by Dakshayani &bull; Yojaka v1.4
     </footer>
+    <?php if (is_license_trial($currentLicense ?? []) && !empty($currentLicense['watermark_text'])): ?>
+        <div style="position:fixed; top:30%; left:0; right:0; text-align:center; opacity:0.1; font-size:64px; pointer-events:none; transform:rotate(-20deg); z-index:0;">
+            <?= htmlspecialchars($currentLicense['watermark_text']); ?>
+        </div>
+    <?php endif; ?>
     <script>
         document.addEventListener('click', function (e) {
             if (e.target.classList.contains('ai-suggest-btn')) {
