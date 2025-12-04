@@ -14,6 +14,11 @@ return [
     'letters_templates_file' => 'letters.json',
     'generated_letters_log' => 'generated_letters.log',
 
+    // RTI module configuration
+    'rti_data_path' => __DIR__ . '/../data/rti',
+    'rti_cases_file' => 'rti_cases.json',
+    'rti_reply_days' => 30,
+
     // Default admin credentials used only when seeding users.json on first run
     'default_admin' => [
         'username' => 'admin',

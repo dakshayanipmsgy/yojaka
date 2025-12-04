@@ -29,9 +29,13 @@ if (!defined('YOJAKA_BASE_URL')) {
 require_once __DIR__ . '/logging.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/templates.php';
+require_once __DIR__ . '/rti.php';
 
 // Ensure logs directory exists early
 ensure_logs_directory();
+
+// Ensure RTI storage exists
+ensure_rti_storage();
 
 // Seed default admin user if necessary
 create_default_admin_if_needed($config);

@@ -25,6 +25,8 @@ a { text-decoration: none; color: inherit; }
     transition: background 0.2s ease;
 }
 .btn-primary:hover { background: var(--primary-dark); }
+.button { display: inline-block; padding: 0.55rem 1rem; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text); font-weight: 600; }
+.button:hover { background: #f3f6fb; }
 
 .alert { padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
 .alert-danger { background: #fdecea; color: #b71c1c; border: 1px solid #f5c6cb; }
@@ -91,3 +93,16 @@ a { text-decoration: none; color: inherit; }
 .table .badge { background: var(--primary); color: #fff; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.85rem; }
 
 .grid.stats { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+.badge-soft { background: #e8f1fb; color: #0f5aa5; }
+.badge-danger { background: #fdecea; color: #b71c1c; }
+.form-stacked .form-field { margin-bottom: 1rem; display: flex; flex-direction: column; }
+.form-stacked label { font-weight: 600; color: var(--muted); margin-bottom: 0.35rem; }
+.form-stacked input,
+.form-stacked select,
+.form-stacked textarea { padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); font-size: 1rem; }
+.form-actions { display: flex; gap: 0.6rem; align-items: center; }
+.filter-bar { margin-bottom: 1rem; display: flex; justify-content: flex-start; align-items: center; gap: 0.75rem; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; }
+.detail-grid .muted { color: var(--muted); font-size: 0.9rem; }
+.detail-grid .strong { font-weight: 700; font-size: 1.05rem; }
