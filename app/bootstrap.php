@@ -42,6 +42,7 @@ require_once __DIR__ . '/document_templates.php';
 require_once __DIR__ . '/rti.php';
 require_once __DIR__ . '/dak.php';
 require_once __DIR__ . '/inspection.php';
+require_once __DIR__ . '/mis_helpers.php';
 require_once __DIR__ . '/backup.php';
 
 // Ensure logs directory exists early
