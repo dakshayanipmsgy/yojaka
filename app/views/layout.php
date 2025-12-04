@@ -7,6 +7,7 @@ $officeConfig = load_office_config();
 $primaryColor = $officeConfig['theme']['primary_color'] ?? '#0f5aa5';
 $secondaryColor = $officeConfig['theme']['secondary_color'] ?? '#f5f7fb';
 $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('manage_templates') || user_has_permission('manage_departments') || user_has_permission('view_logs') || user_has_permission('manage_rti') || user_has_permission('manage_dak') || user_has_permission('manage_inspection') || user_has_permission('admin_backup') || user_has_permission('manage_office_config') || user_has_permission('view_mis_reports') || user_has_permission('view_all_records');
+$unreadNotifications = $user ? count(get_unread_notifications_for_user($user['username'])) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -40,6 +41,7 @@ $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('mana
             <?php if ($department): ?>
                 <div class="dept muted">Dept: <?= htmlspecialchars($department['name'] ?? ''); ?></div>
             <?php endif; ?>
+            <a class="logout" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=notifications">Notifications <?= $unreadNotifications ? '(' . (int) $unreadNotifications . ')' : ''; ?></a>
             <a class="logout" href="<?= YOJAKA_BASE_URL; ?>/logout.php">Logout</a>
         </div>
     </header>
@@ -47,6 +49,7 @@ $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('mana
         <nav class="sidebar">
             <div class="nav-section">Main</div>
             <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dashboard" class="nav-item<?= ($activePage ?? '') === 'dashboard' ? ' active' : ''; ?>">Dashboard</a>
+            <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=my_tasks" class="nav-item<?= ($activePage ?? '') === 'my_tasks' ? ' active' : ''; ?>">My Tasks</a>
             <?php if (user_has_permission('create_documents')): ?>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=letters" class="nav-item<?= ($activePage ?? '') === 'letters' ? ' active' : ''; ?>">Letters &amp; Notices</a>
             <?php endif; ?>
@@ -121,7 +124,7 @@ $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('mana
         </main>
     </div>
     <footer class="footer">
-        Powered by Dakshayani &bull; Yojaka v1.2
+        Powered by Dakshayani &bull; Yojaka v1.3
     </footer>
     <script>
         document.addEventListener('click', function (e) {

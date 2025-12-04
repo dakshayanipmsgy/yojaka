@@ -31,7 +31,11 @@ function load_rti_cases(): array
     }
     $contents = file_get_contents($path);
     $data = json_decode($contents, true);
-    return is_array($data) ? $data : [];
+    $data = is_array($data) ? $data : [];
+
+    return array_map(function ($case) {
+        return enrich_workflow_defaults('rti', $case);
+    }, $data);
 }
 
 function save_rti_cases(array $cases): void

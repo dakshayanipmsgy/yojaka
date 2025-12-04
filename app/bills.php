@@ -38,7 +38,10 @@ function load_bills(): array
         return [];
     }
     $data = json_decode((string) file_get_contents($path), true);
-    return is_array($data) ? $data : [];
+    $data = is_array($data) ? $data : [];
+    return array_map(function ($bill) {
+        return enrich_workflow_defaults('bills', $bill);
+    }, $data);
 }
 
 function save_bills(array $bills): bool

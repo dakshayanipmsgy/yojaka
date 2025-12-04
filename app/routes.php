@@ -104,6 +104,14 @@ function resolve_route(string $page): array
             'title' => 'Global Search',
             'view' => __DIR__ . '/views/global_search.php',
         ],
+        'my_tasks' => [
+            'title' => 'My Tasks',
+            'view' => __DIR__ . '/views/my_tasks.php',
+        ],
+        'notifications' => [
+            'title' => 'Notifications',
+            'view' => __DIR__ . '/views/notifications.php',
+        ],
     ];
 
     if (isset($routes[$page])) {
