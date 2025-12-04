@@ -5,14 +5,6 @@ require_login();
 $type = $_GET['type'] ?? '';
 $id = $_GET['id'] ?? '';
 
-function yojaka_print_page_size(): string
-{
-    $office = load_office_config();
-    $size = strtoupper(trim($office['print_page_size'] ?? ''));
-
-    return $size === 'LETTER' ? 'Letter' : 'A4';
-}
-
 switch ($type) {
     case 'bill':
         include __DIR__ . '/print_bill.php';
@@ -35,11 +27,11 @@ switch ($type) {
         break;
 
     case 'rti':
-        include __DIR__ . '/print_rti.php';
+        include __DIR__ . '/print_rti_reply.php';
         break;
 
     case 'dak':
-        include __DIR__ . '/print_dak.php';
+        include __DIR__ . '/print_dak_note.php';
         break;
 
     case 'letter':

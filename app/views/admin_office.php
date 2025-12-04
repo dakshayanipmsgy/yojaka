@@ -4,6 +4,7 @@ require_permission('manage_office_config');
 
 $office = load_office_config();
 $currentOfficeId = get_current_office_id();
+$printConfig = office_print_config($currentOfficeId);
 $csrf = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(16));
 $_SESSION['csrf_token'] = $csrf;
 
@@ -20,6 +21,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $office['theme']['primary_color'] = trim($_POST['primary_color'] ?? $office['theme']['primary_color']);
         $office['theme']['secondary_color'] = trim($_POST['secondary_color'] ?? $office['theme']['secondary_color']);
         $office['theme']['logo_path'] = trim($_POST['logo_path'] ?? $office['theme']['logo_path']);
+
+        $officePrint = $office['print'] ?? default_print_config($office);
+        $officePrint['page_size'] = strtoupper(trim($_POST['print']['page_size'] ?? ($officePrint['page_size'] ?? 'A4')));
+        $officePrint['show_header'] = isset($_POST['print']['show_header']);
+        $officePrint['show_footer'] = isset($_POST['print']['show_footer']);
+        $officePrint['header_html'] = trim($_POST['print']['header_html'] ?? ($officePrint['header_html'] ?? ''));
+        $officePrint['footer_html'] = trim($_POST['print']['footer_html'] ?? ($officePrint['footer_html'] ?? ''));
+        $officePrint['logo_path'] = trim($_POST['print']['logo_path'] ?? ($officePrint['logo_path'] ?? ''));
+        $officePrint['watermark_text'] = trim($_POST['print']['watermark_text'] ?? ($officePrint['watermark_text'] ?? ''));
+        $officePrint['watermark_enabled'] = isset($_POST['print']['watermark_enabled']);
+
+        if (!empty($_FILES['print_logo']['tmp_name'])) {
+            $uploadDir = YOJAKA_DATA_PATH . '/offices/logos';
+            if (!is_dir($uploadDir)) {
+                @mkdir($uploadDir, 0755, true);
+            }
+            $extension = pathinfo($_FILES['print_logo']['name'] ?? '', PATHINFO_EXTENSION);
+            $safeExtension = $extension ? '.' . preg_replace('/[^a-zA-Z0-9]/', '', $extension) : '';
+            $target = $uploadDir . '/logo_' . preg_replace('/[^a-zA-Z0-9]/', '_', $currentOfficeId) . $safeExtension;
+            if (@move_uploaded_file($_FILES['print_logo']['tmp_name'], $target)) {
+                $officePrint['logo_path'] = $target;
+            }
+        }
+
+        $office['print'] = $officePrint;
 
         $modules = ['rti', 'dak', 'inspection', 'bills', 'meeting_minutes', 'work_orders', 'guc'];
         foreach ($modules as $module) {
@@ -49,8 +75,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+$printConfig = $office['print'] ?? $printConfig;
 ?>
-<form method="post" class="form-stacked">
+<form method="post" class="form-stacked" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf); ?>">
     <div class="grid">
         <div class="form-field">
@@ -88,6 +115,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-field">
             <label>Logo Path</label>
             <input type="text" name="logo_path" value="<?= htmlspecialchars($office['theme']['logo_path'] ?? ''); ?>">
+        </div>
+    </div>
+
+    <h3>Print / Letterhead Settings</h3>
+    <div class="grid">
+        <div class="form-field">
+            <label>Page Size</label>
+            <select name="print[page_size]">
+                <option value="A4" <?= ($printConfig['page_size'] ?? '') === 'A4' ? 'selected' : ''; ?>>A4</option>
+                <option value="LETTER" <?= ($printConfig['page_size'] ?? '') === 'LETTER' ? 'selected' : ''; ?>>Letter</option>
+            </select>
+        </div>
+        <label><input type="checkbox" name="print[show_header]" <?= !empty($printConfig['show_header']) ? 'checked' : ''; ?>> Show header</label>
+        <label><input type="checkbox" name="print[show_footer]" <?= !empty($printConfig['show_footer']) ? 'checked' : ''; ?>> Show footer</label>
+        <label><input type="checkbox" name="print[watermark_enabled]" <?= !empty($printConfig['watermark_enabled']) ? 'checked' : ''; ?>> Enable watermark</label>
+    </div>
+    <div class="grid">
+        <div class="form-field">
+            <label>Letterhead Logo</label>
+            <input type="text" name="print[logo_path]" value="<?= htmlspecialchars($printConfig['logo_path'] ?? ''); ?>" placeholder="/data/offices/logos/office_logo.png">
+            <input type="file" name="print_logo" accept="image/*">
+        </div>
+        <div class="form-field">
+            <label>Watermark Text</label>
+            <input type="text" name="print[watermark_text]" value="<?= htmlspecialchars($printConfig['watermark_text'] ?? ''); ?>" placeholder="TRIAL COPY - NOT FOR PRODUCTION">
+        </div>
+    </div>
+    <div class="grid">
+        <div class="form-field">
+            <label>Header HTML</label>
+            <textarea name="print[header_html]" rows="4"><?= htmlspecialchars($printConfig['header_html'] ?? ''); ?></textarea>
+        </div>
+        <div class="form-field">
+            <label>Footer HTML</label>
+            <textarea name="print[footer_html]" rows="3"><?= htmlspecialchars($printConfig['footer_html'] ?? ''); ?></textarea>
         </div>
     </div>
 
