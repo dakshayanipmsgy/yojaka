@@ -1,6 +1,8 @@
 <?php
 require_login();
 require_permission('manage_office_config');
+require_once __DIR__ . '/../master_data.php';
+require_once __DIR__ . '/../staff.php';
 
 $errors = [];
 $notices = [];
