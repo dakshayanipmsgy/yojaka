@@ -14,6 +14,11 @@ return [
     'letters_templates_file' => 'letters.json',
     'generated_letters_log' => 'generated_letters.log',
 
+    // Dak module configuration
+    'dak_data_path' => __DIR__ . '/../data/dak',
+    'dak_entries_file' => 'dak_entries.json',
+    'dak_overdue_days' => 7,
+
     // RTI module configuration
     'rti_data_path' => __DIR__ . '/../data/rti',
     'rti_cases_file' => 'rti_cases.json',

@@ -11,12 +11,20 @@ $totalLettersGenerated = count_events($usageEntries, 'letter_generated');
 $userLettersGenerated = count_events($usageEntries, 'letter_generated', $user['username'] ?? null);
 
 $rtiCases = load_rti_cases();
+$dakEntries = load_dak_entries();
 
 $yourPendingRtis = 0;
 $yourOverdueRtis = 0;
+$yourDakAssigned = 0;
+$yourDakPending = 0;
+$yourDakOverdue = 0;
 $totalRtis = count($rtiCases);
 $pendingRtis = 0;
 $overdueRtis = 0;
+$totalDak = count($dakEntries);
+$pendingDak = 0;
+$overdueDak = 0;
+$unassignedDak = 0;
 
 foreach ($rtiCases as $case) {
     $isPending = ($case['status'] ?? '') === 'Pending';
@@ -34,6 +42,32 @@ foreach ($rtiCases as $case) {
     }
     if ($isOverdue) {
         $overdueRtis++;
+    }
+}
+
+foreach ($dakEntries as $entry) {
+    $isAssignedToUser = ($entry['assigned_to'] ?? null) === ($user['username'] ?? null);
+    $isClosed = ($entry['status'] ?? '') === 'Closed';
+    $overdue = is_dak_overdue($entry);
+
+    if ($isAssignedToUser) {
+        $yourDakAssigned++;
+        if (!$isClosed) {
+            $yourDakPending++;
+        }
+        if ($overdue) {
+            $yourDakOverdue++;
+        }
+    }
+
+    if (!$isClosed) {
+        $pendingDak++;
+    }
+    if ($overdue) {
+        $overdueDak++;
+    }
+    if (empty($entry['assigned_to'])) {
+        $unassignedDak++;
     }
 }
 ?>
@@ -68,6 +102,18 @@ foreach ($rtiCases as $case) {
         <div class="stat-value"><?= (int) $userLettersGenerated; ?></div>
     </div>
     <div class="card stat">
+        <div class="stat-label">Dak Assigned to You</div>
+        <div class="stat-value"><?= (int) $yourDakAssigned; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Dak Pending for You</div>
+        <div class="stat-value"><?= (int) $yourDakPending; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Dak Overdue</div>
+        <div class="stat-value warn"><?= (int) $yourDakOverdue; ?></div>
+    </div>
+    <div class="card stat">
         <div class="stat-label">Your RTIs (Pending)</div>
         <div class="stat-value"><?= (int) $yourPendingRtis; ?></div>
     </div>
@@ -81,12 +127,28 @@ foreach ($rtiCases as $case) {
             <div class="stat-value"><?= (int) $totalRtis; ?></div>
         </div>
         <div class="card stat">
-            <div class="stat-label">Pending RTIs</div>
-            <div class="stat-value"><?= (int) $pendingRtis; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Overdue RTIs</div>
-            <div class="stat-value warn"><?= (int) $overdueRtis; ?></div>
-        </div>
+        <div class="stat-label">Pending RTIs</div>
+        <div class="stat-value"><?= (int) $pendingRtis; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Overdue RTIs</div>
+        <div class="stat-value warn"><?= (int) $overdueRtis; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Total Dak</div>
+        <div class="stat-value"><?= (int) $totalDak; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Pending Dak</div>
+        <div class="stat-value"><?= (int) $pendingDak; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Overdue Dak</div>
+        <div class="stat-value warn"><?= (int) $overdueDak; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Unassigned Dak</div>
+        <div class="stat-value"><?= (int) $unassignedDak; ?></div>
+    </div>
     <?php endif; ?>
 </div>
