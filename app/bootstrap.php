@@ -27,6 +27,7 @@ if (!defined('YOJAKA_BASE_URL')) {
 }
 
 require_once __DIR__ . '/logging.php';
+require_once __DIR__ . '/list_helpers.php';
 require_once __DIR__ . '/departments.php';
 require_once __DIR__ . '/rendering.php';
 require_once __DIR__ . '/auth.php';
@@ -34,9 +35,13 @@ require_once __DIR__ . '/templates.php';
 require_once __DIR__ . '/rti.php';
 require_once __DIR__ . '/dak.php';
 require_once __DIR__ . '/inspection.php';
+require_once __DIR__ . '/backup.php';
 
 // Ensure logs directory exists early
 ensure_logs_directory();
+
+// Ensure backup directory exists
+ensure_backup_directory_exists();
 
 // Ensure departments storage exists
 ensure_departments_storage();

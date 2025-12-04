@@ -12,6 +12,7 @@ $mode = $_GET['mode'] ?? 'list';
 $mode = in_array($mode, ['list', 'create', 'view'], true) ? $mode : 'list';
 $errors = [];
 $notice = '';
+$pagination = null;
 
 $csrfToken = $_SESSION['rti_csrf_token'] ?? bin2hex(random_bytes(16));
 $_SESSION['rti_csrf_token'] = $csrfToken;
@@ -104,6 +105,25 @@ if ($mode === 'list') {
             return ($case['created_by'] ?? null) === ($user['username'] ?? null);
         });
     }
+
+    $searchTerm = trim($_GET['q'] ?? '');
+    $statusOptions = ['Pending', 'Replied', 'Closed'];
+    $statusFilter = trim($_GET['status'] ?? '');
+    if (!in_array($statusFilter, $statusOptions, true)) {
+        $statusFilter = '';
+    }
+
+    $visibleCases = filter_items_search($visibleCases, $searchTerm, ['reference_number', 'applicant_name', 'subject', 'details']);
+    if ($statusFilter !== '') {
+        $visibleCases = array_filter($visibleCases, function ($case) use ($statusFilter) {
+            return ($case['status'] ?? '') === $statusFilter;
+        });
+    }
+
+    $perPage = $config['pagination_per_page'] ?? 10;
+    $pageParam = 'p';
+    $pagination = paginate_array(array_values($visibleCases), get_page_param($pageParam), $perPage);
+    $visibleCases = $pagination['items'];
 }
 ?>
 
@@ -125,6 +145,24 @@ if ($mode === 'list') {
         <?php if ($canManage): ?>
             <a class="btn-primary" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=rti&mode=create">Create New RTI</a>
         <?php endif; ?>
+    </div>
+    <div class="filter-bar">
+        <form method="get" action="<?= YOJAKA_BASE_URL; ?>/app.php" class="form-inline">
+            <input type="hidden" name="page" value="rti">
+            <div class="form-field">
+                <input type="text" name="q" placeholder="Search RTIs (reference, applicant, subject)" value="<?= htmlspecialchars($_GET['q'] ?? ''); ?>">
+            </div>
+            <div class="form-field">
+                <label for="status">Status</label>
+                <select id="status" name="status" onchange="this.form.submit()">
+                    <option value="">All</option>
+                    <?php foreach ($statusOptions as $statusOpt): ?>
+                        <option value="<?= htmlspecialchars($statusOpt); ?>" <?= ($statusFilter ?? '') === $statusOpt ? 'selected' : ''; ?>><?= htmlspecialchars($statusOpt); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button type="submit" class="btn">Search</button>
+        </form>
     </div>
     <div class="table-responsive">
         <table class="table">
@@ -161,6 +199,29 @@ if ($mode === 'list') {
             </tbody>
         </table>
     </div>
+    <?php if ($pagination): ?>
+        <div class="pagination">
+            <span>Page <?= (int) $pagination['page']; ?> of <?= (int) $pagination['total_pages']; ?></span>
+            <?php
+            $queryBase = [
+                'page' => 'rti',
+                'q' => $_GET['q'] ?? '',
+                'status' => $statusFilter ?? '',
+            ];
+            $pageParam = 'p';
+            ?>
+            <div class="pager-links">
+                <?php if ($pagination['page'] > 1): ?>
+                    <?php $prevQuery = http_build_query(array_merge($queryBase, [$pageParam => $pagination['page'] - 1])); ?>
+                    <a class="btn" href="<?= YOJAKA_BASE_URL; ?>/app.php?<?= $prevQuery; ?>">&laquo; Prev</a>
+                <?php endif; ?>
+                <?php if ($pagination['page'] < $pagination['total_pages']): ?>
+                    <?php $nextQuery = http_build_query(array_merge($queryBase, [$pageParam => $pagination['page'] + 1])); ?>
+                    <a class="btn" href="<?= YOJAKA_BASE_URL; ?>/app.php?<?= $nextQuery; ?>">Next &raquo;</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 <?php elseif ($mode === 'create'): ?>
     <h3>Create New RTI Case</h3>
     <form method="post" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=rti&mode=create" class="form-stacked">
