@@ -73,28 +73,108 @@ function bootstrap_ensure_base_directories(): void
     }
 }
 
+function bootstrap_seed_permissions(): void
+{
+    $permissionsFile = YOJAKA_DATA_PATH . '/org/permissions.json';
+    $defaultPermissions = [
+        'roles' => [
+            'superadmin' => ['*'],
+            'admin' => [
+                'manage_users',
+                'manage_hierarchy',
+                'manage_routes',
+                'manage_master_data',
+                'manage_templates',
+                'view_all_files',
+                'manage_departments',
+                'view_logs',
+                'manage_rti',
+                'manage_dak',
+                'manage_inspection',
+                'view_reports_basic',
+                'view_mis_reports',
+                'admin_backup',
+                'manage_office_config',
+                'manage_bills',
+                'manage_documents_repository',
+                'manage_housekeeping',
+            ],
+            'officer' => [
+                'view_assigned_files',
+                'move_files',
+                'edit_files',
+                'manage_rti',
+                'manage_dak',
+                'manage_inspection',
+                'view_reports_basic',
+                'create_documents',
+                'manage_bills',
+                'manage_documents_repository',
+            ],
+            'clerk' => [
+                'create_dak',
+                'move_files',
+                'view_assigned_files',
+                'create_documents',
+                'manage_dak',
+                'view_reports_basic',
+                'manage_bills',
+            ],
+        ],
+        'custom_roles' => new stdClass(),
+    ];
+
+    bootstrap_seed_json($permissionsFile, $defaultPermissions);
+}
+
 function bootstrap_seed_default_users(array $config): void
 {
     $usersFile = YOJAKA_DATA_PATH . '/users.json';
+    $existing = [];
     if (file_exists($usersFile)) {
-        return;
+        $existing = json_decode((string) file_get_contents($usersFile), true) ?: [];
     }
 
     $admin = $config['default_admin'] ?? ['username' => 'admin', 'password' => 'admin123', 'full_name' => 'System Administrator'];
-    $user = [
-        'id' => 1,
-        'username' => $admin['username'],
-        'password_hash' => password_hash($admin['password'], PASSWORD_DEFAULT),
-        'role' => 'admin',
-        'office_id' => 'office_001',
-        'active' => true,
-        'preferred_language' => 'en',
-        'full_name' => $admin['full_name'] ?? 'System Administrator',
-        'department_id' => 'dept_default',
-        'created_at' => gmdate('c'),
-    ];
+    if (empty($existing)) {
+        $existing[] = [
+            'id' => 1,
+            'username' => $admin['username'],
+            'password_hash' => password_hash($admin['password'], PASSWORD_DEFAULT),
+            'role' => 'admin',
+            'office_id' => 'office_001',
+            'active' => true,
+            'preferred_language' => 'en',
+            'full_name' => $admin['full_name'] ?? 'System Administrator',
+            'department_id' => 'dept_default',
+            'created_at' => gmdate('c'),
+        ];
+    }
 
-    bootstrap_seed_json($usersFile, [$user]);
+    $hasSuperAdmin = false;
+    foreach ($existing as $u) {
+        if (($u['role'] ?? '') === 'superadmin') {
+            $hasSuperAdmin = true;
+            break;
+        }
+    }
+
+    if (!$hasSuperAdmin) {
+        $existing[] = [
+            'id' => count($existing) + 1,
+            'username' => 'superadmin',
+            'password_hash' => password_hash('superadmin', PASSWORD_DEFAULT),
+            'role' => 'superadmin',
+            'office_id' => 'office_001',
+            'active' => true,
+            'preferred_language' => 'en',
+            'full_name' => 'Super Administrator',
+            'department_id' => 'dept_default',
+            'created_at' => gmdate('c'),
+        ];
+    }
+
+    bootstrap_seed_json($usersFile, $existing);
 }
 
 function bootstrap_seed_default_i18n(array $config): void
@@ -152,6 +232,7 @@ yojaka_initialize($config);
 
 bootstrap_ensure_base_directories();
 bootstrap_seed_default_i18n($config);
+bootstrap_seed_permissions();
 bootstrap_seed_default_users($config);
 
 // Control error display for production safety

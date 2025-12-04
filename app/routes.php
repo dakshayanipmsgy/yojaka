@@ -152,6 +152,21 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/case_export.php',
             'permission' => 'admin_backup',
         ],
+        'admin_roles' => [
+            'title' => 'Role Management',
+            'view' => __DIR__ . '/views/admin_roles.php',
+            'permission' => 'manage_users',
+        ],
+        'superadmin_offices' => [
+            'title' => 'Super Admin Offices',
+            'view' => __DIR__ . '/views/superadmin_offices.php',
+            'role' => 'superadmin',
+        ],
+        'superadmin_dashboard' => [
+            'title' => 'Super Admin Dashboard',
+            'view' => __DIR__ . '/views/superadmin_dashboard.php',
+            'role' => 'superadmin',
+        ],
     ];
 
     if (isset($routes[$page])) {
