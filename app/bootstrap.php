@@ -60,9 +60,11 @@ function bootstrap_ensure_base_directories(): void
         YOJAKA_DATA_PATH . '/offices',
         YOJAKA_DATA_PATH . '/audit',
         YOJAKA_DATA_PATH . '/index',
+        YOJAKA_DATA_PATH . '/index_v2',
         YOJAKA_DATA_PATH . '/i18n',
         YOJAKA_DATA_PATH . '/master',
         YOJAKA_DATA_PATH . '/portal',
+        YOJAKA_DATA_PATH . '/qr',
     ];
 
     foreach ($directories as $dir) {
@@ -124,7 +126,14 @@ function bootstrap_seed_default_i18n(array $config): void
         'btn.save' => 'Save',
         'btn.cancel' => 'Cancel',
         'btn.search' => 'Search',
+        'search.advanced' => 'Advanced Search',
+        'search.keyword' => 'Keyword',
+        'search.status' => 'Status',
+        'search.date_from' => 'Date From',
+        'search.date_to' => 'Date To',
         'btn.create_new' => 'Create New',
+        'export.pdf' => 'Export PDF',
+        'print.html' => 'Print HTML',
         'label.language' => 'Language',
         'label.office' => 'Office',
         'label.custom_fields' => 'Custom Fields',
@@ -180,11 +189,15 @@ require_once __DIR__ . '/workflow.php';
 require_once __DIR__ . '/notifications.php';
 require_once __DIR__ . '/sla.php';
 require_once __DIR__ . '/indexes.php';
+require_once __DIR__ . '/index_v2.php';
 require_once __DIR__ . '/export.php';
 require_once __DIR__ . '/i18n.php';
 require_once __DIR__ . '/custom_fields.php';
 require_once __DIR__ . '/ui_config.php';
 require_once __DIR__ . '/portal_rate_limit.php';
+require_once __DIR__ . '/qr.php';
+require_once __DIR__ . '/pdf_export.php';
+require_once __DIR__ . '/search.php';
 
 // Ensure logs directory exists early
 ensure_logs_directory();
@@ -221,6 +234,7 @@ ensure_documents_storage();
 ensure_bills_storage();
 ensure_attachments_storage();
 ensure_notifications_storage();
+ensure_qr_storage();
 
 // Seed default admin user if necessary
 create_default_admin_if_needed($config);
