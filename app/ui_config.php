@@ -28,6 +28,8 @@ function default_menu_config(): array
             ['page' => 'admin_rti', 'visible' => true, 'label_key' => 'nav.admin_rti'],
             ['page' => 'admin_dak', 'visible' => true, 'label_key' => 'nav.admin_dak'],
             ['page' => 'admin_inspection', 'visible' => true, 'label_key' => 'nav.admin_inspection'],
+            ['page' => 'admin_hierarchy', 'visible' => true, 'label_key' => 'nav.admin_hierarchy'],
+            ['page' => 'admin_routes', 'visible' => true, 'label_key' => 'nav.admin_routes'],
             ['page' => 'admin_repository', 'visible' => true, 'label_key' => 'nav.repository'],
             ['page' => 'admin_logs', 'visible' => true, 'label_key' => 'nav.logs'],
             ['page' => 'admin_housekeeping', 'visible' => true, 'label_key' => 'nav.housekeeping'],

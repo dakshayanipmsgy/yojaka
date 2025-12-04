@@ -111,6 +111,16 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_master_data.php',
             'permission' => 'manage_office_config',
         ],
+        'admin_hierarchy' => [
+            'title' => 'Hierarchy & Posts',
+            'view' => __DIR__ . '/views/admin_hierarchy.php',
+            'permission' => 'manage_office_config',
+        ],
+        'admin_routes' => [
+            'title' => 'File Routes',
+            'view' => __DIR__ . '/views/admin_routes.php',
+            'permission' => 'manage_office_config',
+        ],
         'admin_mis' => [
             'title' => 'Reports & Analytics (MIS)',
             'view' => __DIR__ . '/views/admin_mis.php',

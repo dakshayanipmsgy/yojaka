@@ -1,0 +1,24 @@
+[
+  {
+    "id": "POS-001",
+    "office_id": "office_001",
+    "department_id": "dept_default",
+    "post_id": "POST-CLERK",
+    "title": "Dak Clerk",
+    "reports_to": "POS-002",
+    "user_username": "admin",
+    "staff_id": null,
+    "active": true
+  },
+  {
+    "id": "POS-002",
+    "office_id": "office_001",
+    "department_id": "dept_default",
+    "post_id": "POST-AE",
+    "title": "Assistant Engineer",
+    "reports_to": null,
+    "user_username": null,
+    "staff_id": null,
+    "active": true
+  }
+]

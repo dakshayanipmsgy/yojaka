@@ -1,0 +1,16 @@
+[
+  {
+    "id": "POST-CLERK",
+    "name": "Clerk",
+    "short_name": "Clerk",
+    "level": 10,
+    "description": "Clerical staff handling initial receipts."
+  },
+  {
+    "id": "POST-AE",
+    "name": "Assistant Engineer",
+    "short_name": "AE",
+    "level": 20,
+    "description": "Assistant Engineer"
+  }
+]
