@@ -1,83 +1,51 @@
 <?php
 // Staff helpers for unified staff directory
 
-function staff_data_path(string $officeId): string
+function staff_data_path(): string
 {
-    $safeOffice = preg_replace('/[^A-Za-z0-9_\-]/', '_', $officeId);
-    return YOJAKA_DATA_PATH . '/master/staff_' . $safeOffice . '.json';
+    return YOJAKA_DATA_PATH . '/master/staff.json';
 }
 
-function load_staff(string $officeId): array
+function load_all_staff(): array
 {
-    $path = staff_data_path($officeId);
+    $path = staff_data_path();
     if (!file_exists($path)) {
-        $legacy = YOJAKA_DATA_PATH . '/master/staff.json';
-        if (!file_exists($legacy)) {
-            return [];
-        }
-        $raw = json_decode((string) file_get_contents($legacy), true);
-        if (!is_array($raw)) {
-            return [];
-        }
-        return array_values(array_filter($raw, static function ($row) use ($officeId) {
-            return !isset($row['office_id']) || ($row['office_id'] === $officeId);
-        }));
+        return [];
     }
     $raw = json_decode((string) file_get_contents($path), true);
     return is_array($raw) ? $raw : [];
 }
 
-function next_staff_identifier(array $existing, array $pending): string
+function load_staff(string $officeId): array
 {
-    $max = 0;
-    foreach (array_merge($existing, $pending) as $row) {
-        $id = $row['staff_id'] ?? ($row['id'] ?? '');
-        if (preg_match('/S-(\d{4})/', (string) $id, $m)) {
-            $max = max($max, (int) $m[1]);
-        }
-    }
-    return sprintf('S-%04d', $max + 1);
+    $records = load_all_staff();
+    return array_values(array_filter($records, static function ($row) use ($officeId) {
+        return ($row['office_id'] ?? null) === $officeId;
+    }));
 }
 
 function save_staff(string $officeId, array $staff): bool
 {
-    $path = staff_data_path($officeId);
-    $existing = load_staff($officeId);
+    $existing = load_all_staff();
+    $filtered = array_values(array_filter($existing, static function ($row) use ($officeId) {
+        return ($row['office_id'] ?? null) !== $officeId;
+    }));
 
     $normalized = [];
     $now = date('c');
     foreach ($staff as $entry) {
-        if (empty($entry['staff_id']) && !empty($entry['id'])) {
-            $entry['staff_id'] = $entry['id'];
-            unset($entry['id']);
-        }
         if (empty($entry['staff_id'])) {
-            $entry['staff_id'] = next_staff_identifier($existing, $normalized);
+            $entry['staff_id'] = sprintf('S-%04d', count($normalized) + 1);
         }
-        $entry['full_name'] = $entry['full_name'] ?? ($entry['name'] ?? '');
         $entry['created_at'] = $entry['created_at'] ?? $now;
         $entry['updated_at'] = $now;
         $entry['office_id'] = $entry['office_id'] ?? $officeId;
         $entry['active'] = array_key_exists('active', $entry) ? (bool) $entry['active'] : true;
         $normalized[] = $entry;
     }
-
-    bootstrap_ensure_directory(dirname($path));
-    $json = json_encode($normalized, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    $fp = fopen($path, 'c+');
-    if (!$fp) {
-        return false;
-    }
-    $result = false;
-    if (flock($fp, LOCK_EX)) {
-        ftruncate($fp, 0);
-        rewind($fp);
-        $result = fwrite($fp, $json) !== false;
-        fflush($fp);
-        flock($fp, LOCK_UN);
-    }
-    fclose($fp);
-    return $result;
+    $payload = array_merge($filtered, $normalized);
+    bootstrap_ensure_directory(dirname(staff_data_path()));
+    return false !== @file_put_contents(staff_data_path(), json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
 function find_staff_by_id(string $officeId, string $staffId): ?array
@@ -97,43 +65,4 @@ function find_staff_by_username(string $officeId, string $username): ?array
         return null;
     }
     return find_staff_by_id($officeId, $user['staff_id']);
-}
-
-function import_staff_from_csv(string $officeId, string $fileTmpPath): int
-{
-    $imported = 0;
-    if (!is_readable($fileTmpPath)) {
-        return 0;
-    }
-
-    $staff = load_staff($officeId);
-    if (($handle = fopen($fileTmpPath, 'r')) !== false) {
-        $header = fgetcsv($handle);
-        while (($row = fgetcsv($handle)) !== false) {
-            if (count(array_filter($row, 'strlen')) === 0) {
-                continue;
-            }
-            [$name, $designation, $role, $departmentId, $phone, $email] = array_pad($row, 6, '');
-            $name = trim($name);
-            if ($name === '') {
-                continue;
-            }
-            $staff[] = [
-                'staff_id' => null,
-                'full_name' => $name,
-                'designation' => trim($designation),
-                'role' => trim($role),
-                'department_id' => trim($departmentId),
-                'phone' => trim($phone),
-                'email' => trim($email),
-                'active' => true,
-                'office_id' => $officeId,
-            ];
-            $imported++;
-        }
-        fclose($handle);
-    }
-
-    save_staff($officeId, $staff);
-    return $imported;
 }
