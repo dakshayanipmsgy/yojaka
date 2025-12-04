@@ -6,6 +6,7 @@ require_module_enabled('bills');
 $user = current_user();
 $officeConfig = load_office_config();
 $bills = load_bills();
+$contractors = load_contractors();
 $mode = $_GET['mode'] ?? 'list';
 $csrf_token = $_SESSION['csrf_token'] ?? bin2hex(random_bytes(16));
 $_SESSION['csrf_token'] = $csrf_token;
@@ -23,7 +24,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mode === 'create') {
     } else {
         $billNo = trim($_POST['bill_no'] ?? '');
         $billDate = trim($_POST['bill_date'] ?? date('Y-m-d'));
+        $contractorId = trim($_POST['contractor_id'] ?? '');
+        if ($contractorId === 'other') {
+            $contractorId = '';
+        }
         $contractor = trim($_POST['contractor_name'] ?? '');
+        if ($contractorId !== '') {
+            foreach ($contractors as $ctr) {
+                if (($ctr['id'] ?? '') === $contractorId) {
+                    $contractor = $ctr['name'] ?? $contractor;
+                    break;
+                }
+            }
+        }
         $workDescription = trim($_POST['work_description'] ?? '');
         $workOrderNo = trim($_POST['work_order_no'] ?? '');
         $workOrderDate = trim($_POST['work_order_date'] ?? '');
@@ -73,6 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mode === 'create') {
             'id' => $billId,
             'bill_no' => $billNo,
             'bill_date' => $billDate,
+            'contractor_id' => $contractorId ?: null,
             'contractor_name' => $contractor,
             'work_description' => $workDescription,
             'work_order_no' => $workOrderNo,
@@ -361,8 +375,15 @@ if ($mode === 'create') {
                 <input type="date" name="bill_date" value="<?= htmlspecialchars(date('Y-m-d')); ?>" required>
             </div>
             <div class="form-field">
-                <label>Contractor Name</label>
-                <input type="text" name="contractor_name" required>
+                <label>Contractor</label>
+                <select name="contractor_id">
+                    <option value="">-- Select Contractor --</option>
+                    <?php foreach ($contractors as $ctr): ?>
+                        <option value="<?= htmlspecialchars($ctr['id'] ?? ''); ?>"><?= htmlspecialchars(($ctr['name'] ?? '') . ($ctr['category'] ? ' (' . $ctr['category'] . ')' : '')); ?></option>
+                    <?php endforeach; ?>
+                    <option value="other">Other (type manually)</option>
+                </select>
+                <input type="text" name="contractor_name" placeholder="If Other, type contractor name" required>
             </div>
             <div class="form-field">
                 <label>Work Description</label>

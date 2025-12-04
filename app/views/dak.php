@@ -60,8 +60,10 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             'last_action' => 'created',
             'last_action_at' => $now,
             'office_id' => $currentOfficeId,
+            'movements' => [],
         ];
 
+        append_dak_movement($entries[array_key_last($entries)], 'created', null, $user['username'] ?? null, 'Dak entry created');
         save_dak_entries($entries);
         log_event('dak_created', $user['username'] ?? null, ['dak_id' => $dakId]);
         log_dak_movement($dakId, 'created', null, $user['username'] ?? null, 'Dak entry created');
@@ -141,6 +143,7 @@ $targetId = $_GET['id'] ?? null;
                     $entry['last_action'] = 'assigned';
                     $entry['last_action_at'] = gmdate('c');
                     $entry['updated_at'] = gmdate('c');
+                    append_dak_movement($entry, 'assigned', $entry['created_by'] ?? null, $assignTo, 'Assigned via admin');
                     foreach ($entries as &$item) {
                         if (($item['id'] ?? '') === $entry['id']) {
                             $item = $entry;
@@ -167,6 +170,7 @@ $targetId = $_GET['id'] ?? null;
                     $entry['last_action'] = 'workflow_changed';
                     $entry['last_action_at'] = gmdate('c');
                     $entry['updated_at'] = gmdate('c');
+                    append_dak_movement($entry, 'workflow_changed', $entry['assigned_to'] ?? null, $entry['assigned_to'] ?? null, 'State changed to ' . $newState);
                     foreach ($entries as &$item) {
                         if (($item['id'] ?? '') === $entry['id']) {
                             $item = $entry;
@@ -204,6 +208,29 @@ $targetId = $_GET['id'] ?? null;
                 <p><strong>Assigned To:</strong> <?= htmlspecialchars($entry['assigned_to'] ?? 'Unassigned'); ?></p>
                 <p><strong>Details:</strong><br><?= nl2br(htmlspecialchars($entry['details'] ?? '')); ?></p>
                 <p><strong>Created By:</strong> <?= htmlspecialchars($entry['created_by'] ?? ''); ?></p>
+            </div>
+            <div class="card">
+                <h3>Movement History</h3>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead><tr><th>Date/Time</th><th>From</th><th>To</th><th>Action</th><th>Remark</th></tr></thead>
+                        <tbody>
+                            <?php if (empty($entry['movements'])): ?>
+                                <tr><td colspan="5">No movements logged yet.</td></tr>
+                            <?php else: ?>
+                                <?php foreach ($entry['movements'] as $move): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars(format_date_for_display($move['timestamp'] ?? '')); ?></td>
+                                        <td><?= htmlspecialchars($move['from_user'] ?? ''); ?></td>
+                                        <td><?= htmlspecialchars($move['to_user'] ?? ''); ?></td>
+                                        <td><?= htmlspecialchars($move['action'] ?? ''); ?></td>
+                                        <td><?= htmlspecialchars($move['remark'] ?? ''); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <div class="card">
                 <h3>Workflow &amp; Assignment</h3>

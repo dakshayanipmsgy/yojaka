@@ -186,6 +186,30 @@ function save_office_config_by_id(string $officeId, string $configFile, array $o
     return true;
 }
 
+function save_office_config(string $officeId, array $config): bool
+{
+    ensure_office_storage();
+    $dir = offices_data_directory();
+    $file = $dir . DIRECTORY_SEPARATOR . $officeId . '.json';
+    $config['id'] = $officeId;
+
+    $handle = @fopen($file, 'c+');
+    if (!$handle) {
+        return false;
+    }
+
+    $result = false;
+    if (flock($handle, LOCK_EX)) {
+        ftruncate($handle, 0);
+        rewind($handle);
+        $result = fwrite($handle, json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) !== false;
+        fflush($handle);
+        flock($handle, LOCK_UN);
+    }
+    fclose($handle);
+    return $result;
+}
+
 function load_office_config_by_id(string $officeId): array
 {
     $registry = load_offices_registry();

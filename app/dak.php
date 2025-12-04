@@ -63,6 +63,9 @@ function load_dak_entries(): array
     return array_map(function ($entry) use ($currentOffice) {
         $entry = ensure_record_office($entry, $currentOffice);
         $entry = ensure_archival_defaults($entry);
+        if (!isset($entry['movements']) || !is_array($entry['movements'])) {
+            $entry['movements'] = [];
+        }
         return enrich_workflow_defaults('dak', $entry);
     }, $data);
 }
@@ -86,6 +89,17 @@ function save_dak_entries(array $entries): void
     fflush($handle);
     flock($handle, LOCK_UN);
     fclose($handle);
+}
+
+function append_dak_movement(array &$entry, string $action, ?string $from_user, ?string $to_user, string $remarks = ''): void
+{
+    $entry['movements'][] = [
+        'timestamp' => gmdate('c'),
+        'action' => $action,
+        'from_user' => $from_user,
+        'to_user' => $to_user,
+        'remark' => $remarks,
+    ];
 }
 
 function generate_next_dak_id(array $entries): string
@@ -134,6 +148,7 @@ function update_dak_status(array &$entries, string $dak_id, string $new_status):
         if (($entry['id'] ?? '') === $dak_id) {
             $entry['status'] = $new_status;
             $entry['updated_at'] = gmdate('c');
+            append_dak_movement($entry, 'status_changed', $entry['assigned_to'] ?? null, $entry['assigned_to'] ?? null, 'Status changed to ' . $new_status);
             log_dak_movement($dak_id, 'status_changed', $entry['assigned_to'] ?? null, $entry['assigned_to'] ?? null, 'Status changed to ' . $new_status);
             return true;
         }
@@ -149,6 +164,7 @@ function assign_dak_to_user(array &$entries, string $dak_id, string $username): 
             $entry['assigned_to'] = $username;
             $entry['status'] = $entry['status'] === 'Closed' ? $entry['status'] : 'Assigned';
             $entry['updated_at'] = gmdate('c');
+            append_dak_movement($entry, 'assigned', $from, $username, 'Assigned to user');
             log_dak_movement($dak_id, 'assigned', $from, $username, 'Assigned to user');
             return true;
         }
@@ -163,6 +179,7 @@ function forward_dak(array &$entries, string $dak_id, ?string $from_user, string
             $entry['assigned_to'] = $to_user;
             $entry['status'] = $entry['status'] === 'Closed' ? $entry['status'] : 'Assigned';
             $entry['updated_at'] = gmdate('c');
+            append_dak_movement($entry, 'forwarded', $from_user, $to_user, $remarks);
             log_dak_movement($dak_id, 'forwarded', $from_user, $to_user, $remarks);
             return true;
         }

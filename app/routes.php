@@ -106,6 +106,11 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_license.php',
             'permission' => 'manage_office_config',
         ],
+        'admin_master_data' => [
+            'title' => 'Master Data',
+            'view' => __DIR__ . '/views/admin_master_data.php',
+            'permission' => 'manage_office_config',
+        ],
         'admin_mis' => [
             'title' => 'Reports & Analytics (MIS)',
             'view' => __DIR__ . '/views/admin_mis.php',

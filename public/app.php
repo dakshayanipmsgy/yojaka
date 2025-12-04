@@ -1,4 +1,8 @@
 <?php
+if (!ob_get_level()) {
+    ob_start();
+}
+
 require_once __DIR__ . '/../app/bootstrap.php';
 require_once __DIR__ . '/../app/routes.php';
 
@@ -92,4 +96,8 @@ if ($useLayout) {
     include __DIR__ . '/../app/views/layout.php';
 } else {
     include $viewFile;
+}
+
+if (ob_get_level()) {
+    ob_end_flush();
 }
