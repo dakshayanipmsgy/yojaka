@@ -296,7 +296,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/logging.php';
 require_once __DIR__ . '/list_helpers.php';
-require_once __DIR__ . '/staff.php';
 require_once __DIR__ . '/departments.php';
 require_once __DIR__ . '/rendering.php';
 require_once __DIR__ . '/office.php';
@@ -325,7 +324,6 @@ require_once __DIR__ . '/i18n.php';
 require_once __DIR__ . '/custom_fields.php';
 require_once __DIR__ . '/ui_config.php';
 require_once __DIR__ . '/portal_rate_limit.php';
-require_once __DIR__ . '/positions.php';
 require_once __DIR__ . '/qr.php';
 require_once __DIR__ . '/pdf_export.php';
 require_once __DIR__ . '/search.php';
