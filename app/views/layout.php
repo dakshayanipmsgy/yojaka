@@ -35,6 +35,9 @@ $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('mana
             <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dashboard" class="nav-item<?= ($activePage ?? '') === 'dashboard' ? ' active' : ''; ?>">Dashboard</a>
             <?php if (user_has_permission('create_documents')): ?>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=letters" class="nav-item<?= ($activePage ?? '') === 'letters' ? ' active' : ''; ?>">Letters &amp; Notices</a>
+                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=meeting_minutes" class="nav-item<?= ($activePage ?? '') === 'meeting_minutes' ? ' active' : ''; ?>">Meeting Minutes</a>
+                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=work_orders" class="nav-item<?= ($activePage ?? '') === 'work_orders' ? ' active' : ''; ?>">Work Orders</a>
+                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=guc" class="nav-item<?= ($activePage ?? '') === 'guc' ? ' active' : ''; ?>">Grant Utilization Certificates</a>
             <?php endif; ?>
             <?php if (user_has_permission('manage_rti') || user_has_permission('view_reports_basic')): ?>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=rti" class="nav-item<?= ($activePage ?? '') === 'rti' ? ' active' : ''; ?>">RTI Cases</a>
@@ -58,6 +61,7 @@ $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('mana
                 <?php endif; ?>
                 <?php if (user_has_permission('manage_templates')): ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_letter_templates" class="nav-item<?= ($activePage ?? '') === 'admin_letter_templates' ? ' active' : ''; ?>">Letter Templates</a>
+                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_documents" class="nav-item<?= ($activePage ?? '') === 'admin_documents' ? ' active' : ''; ?>">Document Templates</a>
                 <?php endif; ?>
                 <?php if (user_has_permission('manage_rti')): ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_rti" class="nav-item<?= ($activePage ?? '') === 'admin_rti' ? ' active' : ''; ?>">RTI Management</a>
@@ -83,7 +87,7 @@ $hasAdminMenu = user_has_permission('manage_users') || user_has_permission('mana
         </main>
     </div>
     <footer class="footer">
-        Powered by Dakshayani &bull; Yojaka v0.7
+        Powered by Dakshayani &bull; Yojaka v0.9
     </footer>
 </body>
 </html>

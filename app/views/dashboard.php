@@ -13,6 +13,9 @@ $userLettersGenerated = count_events($usageEntries, 'letter_generated', $user['u
 $rtiCases = load_rti_cases();
 $dakEntries = load_dak_entries();
 $inspectionReports = load_inspection_reports();
+$meetingMinutesDocs = load_document_records('meeting_minutes');
+$workOrdersDocs = load_document_records('work_order');
+$gucDocs = load_document_records('guc');
 
 $yourPendingRtis = 0;
 $yourOverdueRtis = 0;
@@ -31,6 +34,12 @@ $yourOpenInspections = 0;
 $totalInspections = count($inspectionReports);
 $openInspections = 0;
 $closedInspections = 0;
+$yourMeetingMinutes = 0;
+$yourWorkOrders = 0;
+$yourGucs = 0;
+$totalMeetingMinutes = count($meetingMinutesDocs);
+$totalWorkOrders = count($workOrdersDocs);
+$totalGucs = count($gucDocs);
 
 foreach ($rtiCases as $case) {
     $isPending = ($case['status'] ?? '') === 'Pending';
@@ -92,6 +101,24 @@ foreach ($inspectionReports as $report) {
         $openInspections++;
     }
 }
+
+foreach ($meetingMinutesDocs as $doc) {
+    if (($doc['created_by'] ?? null) === ($user['username'] ?? null)) {
+        $yourMeetingMinutes++;
+    }
+}
+
+foreach ($workOrdersDocs as $doc) {
+    if (($doc['created_by'] ?? null) === ($user['username'] ?? null)) {
+        $yourWorkOrders++;
+    }
+}
+
+foreach ($gucDocs as $doc) {
+    if (($doc['created_by'] ?? null) === ($user['username'] ?? null)) {
+        $yourGucs++;
+    }
+}
 ?>
 <div class="grid">
     <div class="card highlight">
@@ -122,6 +149,18 @@ foreach ($inspectionReports as $report) {
     <div class="card stat">
         <div class="stat-label">Your Letters Generated</div>
         <div class="stat-value"><?= (int) $userLettersGenerated; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Your Meeting Minutes</div>
+        <div class="stat-value"><?= (int) $yourMeetingMinutes; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Your Work Orders</div>
+        <div class="stat-value"><?= (int) $yourWorkOrders; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Your GUCs</div>
+        <div class="stat-value"><?= (int) $yourGucs; ?></div>
     </div>
     <div class="card stat">
         <div class="stat-label">Your Inspection Reports</div>
@@ -191,6 +230,18 @@ foreach ($inspectionReports as $report) {
     <div class="card stat">
         <div class="stat-label">Closed Inspection Reports</div>
         <div class="stat-value"><?= (int) $closedInspections; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Total Meeting Minutes</div>
+        <div class="stat-value"><?= (int) $totalMeetingMinutes; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Total Work Orders</div>
+        <div class="stat-value"><?= (int) $totalWorkOrders; ?></div>
+    </div>
+    <div class="card stat">
+        <div class="stat-label">Total GUCs</div>
+        <div class="stat-value"><?= (int) $totalGucs; ?></div>
     </div>
     <?php endif; ?>
 </div>

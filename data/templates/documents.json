@@ -1,0 +1,191 @@
+[
+  {
+    "id": "mm_general_meeting",
+    "category": "meeting_minutes",
+    "name": "General Meeting Minutes",
+    "description": "Record of standard departmental meeting proceedings.",
+    "active": true,
+    "fields": [
+      {
+        "name": "meeting_title",
+        "label": "Meeting Title",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "meeting_date",
+        "label": "Meeting Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "name": "meeting_time",
+        "label": "Meeting Time",
+        "type": "text",
+        "required": false
+      },
+      {
+        "name": "venue",
+        "label": "Venue",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "participants",
+        "label": "Participants",
+        "type": "textarea",
+        "required": true
+      }
+    ],
+    "extra_sections": [
+      {
+        "name": "agenda_items",
+        "label": "Agenda Items",
+        "type": "textarea",
+        "required": false
+      },
+      {
+        "name": "decisions",
+        "label": "Decisions",
+        "type": "textarea",
+        "required": false
+      },
+      {
+        "name": "action_points",
+        "label": "Action Points",
+        "type": "textarea",
+        "required": false
+      }
+    ],
+    "body": "Minutes of the meeting titled {{meeting_title}} held on {{meeting_date}} at {{meeting_time}} at {{venue}}.\n\nParticipants:\n{{participants}}\n\nAgenda Items:\n{{agenda_items}}\n\nDecisions Taken:\n{{decisions}}\n\nAction Points:\n{{action_points}}",
+    "footer_note": "These minutes are issued with the approval of the competent authority."
+  },
+  {
+    "id": "wo_basic_order",
+    "category": "work_order",
+    "name": "Basic Work Order",
+    "description": "Standard work order outlining scope, cost, and completion period.",
+    "active": true,
+    "fields": [
+      {
+        "name": "work_title",
+        "label": "Work Title",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "work_order_no",
+        "label": "Work Order No.",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "work_order_date",
+        "label": "Work Order Date",
+        "type": "date",
+        "required": true
+      },
+      {
+        "name": "contractor_name",
+        "label": "Contractor Name",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "estimated_amount",
+        "label": "Estimated Amount",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "completion_period",
+        "label": "Completion Period",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "extra_sections": [
+      {
+        "name": "work_description",
+        "label": "Work Description",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "name": "approval_reference",
+        "label": "Approval Reference",
+        "type": "text",
+        "required": false
+      },
+      {
+        "name": "payment_terms",
+        "label": "Payment Terms",
+        "type": "textarea",
+        "required": false
+      }
+    ],
+    "body": "Work Order No: {{work_order_no}} dated {{work_order_date}} for {{work_title}} is hereby awarded to {{contractor_name}}.\n\nWork Description:\n{{work_description}}\n\nEstimated Amount: Rs. {{estimated_amount}}\nCompletion Period: {{completion_period}}\nApproval Reference: {{approval_reference}}\n\nPayment Terms:\n{{payment_terms}}",
+    "footer_note": "Please acknowledge receipt and commence work as per terms."
+  },
+  {
+    "id": "guc_basic_certificate",
+    "category": "guc",
+    "name": "Grant Utilization Certificate",
+    "description": "Certificate of utilization for sanctioned grants.",
+    "active": true,
+    "fields": [
+      {
+        "name": "scheme_name",
+        "label": "Scheme Name",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "sanction_order_no",
+        "label": "Sanction Order No.",
+        "type": "text",
+        "required": true
+      },
+      {
+        "name": "sanction_amount",
+        "label": "Sanctioned Amount",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "amount_utilized",
+        "label": "Amount Utilized",
+        "type": "number",
+        "required": true
+      },
+      {
+        "name": "period_from",
+        "label": "Period From",
+        "type": "date",
+        "required": true
+      },
+      {
+        "name": "period_to",
+        "label": "Period To",
+        "type": "date",
+        "required": true
+      }
+    ],
+    "extra_sections": [
+      {
+        "name": "utilization_cert_text",
+        "label": "Utilization Details",
+        "type": "textarea",
+        "required": true
+      },
+      {
+        "name": "remarks",
+        "label": "Remarks",
+        "type": "textarea",
+        "required": false
+      }
+    ],
+    "body": "This is to certify that a sum of Rs. {{sanction_amount}} was sanctioned under {{scheme_name}} vide order {{sanction_order_no}}. An amount of Rs. {{amount_utilized}} has been utilized during the period {{period_from}} to {{period_to}}.\n\nUtilization Details:\n{{utilization_cert_text}}\n\nRemarks:\n{{remarks}}",
+    "footer_note": "Certified that the above information is true and correct to the best of our knowledge."
+  }
+]

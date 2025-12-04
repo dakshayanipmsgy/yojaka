@@ -32,6 +32,7 @@ require_once __DIR__ . '/departments.php';
 require_once __DIR__ . '/rendering.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/templates.php';
+require_once __DIR__ . '/document_templates.php';
 require_once __DIR__ . '/rti.php';
 require_once __DIR__ . '/dak.php';
 require_once __DIR__ . '/inspection.php';
@@ -55,6 +56,9 @@ ensure_dak_storage();
 // Ensure Inspection storage exists
 ensure_inspection_storage();
 
+// Ensure document storage exists
+ensure_documents_storage();
+
 // Seed default admin user if necessary
 create_default_admin_if_needed($config);
 
@@ -66,3 +70,6 @@ ensure_default_letter_templates();
 
 // Seed default inspection templates if necessary
 ensure_default_inspection_templates();
+
+// Seed default document templates if necessary
+ensure_default_document_templates();
