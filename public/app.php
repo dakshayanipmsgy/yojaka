@@ -57,7 +57,9 @@ if ($page === 'login') {
 
             if ($username !== '' && $password !== '' && login($username, $password)) {
                 unset($_SESSION['csrf_token']);
-                header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=dashboard');
+                $roleConfig = get_role_dashboard_config($_SESSION['role'] ?? 'user');
+                $landingPage = $roleConfig['landing_page'] ?? 'dashboard';
+                header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=' . urlencode($landingPage));
                 exit;
             }
             $error = true;

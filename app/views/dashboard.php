@@ -2,6 +2,8 @@
 $user = current_user();
 $users = load_users();
 $usageEntries = read_usage_logs(1000); // limit to recent entries for lightweight stats
+$roleConfig = get_role_dashboard_config($_SESSION['role'] ?? 'user');
+$widgetList = $roleConfig['widgets'] ?? ['my_pending_files'];
 
 $totalUsers = count($users);
 $totalLoginSuccess = count_events($usageEntries, 'login_success');
@@ -46,6 +48,7 @@ $totalWorkOrders = count($workOrdersDocs);
 $totalGucs = count($gucDocs);
 $totalBills = count($bills);
 $yourBills = 0;
+$todayOutbox = 0;
 
 function dashboard_widget_visible(array $widgets, string $id): bool
 {
@@ -80,6 +83,14 @@ foreach ($dakEntries as $entry) {
     $isAssignedToUser = ($entry['assigned_to'] ?? null) === ($user['username'] ?? null);
     $isClosed = ($entry['status'] ?? '') === 'Closed';
     $overdue = is_dak_overdue($entry);
+
+    if (!empty($entry['movements'])) {
+        foreach ($entry['movements'] as $movement) {
+            if (!empty($movement['timestamp']) && substr($movement['timestamp'], 0, 10) === gmdate('Y-m-d')) {
+                $todayOutbox++;
+            }
+        }
+    }
 
     if ($isAssignedToUser) {
         $yourDakAssigned++;
@@ -141,163 +152,176 @@ foreach ($bills as $bill) {
         $yourBills++;
     }
 }
+
+function render_dashboard_widget(string $id, array $ctx): void
+{
+    switch ($id) {
+        case 'office_stats':
+            ?>
+            <div class="card highlight">
+                <h2>Welcome <?= htmlspecialchars($ctx['user']['full_name'] ?? ''); ?></h2>
+                <p>Role: <?= htmlspecialchars($ctx['user']['role'] ?? ''); ?> @ <?= htmlspecialchars($ctx['officeConfig']['office_name'] ?? ''); ?></p>
+                <div class="muted">Timezone: <?= htmlspecialchars($ctx['officeConfig']['timezone'] ?? ''); ?></div>
+            </div>
+            <div class="card stat">
+                <div class="stat-label">Registered Users</div>
+                <div class="stat-value"><?= (int) $ctx['totalUsers']; ?></div>
+            </div>
+            <div class="card stat">
+                <div class="stat-label">Login Success</div>
+                <div class="stat-value"><?= (int) $ctx['totalLoginSuccess']; ?></div>
+            </div>
+            <div class="card stat">
+                <div class="stat-label">Login Failures</div>
+                <div class="stat-value warn"><?= (int) $ctx['totalLoginFailure']; ?></div>
+            </div>
+            <?php
+            break;
+        case 'pending_rti':
+            ?>
+            <div class="card stat">
+                <div class="stat-label">Pending RTIs</div>
+                <div class="stat-value"><?= (int) $ctx['pendingRtis']; ?></div>
+                <div class="muted">Overdue: <?= (int) $ctx['overdueRtis']; ?></div>
+            </div>
+            <?php
+            break;
+        case 'pending_dak':
+            ?>
+            <div class="card stat">
+                <div class="stat-label">Pending Dak (Office)</div>
+                <div class="stat-value"><?= (int) $ctx['pendingDak']; ?></div>
+                <div class="muted">Overdue: <?= (int) $ctx['overdueDak']; ?> | Unassigned: <?= (int) $ctx['unassignedDak']; ?></div>
+            </div>
+            <?php
+            break;
+        case 'overdue_bills':
+            ?>
+            <div class="card stat">
+                <div class="stat-label">Bills Tracked</div>
+                <div class="stat-value"><?= (int) $ctx['totalBills']; ?></div>
+                <div class="muted">Your bills: <?= (int) $ctx['yourBills']; ?></div>
+            </div>
+            <?php
+            break;
+        case 'my_pending_files':
+            $totalMine = ($ctx['yourDakPending'] ?? 0) + ($ctx['yourPendingRtis'] ?? 0) + ($ctx['yourBills'] ?? 0) + ($ctx['yourOpenInspections'] ?? 0);
+            ?>
+            <div class="card stat">
+                <div class="stat-label">My Pending Files</div>
+                <div class="stat-value"><?= (int) $totalMine; ?></div>
+                <div class="muted">Dak: <?= (int) $ctx['yourDakPending']; ?> | RTI: <?= (int) $ctx['yourPendingRtis']; ?> | Bills: <?= (int) $ctx['yourBills']; ?></div>
+            </div>
+            <?php
+            break;
+        case 'recent_movements':
+            ?>
+            <div class="card">
+                <h3>Recent Activity</h3>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead><tr><th>When</th><th>User</th><th>Event</th></tr></thead>
+                        <tbody>
+                        <?php foreach (array_slice(array_reverse($ctx['usageEntries']), 0, 5) as $entry): ?>
+                            <tr>
+                                <td><?= htmlspecialchars(format_date_for_display($entry['timestamp'] ?? '')); ?></td>
+                                <td><?= htmlspecialchars($entry['username'] ?? ''); ?></td>
+                                <td><?= htmlspecialchars($entry['event'] ?? ''); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <?php
+            break;
+        case 'rti_summary':
+            ?>
+            <div class="card stat">
+                <div class="stat-label">Your RTIs</div>
+                <div class="stat-value"><?= (int) $ctx['yourPendingRtis']; ?></div>
+                <div class="muted">Overdue: <?= (int) $ctx['yourOverdueRtis']; ?> | Total: <?= (int) $ctx['totalRtis']; ?></div>
+            </div>
+            <?php
+            break;
+        case 'new_dak_quick':
+            ?>
+            <div class="card stat">
+                <div class="stat-label">Create Dak</div>
+                <div class="stat-value">Ready</div>
+                <a class="btn primary" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=dak&mode=create">New Dak Entry</a>
+            </div>
+            <?php
+            break;
+        case 'outbox_today':
+            ?>
+            <div class="card stat">
+                <div class="stat-label">Outbox Today</div>
+                <div class="stat-value"><?= (int) $ctx['todayOutbox']; ?></div>
+                <div class="muted">Movements recorded today</div>
+            </div>
+            <?php
+            break;
+        case 'bills_summary':
+            ?>
+            <div class="card stat">
+                <div class="stat-label">Bills Overview</div>
+                <div class="stat-value"><?= (int) $ctx['totalBills']; ?></div>
+                <div class="muted">Your bills: <?= (int) $ctx['yourBills']; ?></div>
+            </div>
+            <?php
+            break;
+        case 'work_orders_summary':
+            ?>
+            <div class="card stat">
+                <div class="stat-label">Work Orders</div>
+                <div class="stat-value"><?= (int) $ctx['totalWorkOrders']; ?></div>
+                <div class="muted">Created by you: <?= (int) $ctx['yourWorkOrders']; ?></div>
+            </div>
+            <?php
+            break;
+        default:
+            ?>
+            <div class="card">
+                <div class="stat-label">Widget</div>
+                <div class="stat-value"><?= htmlspecialchars($id); ?></div>
+                <div class="muted">No renderer defined.</div>
+            </div>
+            <?php
+    }
+}
+
+$widgetsToRender = array_values(array_unique($widgetList));
+$widgetContext = [
+    'user' => $user,
+    'officeConfig' => $officeConfig,
+    'totalUsers' => $totalUsers,
+    'totalLoginSuccess' => $totalLoginSuccess,
+    'totalLoginFailure' => $totalLoginFailure,
+    'userDashboardViews' => $userDashboardViews,
+    'totalLettersGenerated' => $totalLettersGenerated,
+    'userLettersGenerated' => $userLettersGenerated,
+    'pendingRtis' => $pendingRtis,
+    'overdueRtis' => $overdueRtis,
+    'yourPendingRtis' => $yourPendingRtis,
+    'yourOverdueRtis' => $yourOverdueRtis,
+    'totalRtis' => $totalRtis,
+    'pendingDak' => $pendingDak,
+    'overdueDak' => $overdueDak,
+    'unassignedDak' => $unassignedDak,
+    'yourDakPending' => $yourDakPending,
+    'yourBills' => $yourBills,
+    'totalBills' => $totalBills,
+    'usageEntries' => $usageEntries,
+    'todayOutbox' => $todayOutbox,
+    'totalWorkOrders' => $totalWorkOrders,
+    'yourWorkOrders' => $yourWorkOrders,
+    'yourOpenInspections' => $yourOpenInspections,
+];
 ?>
 <div class="grid">
-    <?php if (dashboard_widget_visible($dashboardWidgets, 'tasks_overview')): ?>
-        <div class="card highlight">
-            <h2><?= htmlspecialchars(i18n_get('nav.dashboard')); ?> - <?= htmlspecialchars($user['full_name'] ?? ''); ?></h2>
-            <p><?= htmlspecialchars(i18n_get('nav.dashboard')); ?> overview for <strong><?= htmlspecialchars($user['role'] ?? ''); ?></strong></p>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Office</div>
-            <div class="stat-value" style="font-size:1.2rem;"><?= htmlspecialchars($officeConfig['office_name'] ?? ''); ?></div>
-            <div class="muted">Timezone: <?= htmlspecialchars($officeConfig['timezone'] ?? ''); ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Registered Users</div>
-            <div class="stat-value"><?= (int) $totalUsers; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Login Successes</div>
-            <div class="stat-value"><?= (int) $totalLoginSuccess; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Login Failures</div>
-            <div class="stat-value warn"><?= (int) $totalLoginFailure; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Your Dashboard Views</div>
-            <div class="stat-value"><?= (int) $userDashboardViews; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Total Letters Generated</div>
-            <div class="stat-value"><?= (int) $totalLettersGenerated; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Your Letters Generated</div>
-            <div class="stat-value"><?= (int) $userLettersGenerated; ?></div>
-        </div>
-    <?php endif; ?>
-
-    <?php if (dashboard_widget_visible($dashboardWidgets, 'notifications_overview')): ?>
-        <div class="card stat">
-            <div class="stat-label">Unread Notifications</div>
-            <div class="stat-value"><?= (int) count(get_unread_notifications_for_user($user['username'] ?? '')); ?></div>
-        </div>
-    <?php endif; ?>
-
-    <?php if (dashboard_widget_visible($dashboardWidgets, 'bills_summary')): ?>
-        <div class="card stat">
-            <div class="stat-label">Contractor Bills (Total)</div>
-            <div class="stat-value"><?= (int) $totalBills; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Your Bills</div>
-            <div class="stat-value"><?= (int) $yourBills; ?></div>
-        </div>
-    <?php endif; ?>
-
-    <?php if (dashboard_widget_visible($dashboardWidgets, 'documents_summary')): ?>
-        <div class="card stat">
-            <div class="stat-label">Your Meeting Minutes</div>
-            <div class="stat-value"><?= (int) $yourMeetingMinutes; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Your Work Orders</div>
-            <div class="stat-value"><?= (int) $yourWorkOrders; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Your GUCs</div>
-            <div class="stat-value"><?= (int) $yourGucs; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Total Meeting Minutes</div>
-            <div class="stat-value"><?= (int) $totalMeetingMinutes; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Total Work Orders</div>
-            <div class="stat-value"><?= (int) $totalWorkOrders; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Total GUCs</div>
-            <div class="stat-value"><?= (int) $totalGucs; ?></div>
-        </div>
-    <?php endif; ?>
-
-    <?php if (dashboard_widget_visible($dashboardWidgets, 'inspection_summary')): ?>
-        <div class="card stat">
-            <div class="stat-label">Your Inspection Reports</div>
-            <div class="stat-value"><?= (int) $yourInspections; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Your Open Inspections</div>
-            <div class="stat-value"><?= (int) $yourOpenInspections; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Total Inspection Reports</div>
-            <div class="stat-value"><?= (int) $totalInspections; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Open Inspection Reports</div>
-            <div class="stat-value"><?= (int) $openInspections; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Closed Inspection Reports</div>
-            <div class="stat-value"><?= (int) $closedInspections; ?></div>
-        </div>
-    <?php endif; ?>
-
-    <?php if (dashboard_widget_visible($dashboardWidgets, 'dak_summary')): ?>
-        <div class="card stat">
-            <div class="stat-label">Dak Assigned to You</div>
-            <div class="stat-value"><?= (int) $yourDakAssigned; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Dak Pending for You</div>
-            <div class="stat-value"><?= (int) $yourDakPending; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Dak Overdue</div>
-            <div class="stat-value warn"><?= (int) $yourDakOverdue; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Total Dak</div>
-            <div class="stat-value"><?= (int) $totalDak; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Pending Dak</div>
-            <div class="stat-value"><?= (int) $pendingDak; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Overdue Dak</div>
-            <div class="stat-value warn"><?= (int) $overdueDak; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Unassigned Dak</div>
-            <div class="stat-value"><?= (int) $unassignedDak; ?></div>
-        </div>
-    <?php endif; ?>
-
-    <?php if (dashboard_widget_visible($dashboardWidgets, 'rti_summary')): ?>
-        <div class="card stat">
-            <div class="stat-label">Your RTIs (Pending)</div>
-            <div class="stat-value"><?= (int) $yourPendingRtis; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Your RTIs (Overdue)</div>
-            <div class="stat-value warn"><?= (int) $yourOverdueRtis; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Total RTIs</div>
-            <div class="stat-value"><?= (int) $totalRtis; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Pending RTIs</div>
-            <div class="stat-value"><?= (int) $pendingRtis; ?></div>
-        </div>
-        <div class="card stat">
-            <div class="stat-label">Overdue RTIs</div>
-            <div class="stat-value warn"><?= (int) $overdueRtis; ?></div>
-        </div>
-    <?php endif; ?>
+    <?php foreach ($widgetsToRender as $widgetId): ?>
+        <?php if (!dashboard_widget_visible($dashboardWidgets, $widgetId)) { continue; } ?>
+        <?php render_dashboard_widget($widgetId, $widgetContext); ?>
+    <?php endforeach; ?>
 </div>

@@ -147,9 +147,19 @@ $targetId = $_GET['id'] ?? null;
                     $entry['last_action'] = 'route_initialized';
                     $entryChanged = true;
                 } elseif ($action === 'forward') {
-                    if (!file_flow_forward($entry, $user['username'] ?? '')) {
+                    $nextIndex = ($entry['route']['current_node_index'] ?? -1) + 1;
+                    $nextNode = $entry['route']['nodes'][$nextIndex] ?? null;
+                    $targetUser = $nextNode['user_username'] ?? ($entry['assigned_to'] ?? ($entry['current_holder'] ?? null));
+                    $targetUser = $targetUser ?: ($user['username'] ?? '');
+                    if (!file_flow_forward_with_handover($entry, $user['username'] ?? '', $targetUser, $_POST['remarks'] ?? '')) {
                         $errors[] = 'Unable to move forward.';
                     } else {
+                        append_dak_movement($entry, 'forwarded', $user['username'] ?? null, $targetUser, $_POST['remarks'] ?? '', [
+                            'status' => 'pending',
+                            'accepted_by' => null,
+                            'accepted_at' => null,
+                            'rejected_reason' => null,
+                        ]);
                         $entryChanged = true;
                     }
                 } elseif ($action === 'return') {
@@ -258,6 +268,7 @@ $targetId = $_GET['id'] ?? null;
                 <p><strong>Date Received:</strong> <?= htmlspecialchars($entry['date_received']); ?></p>
                 <p><strong>Status:</strong> <?= htmlspecialchars($entry['status']); ?></p>
                 <p><strong>Assigned To:</strong> <?= htmlspecialchars($entry['assigned_to'] ?? 'Unassigned'); ?></p>
+                <p><strong>Current Holder:</strong> <?= htmlspecialchars($entry['current_holder'] ?? ($entry['assigned_to'] ?? '')); ?></p>
                 <p><strong>Details:</strong><br><?= nl2br(htmlspecialchars($entry['details'] ?? '')); ?></p>
                 <p><strong>Created By:</strong> <?= htmlspecialchars($entry['created_by'] ?? ''); ?></p>
             </div>
@@ -356,7 +367,7 @@ $targetId = $_GET['id'] ?? null;
                     <?php if (!empty($entry['route']['history'])): ?>
                         <h4>Route History</h4>
                         <table class="table">
-                            <thead><tr><th>Timestamp</th><th>Action</th><th>From</th><th>To</th><th>User</th><th>Remarks</th></tr></thead>
+                            <thead><tr><th>Timestamp</th><th>Action</th><th>From</th><th>To</th><th>User</th><th>Acceptance</th><th>Remarks</th></tr></thead>
                             <tbody>
                                 <?php foreach ($entry['route']['history'] as $row): ?>
                                     <tr>
@@ -365,6 +376,7 @@ $targetId = $_GET['id'] ?? null;
                                         <td><?= htmlspecialchars($row['from_position_id'] ?? ''); ?></td>
                                         <td><?= htmlspecialchars($row['to_position_id'] ?? ''); ?></td>
                                         <td><?= htmlspecialchars($row['user'] ?? ''); ?></td>
+                                        <td><?= htmlspecialchars($row['acceptance']['status'] ?? 'accepted'); ?></td>
                                         <td><?= htmlspecialchars($row['remarks'] ?? ''); ?></td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -415,9 +427,17 @@ $targetId = $_GET['id'] ?? null;
                         if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
                             $history[] = $decoded;
                         }
-                    }
-                }
-                ?>
+            }
+        }
+        ?>
+        <?php if (!empty($entry['pending_acceptance'])): ?>
+            <div class="alert info">Awaiting acceptance by <?= htmlspecialchars($entry['current_holder'] ?? ''); ?>.</div>
+        <?php else: ?>
+            <?php $lastHistory = !empty($entry['route']['history']) ? end($entry['route']['history']) : null; ?>
+            <?php if ($lastHistory && !empty($lastHistory['acceptance']['accepted_by'])): ?>
+                <div class="alert success">Accepted by <?= htmlspecialchars($lastHistory['acceptance']['accepted_by']); ?> on <?= htmlspecialchars(format_date_for_display($lastHistory['acceptance']['accepted_at'] ?? '')); ?></div>
+            <?php endif; ?>
+        <?php endif; ?>
                 <?php if (empty($history)): ?>
                     <p>No movement recorded.</p>
                 <?php else: ?>

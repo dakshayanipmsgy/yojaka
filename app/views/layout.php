@@ -52,7 +52,7 @@ if (!empty($viewFile) && file_exists($viewFile)) {
             </div>
         </div>
         <div class="user-meta">
-            <div class="name"><?= htmlspecialchars($user['full_name'] ?? ''); ?></div>
+            <div class="name">Logged in as: <?= htmlspecialchars($user['full_name'] ?? ''); ?></div>
             <div class="role badge"><?= htmlspecialchars($user['role'] ?? ''); ?></div>
             <?php if ($department): ?>
                 <div class="dept muted">Dept: <?= htmlspecialchars($department['name'] ?? ''); ?></div>

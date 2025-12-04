@@ -66,7 +66,20 @@ function load_dak_entries(): array
         if (!isset($entry['movements']) || !is_array($entry['movements'])) {
             $entry['movements'] = [];
         }
-        return enrich_workflow_defaults('dak', $entry);
+        foreach ($entry['movements'] as &$movement) {
+            if (!isset($movement['acceptance']) || !is_array($movement['acceptance'])) {
+                $movement['acceptance'] = [
+                    'status' => 'accepted',
+                    'accepted_by' => $movement['to_user'] ?? null,
+                    'accepted_at' => $movement['timestamp'] ?? null,
+                    'rejected_reason' => null,
+                ];
+            }
+        }
+        unset($movement);
+        $entry = enrich_workflow_defaults('dak', $entry);
+        $entry = file_flow_apply_acceptance_defaults($entry);
+        return $entry;
     }, $data);
 }
 
@@ -91,14 +104,21 @@ function save_dak_entries(array $entries): void
     fclose($handle);
 }
 
-function append_dak_movement(array &$entry, string $action, ?string $from_user, ?string $to_user, string $remarks = ''): void
+function append_dak_movement(array &$entry, string $action, ?string $from_user, ?string $to_user, string $remarks = '', ?array $acceptance = null): void
 {
+    $acceptance = $acceptance ?? [
+        'status' => 'accepted',
+        'accepted_by' => $to_user,
+        'accepted_at' => gmdate('c'),
+        'rejected_reason' => null,
+    ];
     $entry['movements'][] = [
         'timestamp' => gmdate('c'),
         'action' => $action,
         'from_user' => $from_user,
         'to_user' => $to_user,
         'remark' => $remarks,
+        'acceptance' => $acceptance,
     ];
 }
 
