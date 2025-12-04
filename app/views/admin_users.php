@@ -13,14 +13,6 @@ $notice = '';
 $generatedPassword = '';
 
 $users = load_users();
-$offices = load_offices_registry();
-$officeNames = [];
-foreach ($offices as $office) {
-    $officeNames[$office['id']] = $office['name'] ?? ($office['short_name'] ?? $office['id']);
-}
-if (empty($officeNames)) {
-    $officeNames[get_default_office_id()] = 'Default Office';
-}
 $allRoles = get_all_roles_for_dropdown();
 $roleOptions = array_column($allRoles, 'id');
 if (empty($roleOptions) && !empty($config['roles_permissions'])) {
@@ -55,7 +47,7 @@ function admin_users_validate_role(string $role, array $roleOptions): bool
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    unset($_POST['department_id'], $_POST['department']);
+    unset($_POST['department_id'], $_POST['department'], $_POST['office_id']);
     $submittedToken = $_POST['csrf_token'] ?? '';
     if (!$submittedToken || !hash_equals($_SESSION['user_admin_csrf'], $submittedToken)) {
         $errors[] = 'Security token mismatch. Please retry.';
@@ -66,7 +58,6 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($erro
     $username = trim($_POST['username'] ?? '');
     $fullName = trim($_POST['full_name'] ?? '');
     $role = trim($_POST['role'] ?? '');
-    $officeId = trim($_POST['office_id'] ?? get_default_office_id());
     $active = !empty($_POST['active']);
     $password = trim($_POST['password'] ?? '');
 
@@ -79,10 +70,6 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($erro
     if (!admin_users_validate_role($role, $roleOptions)) {
         $errors[] = 'Invalid role selected.';
     }
-    if ($officeId === '') {
-        $officeId = get_default_office_id();
-    }
-
     if ($password === '') {
         $password = admin_users_generate_password();
         $generatedPassword = $password;
@@ -97,7 +84,7 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($erro
             'username' => $username,
             'full_name' => $fullName !== '' ? $fullName : $username,
             'role' => $role,
-            'office_id' => $officeId,
+            'office_id' => get_default_office_id(),
             'active' => $active,
             'password_hash' => password_hash($password, PASSWORD_DEFAULT),
             'force_password_change' => true,
@@ -124,7 +111,6 @@ if ($action === 'edit' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors
     } else {
         $fullName = trim($_POST['full_name'] ?? '');
         $role = trim($_POST['role'] ?? '');
-        $officeId = trim($_POST['office_id'] ?? get_default_office_id());
         $active = !empty($_POST['active']);
 
         if (!admin_users_validate_role($role, $roleOptions)) {
@@ -139,7 +125,6 @@ if ($action === 'edit' && $_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors
         if (empty($errors)) {
             $targetUser['full_name'] = $fullName !== '' ? $fullName : ($targetUser['full_name'] ?? $username);
             $targetUser['role'] = $role;
-            $targetUser['office_id'] = $officeId;
             $targetUser['active'] = $active;
             $targetUser['updated_at'] = gmdate('c');
             if (save_user($targetUser)) {
@@ -244,14 +229,6 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
             </select>
         </div>
         <div class="form-field">
-            <label for="office_id"><?= htmlspecialchars(i18n_get('users.office')); ?></label>
-            <select name="office_id" id="office_id">
-                <?php foreach ($officeNames as $id => $name): ?>
-                    <option value="<?= htmlspecialchars($id); ?>" <?= ($targetUser['office_id'] ?? '') === $id ? 'selected' : ''; ?>><?= htmlspecialchars($name); ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="form-field">
             <label><input type="checkbox" name="active" value="1" <?= !empty($targetUser['active']) ? 'checked' : ''; ?>> <?= htmlspecialchars(i18n_get('users.active')); ?></label>
         </div>
         <div class="form-actions">
@@ -326,14 +303,6 @@ if (in_array($action, ['edit', 'reset'], true) && $usernameParam) {
         <select name="role" id="role" required>
             <?php foreach ($allRoles as $role): ?>
                 <option value="<?= htmlspecialchars($role['id']); ?>"><?= htmlspecialchars($role['label'] ?? $role['id']); ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-    <div class="form-field">
-        <label for="office_id"><?= htmlspecialchars(i18n_get('users.office')); ?></label>
-        <select name="office_id" id="office_id">
-            <?php foreach ($officeNames as $id => $name): ?>
-                <option value="<?= htmlspecialchars($id); ?>" <?= $id === get_default_office_id() ? 'selected' : ''; ?>><?= htmlspecialchars($name); ?></option>
             <?php endforeach; ?>
         </select>
     </div>
