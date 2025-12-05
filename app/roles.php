@@ -76,4 +76,45 @@ function format_role_label(string $roleId, array $roleDef): string
     }
     return ucfirst(str_replace('_', ' ', $roleId));
 }
+
+function ensure_department_admin_role(string $deptSlug): string
+{
+    if (!function_exists('load_permissions_config')) {
+        require_once __DIR__ . '/auth.php';
+    }
+
+    $config = load_permissions_config();
+    $roles = $config['roles'] ?? [];
+
+    $baseRoleId = 'dept_admin';
+    $deptRoleId = 'dept_admin.' . $deptSlug;
+
+    if (isset($roles[$deptRoleId])) {
+        return $deptRoleId;
+    }
+
+    if (!isset($roles[$baseRoleId])) {
+        $roles[$baseRoleId] = [
+            'label' => 'Department Admin (Base)',
+            'permissions' => [
+                'dept.manage_roles',
+                'dept.manage_users',
+                'dept.manage_templates',
+                'dept.view_stats',
+                'dept.raise_requests',
+            ],
+        ];
+    }
+
+    $base = $roles[$baseRoleId];
+    $roles[$deptRoleId] = [
+        'label' => ($base['label'] ?? 'Department Admin') . ' - ' . $deptSlug,
+        'permissions' => $base['permissions'] ?? [],
+    ];
+
+    $config['roles'] = $roles;
+    save_permissions_config($config);
+
+    return $deptRoleId;
+}
 ?>
