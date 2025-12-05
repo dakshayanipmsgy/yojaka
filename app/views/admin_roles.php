@@ -5,7 +5,7 @@ require_once __DIR__ . '/../departments.php';
 
 require_login();
 
-$currentUser = get_current_user();
+$currentUser = yojaka_current_user();
 $isSuperAdmin = is_superadmin($currentUser);
 $deptSlug = $currentUser ? get_current_department_slug($currentUser) : null;
 $isDeptAdmin = $deptSlug !== null && user_is_department_admin($currentUser, $deptSlug);

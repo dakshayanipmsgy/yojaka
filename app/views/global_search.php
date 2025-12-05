@@ -35,7 +35,7 @@ function gs_date_within(?string $dateValue, string $from, string $to): bool
     return true;
 }
 
-$user = get_current_user();
+$user = yojaka_current_user();
 $currentUser = $user;
 $canViewAll = user_has_permission('view_all_records');
 $results = [];

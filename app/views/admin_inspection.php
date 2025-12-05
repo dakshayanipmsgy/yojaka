@@ -4,7 +4,7 @@ require_permission('manage_inspection');
 require_once __DIR__ . '/../auth.php';
 require_once __DIR__ . '/../acl.php';
 
-$currentUser = get_current_user();
+$currentUser = yojaka_current_user();
 $user = $currentUser;
 $templates = load_inspection_templates();
 $reports = load_inspection_reports();

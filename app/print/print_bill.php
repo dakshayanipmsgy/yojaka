@@ -5,7 +5,7 @@ require_once __DIR__ . '/../bills.php';
 require_once __DIR__ . '/print_layout.php';
 
 $billId = (string) ($id ?? '');
-$currentUser = get_current_user();
+$currentUser = yojaka_current_user();
 $bills = load_bills();
 $bill = find_bill_by_id($bills, $billId);
 $officeId = get_current_office_id();
