@@ -162,3 +162,80 @@ function append_generated_letter_record(string $username, string $templateId, st
     }
     fclose($handle);
 }
+
+// --- Template scoping helpers ---
+function template_root_directory(): string
+{
+    return YOJAKA_DATA_PATH . '/templates';
+}
+
+function global_templates_directory(): string
+{
+    return template_root_directory() . '/global';
+}
+
+function department_templates_directory(string $deptSlug): string
+{
+    return template_root_directory() . '/dept/' . $deptSlug;
+}
+
+function role_templates_directory(string $deptSlug, string $roleId): string
+{
+    return department_templates_directory($deptSlug) . '/roles/' . $roleId;
+}
+
+function ensure_template_directories(string $deptSlug = null): void
+{
+    $paths = [template_root_directory(), global_templates_directory()];
+    if ($deptSlug !== null) {
+        $paths[] = department_templates_directory($deptSlug);
+        $paths[] = role_templates_directory($deptSlug, '');
+    }
+    foreach ($paths as $p) {
+        if ($p === '') {
+            continue;
+        }
+        if (!is_dir($p)) {
+            @mkdir($p, 0770, true);
+        }
+    }
+}
+
+function save_template(string $path, array $data): bool
+{
+    $dir = dirname($path);
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0770, true);
+    }
+    return (bool) file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), LOCK_EX);
+}
+
+function load_template_file(string $path): ?array
+{
+    if (!file_exists($path)) {
+        return null;
+    }
+    $data = json_decode((string) file_get_contents($path), true);
+    return is_array($data) ? $data : null;
+}
+
+function resolve_template(string $templateId, string $deptSlug, ?string $roleId = null): ?array
+{
+    ensure_template_directories($deptSlug);
+    if ($roleId) {
+        $rolePath = role_templates_directory($deptSlug, $roleId) . '/' . $templateId . '.json';
+        $tpl = load_template_file($rolePath);
+        if ($tpl) {
+            return $tpl;
+        }
+    }
+
+    $deptPath = department_templates_directory($deptSlug) . '/' . $templateId . '.json';
+    $tpl = load_template_file($deptPath);
+    if ($tpl) {
+        return $tpl;
+    }
+
+    $globalPath = global_templates_directory() . '/' . $templateId . '.json';
+    return load_template_file($globalPath);
+}
