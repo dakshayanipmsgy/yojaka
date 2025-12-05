@@ -1,6 +1,8 @@
 <?php
 // Inspection module helper functions for Yojaka v0.6
 
+require_once __DIR__ . '/acl.php';
+
 function inspection_templates_path(): string
 {
     global $config;
@@ -82,7 +84,22 @@ function load_inspection_reports(): array
     }
     $contents = file_get_contents($path);
     $data = json_decode($contents, true);
-    return is_array($data) ? $data : [];
+    $data = is_array($data) ? $data : [];
+
+    $normalized = [];
+    foreach ($data as $report) {
+        $report = acl_normalize($report);
+
+        if ($report['owner'] === null && !empty($report['created_by'])) {
+            $report['owner'] = $report['created_by'];
+            $report['allowed_users'][] = $report['created_by'];
+            $report['allowed_users'] = array_values(array_unique($report['allowed_users']));
+        }
+
+        $normalized[] = $report;
+    }
+
+    return $normalized;
 }
 
 function save_inspection_reports(array $reports): void

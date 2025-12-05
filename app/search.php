@@ -1,6 +1,9 @@
 <?php
 // Advanced search handlers for modules using index v2 when available
 
+require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/acl.php';
+
 function search_paginate(array $items, int $page = 1, int $limit = 25): array
 {
     $offset = max(0, ($page - 1) * $limit);
@@ -86,7 +89,17 @@ function search_bills(array $criteria): array
 
 function search_inspection(array $criteria): array
 {
-    return search_with_index_or_scan('inspection', $criteria, 'load_inspection_reports');
+    $results = search_with_index_or_scan('inspection', $criteria, 'load_inspection_reports');
+    $currentUser = get_current_user();
+    $filtered = [];
+    foreach ($results as $record) {
+        $record = acl_normalize($record);
+        if (acl_can_view($currentUser, $record)) {
+            $filtered[] = $record;
+        }
+    }
+
+    return $filtered;
 }
 
 function search_documents(array $criteria): array

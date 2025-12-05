@@ -1,7 +1,11 @@
 <?php
 require_permission('manage_inspection');
 
-$user = current_user();
+require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../acl.php';
+
+$currentUser = get_current_user();
+$user = $currentUser;
 $templates = load_inspection_templates();
 $reports = load_inspection_reports();
 $sub = $_GET['sub'] ?? 'templates';
@@ -133,8 +137,13 @@ if ($sub === 'reports' && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['acti
             $errors[] = 'Invalid status provided.';
         } else {
             $report = $id ? find_inspection_report_by_id($reports, $id) : null;
+            if ($report) {
+                $report = acl_normalize($report);
+            }
             if (!$report) {
                 $errors[] = 'Report not found.';
+            } elseif (!acl_can_edit($currentUser, $report)) {
+                $errors[] = 'You are not allowed to update this inspection report.';
             } else {
                 $report['status'] = $newStatus;
                 $report['updated_at'] = gmdate('c');
@@ -162,6 +171,14 @@ if ($sub === 'template_edit') {
     if (!$currentTemplate) {
         $errors[] = 'Template not found.';
         $sub = 'templates';
+    }
+}
+
+$visibleReports = [];
+foreach ($reports as $reportRecord) {
+    $reportRecord = acl_normalize($reportRecord);
+    if (acl_can_view($currentUser, $reportRecord)) {
+        $visibleReports[] = $reportRecord;
     }
 }
 ?>
@@ -358,10 +375,10 @@ if ($sub === 'template_edit') {
                 </tr>
             </thead>
             <tbody>
-                <?php if (empty($reports)): ?>
+                <?php if (empty($visibleReports)): ?>
                     <tr><td colspan="6">No inspection reports yet.</td></tr>
                 <?php else: ?>
-                    <?php foreach ($reports as $report): ?>
+                    <?php foreach ($visibleReports as $report): ?>
                         <tr>
                             <td><?= htmlspecialchars($report['id'] ?? ''); ?></td>
                             <td><?= htmlspecialchars($report['template_name'] ?? ''); ?></td>

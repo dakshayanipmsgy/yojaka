@@ -4,6 +4,11 @@ if (!user_has_permission('view_mis_reports')) {
     require_permission('view_all_records');
 }
 
+require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../acl.php';
+
+$currentUser = get_current_user();
+
 $officeConfig = load_office_config();
 $dateFormat = $officeConfig['date_format_php'] ?? 'Y-m-d';
 $departments = load_departments();
@@ -58,6 +63,10 @@ foreach ($gucRecords as $rec) {
 
 $rtiFiltered = mis_apply_filters($rtiCases, ['created_at', 'date_of_receipt'], $fromDate, $toDate, $departmentFilter, $userFilter, ['created_by', 'assigned_to']);
 $dakFiltered = mis_apply_filters($dakEntries, ['date_received', 'created_at'], $fromDate, $toDate, $departmentFilter, $userFilter, ['assigned_to', 'created_by']);
+$inspectionReports = array_values(array_filter($inspectionReports, function ($report) use ($currentUser) {
+    $report = acl_normalize($report);
+    return acl_can_view($currentUser, $report);
+}));
 $inspectionFiltered = mis_apply_filters($inspectionReports, ['fields.date_of_inspection', 'created_at'], $fromDate, $toDate, $departmentFilter, $userFilter, ['created_by']);
 $documentFiltered = mis_apply_filters($documentRecords, ['created_at'], $fromDate, $toDate, $departmentFilter, $userFilter, ['created_by']);
 $billsFiltered = mis_apply_filters($allBills, ['bill_date', 'created_at'], $fromDate, $toDate, $departmentFilter, $userFilter, ['created_by']);

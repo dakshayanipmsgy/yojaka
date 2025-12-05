@@ -1,5 +1,9 @@
 <?php
 require_once __DIR__ . '/print_layout.php';
+require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../acl.php';
+
+$currentUser = get_current_user();
 
 $reportId = (string) ($id ?? '');
 $reports = load_inspection_reports();
@@ -14,6 +18,13 @@ foreach ($reports as $item) {
 if (!$report) {
     http_response_code(404);
     echo 'Inspection report not found.';
+    exit;
+}
+
+$report = acl_normalize($report);
+if (!acl_can_view($currentUser, $report)) {
+    http_response_code(403);
+    echo 'You do not have access to this inspection report.';
     exit;
 }
 
