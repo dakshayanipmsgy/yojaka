@@ -4,28 +4,70 @@ require_once __DIR__ . '/departments.php';
 require_once __DIR__ . '/roles.php';
 require_once __DIR__ . '/auth.php';
 
-// Legacy compatibility helpers
+/**
+ * Return the path to the users JSON file.
+ */
+function users_data_path(): string
+{
+    return __DIR__ . '/../data/users.json';
+}
+
+/**
+ * Load all users from JSON.
+ * Returns associative array keyed by username.
+ */
 function load_users(): array
 {
-    $users = load_global_users();
+    $users = [];
+
+    foreach (load_global_users() as $user) {
+        if (!isset($user['username'])) {
+            continue;
+        }
+        $users[$user['username']] = $user;
+    }
+
     $departments = load_departments();
     foreach ($departments as $slug => $dept) {
         foreach (load_department_users($slug) as $base => $user) {
-            $users[] = assemble_user_login_record($user, $slug);
+            $record = assemble_user_login_record($user, $slug);
+            $users[$record['username']] = $record;
         }
     }
+
     return $users;
 }
 
+/**
+ * Save all users to JSON.
+ */
 function save_users(array $users): bool
 {
-    // Keep global users storage for superadmin and legacy accounts.
-    return save_global_users($users);
+    $normalized = [];
+    foreach ($users as $username => $user) {
+        if (isset($user['username'])) {
+            $normalized[$user['username']] = $user;
+            continue;
+        }
+        if (is_string($username)) {
+            $normalized[$username] = $user;
+        }
+    }
+
+    return save_global_users(array_values($normalized));
+}
+
+/**
+ * Convenience helper: find a single user by username.
+ */
+function find_user(string $username): ?array
+{
+    return find_user_by_username($username);
 }
 
 function global_users_data_path(): string
 {
-    return YOJAKA_DATA_PATH . '/users.json';
+    return users_data_path();
 }
 
 function department_users_directory(): string
@@ -219,11 +261,6 @@ function assemble_user_login_record(array $user, string $deptSlug): array
     return $user;
 }
 
-function find_user(string $username): ?array
-{
-    return find_user_by_username($username);
-}
-
 function find_user_by_username(string $username): ?array
 {
     [$baseUsername, , $deptSlug] = parse_username_parts($username);
@@ -286,4 +323,3 @@ function next_user_id(array $users): int
     }
     return $max + 1;
 }
-?>
