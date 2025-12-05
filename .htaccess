@@ -1,0 +1,6 @@
+# Protect application and data directories if root is web-accessible
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^app/ - [F,L]
+    RewriteRule ^data/ - [F,L]
+</IfModule>
