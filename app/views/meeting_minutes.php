@@ -1,4 +1,8 @@
 <?php
+require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../acl.php';
+require_once __DIR__ . '/../meeting_minutes.php';
+
 require_login();
 require_permission('create_documents');
 
@@ -6,15 +10,16 @@ $category = 'meeting_minutes';
 $allTemplates = load_document_templates();
 $templates = get_templates_by_category($allTemplates, $category);
 $departments = load_departments();
-$user = current_user();
+$currentUser = get_current_user();
+$user = $currentUser;
 $userDepartment = get_user_department($user, $departments);
-$allRecords = load_document_records($category);
-$records = $allRecords;
+$allRecords = load_meeting_minutes();
+$records = [];
 
-if (!user_has_permission('view_all_records')) {
-    $records = array_values(array_filter($records, function ($rec) use ($user) {
-        return ($rec['created_by'] ?? null) === ($user['username'] ?? null);
-    }));
+foreach ($allRecords as $rec) {
+    if (acl_can_view($currentUser, $rec)) {
+        $records[] = $rec;
+    }
 }
 
 $mode = $_GET['mode'] ?? 'list';
@@ -41,8 +46,11 @@ if ($mode === 'view') {
         return;
     }
 
-    if (!user_has_permission('view_all_records') && ($record['created_by'] ?? null) !== ($user['username'] ?? null)) {
-        echo '<p class="error">You do not have access to this record.</p>';
+    $record = meeting_minutes_normalize_record($record);
+
+    if (!acl_can_view($currentUser, $record)) {
+        http_response_code(403);
+        echo '<p class="error">You do not have access to these meeting minutes.</p>';
         return;
     }
 
@@ -189,8 +197,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mode === 'create') {
             'created_at' => $now,
             'updated_at' => $now,
         ];
+        $record = acl_initialize_new($record, $currentUser);
         $allRecords[] = $record;
-        save_document_records($category, $allRecords);
+        save_meeting_minutes($allRecords);
         log_event('meeting_minutes_generated', $user['username'] ?? null, [
             'id' => $docId,
             'template_id' => $selectedTemplate['id'] ?? '',
