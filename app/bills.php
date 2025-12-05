@@ -1,6 +1,9 @@
 <?php
 // Contractor bills helper functions
 
+require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/acl.php';
+
 function bills_directory(): string
 {
     global $config;
@@ -30,6 +33,35 @@ function ensure_bills_storage(): void
     }
 }
 
+function bills_normalize_record(array $bill): array
+{
+    $bill = acl_normalize($bill);
+
+    if (!empty($bill['assigned_to'])) {
+        $bill['assignee'] = $bill['assigned_to'];
+    }
+
+    if ($bill['owner'] === null && !empty($bill['created_by'])) {
+        $bill['owner'] = $bill['created_by'];
+        $bill['allowed_users'][] = $bill['created_by'];
+    }
+
+    if (!empty($bill['assignee'])) {
+        $bill['allowed_users'][] = $bill['assignee'];
+    }
+
+    $bill['allowed_users'] = array_values(array_unique(array_filter($bill['allowed_users'])));
+
+    if ($bill['department_slug'] === null && !empty($bill['owner'])) {
+        [, , $deptSlug] = acl_parse_username_parts($bill['owner']);
+        if ($deptSlug !== null) {
+            $bill['department_slug'] = $deptSlug;
+        }
+    }
+
+    return $bill;
+}
+
 function load_bills(): array
 {
     ensure_bills_storage();
@@ -43,7 +75,8 @@ function load_bills(): array
     return array_map(function ($bill) use ($currentOffice) {
         $bill = ensure_record_office($bill, $currentOffice);
         $bill = ensure_archival_defaults($bill);
-        return enrich_workflow_defaults('bills', $bill);
+        $bill = enrich_workflow_defaults('bills', $bill);
+        return bills_normalize_record($bill);
     }, $data);
 }
 

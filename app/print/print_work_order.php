@@ -1,19 +1,24 @@
 <?php
+require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../acl.php';
+require_once __DIR__ . '/../work_orders.php';
 require_once __DIR__ . '/print_layout.php';
 
 $recordId = (string) ($id ?? '');
-$records = load_document_records('work_order');
-$record = null;
-foreach ($records as $item) {
-    if (($item['id'] ?? '') === $recordId) {
-        $record = $item;
-        break;
-    }
-}
+$currentUser = get_current_user();
+$record = find_work_order_record($recordId);
 
 if (!$record) {
     http_response_code(404);
     echo 'Work order not found.';
+    exit;
+}
+
+$record = work_order_normalize_record($record);
+
+if (!acl_can_view($currentUser, $record)) {
+    http_response_code(403);
+    echo 'You do not have access to this work order.';
     exit;
 }
 
