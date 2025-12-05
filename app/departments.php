@@ -3,7 +3,7 @@
 
 function departments_data_path(): string
 {
-    return __DIR__ . '/../data/org/departments.json';
+    return YOJAKA_DATA_PATH . '/org/departments.json';
 }
 
 function departments_path(): string
@@ -54,7 +54,12 @@ function load_departments(): array
         $dept['slug'] = $slug;
         $dept['id'] = $dept['id'] ?? $slug;
         $dept['status'] = $dept['status'] ?? (!empty($dept['active']) ? 'active' : 'suspended');
+        if (!in_array($dept['status'], ['active', 'suspended', 'archived'], true)) {
+            $dept['status'] = 'active';
+        }
         $dept['active'] = ($dept['status'] === 'active');
+        $dept['created_at'] = $dept['created_at'] ?? gmdate('c');
+        $dept['updated_at'] = $dept['updated_at'] ?? $dept['created_at'];
         $normalized[$slug] = $dept;
     }
 
@@ -81,7 +86,12 @@ function save_departments(array $departments): bool
         $dept['slug'] = $slug;
         $dept['id'] = $dept['id'] ?? $slug;
         $dept['status'] = $dept['status'] ?? (!empty($dept['active']) ? 'active' : 'suspended');
+        if (!in_array($dept['status'], ['active', 'suspended', 'archived'], true)) {
+            $dept['status'] = 'active';
+        }
         $dept['active'] = ($dept['status'] === 'active');
+        $dept['created_at'] = $dept['created_at'] ?? gmdate('c');
+        $dept['updated_at'] = gmdate('c');
         $payload[$slug] = $dept;
     }
 
@@ -173,6 +183,65 @@ function get_user_department(?array $user, ?array $departments = null): ?array
 function slugify_department_name(string $name, array $departments): string
 {
     return make_unique_department_slug($name, $departments);
+}
+
+function set_department_status(string $deptSlug, string $status): bool
+{
+    $departments = load_departments();
+    if (!isset($departments[$deptSlug])) {
+        return false;
+    }
+
+    if (!in_array($status, ['active', 'suspended', 'archived'], true)) {
+        return false;
+    }
+
+    $departments[$deptSlug]['status'] = $status;
+    $departments[$deptSlug]['active'] = ($status === 'active');
+    $departments[$deptSlug]['updated_at'] = gmdate('c');
+    return save_departments($departments);
+}
+
+function ensure_department_org_directories(string $deptSlug): void
+{
+    $paths = [
+        YOJAKA_DATA_PATH . '/org/roles',
+        YOJAKA_DATA_PATH . '/org/users',
+        YOJAKA_DATA_PATH . '/templates',
+        YOJAKA_DATA_PATH . '/templates/dept',
+        YOJAKA_DATA_PATH . '/templates/dept/' . $deptSlug,
+        YOJAKA_DATA_PATH . '/templates/dept/' . $deptSlug . '/roles',
+    ];
+
+    foreach ($paths as $path) {
+        if (!is_dir($path)) {
+            @mkdir($path, 0770, true);
+        }
+    }
+}
+
+function create_department(array $input): array
+{
+    $departments = load_departments();
+    $name = trim((string) ($input['name'] ?? ''));
+    $slug = slugify_department_name($name, $departments);
+    $now = gmdate('c');
+
+    $dept = [
+        'id' => $slug,
+        'slug' => $slug,
+        'name' => $name,
+        'status' => 'active',
+        'active' => true,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ];
+
+    $departments[$slug] = $dept;
+    save_departments($departments);
+    ensure_department_org_directories($slug);
+
+    return $dept;
 }
 
 ?>

@@ -118,37 +118,89 @@ function create_default_admin_if_needed(array $config): void
 
 function login(string $username, string $password): array
 {
-    $user = find_user_by_username($username);
-    if (!$user) {
+    $departments = load_departments();
+    [$baseUsername, , $deptSlugFromInput] = parse_username_parts($username);
+    $resolvedUser = null;
+    $resolvedDept = null;
+    $scope = 'department';
+
+    if ($deptSlugFromInput !== null) {
+        $resolvedUser = find_department_user($deptSlugFromInput, $baseUsername);
+        $resolvedDept = $departments[$deptSlugFromInput] ?? null;
+    }
+
+    if ($resolvedUser === null) {
+        foreach ($departments as $slug => $dept) {
+            $candidate = find_department_user($slug, $baseUsername);
+            if ($candidate) {
+                $resolvedUser = $candidate;
+                $resolvedDept = $dept;
+                break;
+            }
+        }
+    }
+
+    if ($resolvedUser === null) {
+        // try global user (superadmin / legacy)
+        foreach (load_global_users() as $globalUser) {
+            if (($globalUser['username'] ?? '') === $username) {
+                $resolvedUser = $globalUser;
+                $scope = 'global';
+                break;
+            }
+        }
+    }
+
+    if (!$resolvedUser) {
         log_event('login_failure', $username, ['reason' => 'user_not_found']);
         return ['success' => false, 'error' => 'user_not_found'];
     }
 
-    if (empty($user['active'])) {
+    if (isset($resolvedDept['status'])) {
+        if ($resolvedDept['status'] === 'suspended') {
+            log_event('login_failure', $username, ['reason' => 'department_suspended']);
+            return ['success' => false, 'error' => 'department_suspended'];
+        }
+    }
+
+    if (empty($resolvedUser['active'])) {
         log_event('login_failure', $username, ['reason' => 'inactive_user']);
         return ['success' => false, 'error' => 'inactive_user'];
     }
 
-    if (!password_verify($password, $user['password_hash'])) {
+    if (!password_verify($password, $resolvedUser['password_hash'] ?? '')) {
         log_event('login_failure', $username, ['reason' => 'invalid_password']);
         return ['success' => false, 'error' => 'invalid_password'];
     }
 
-    $_SESSION['user_id'] = $user['id'];
-    $_SESSION['username'] = $user['username'];
-    $_SESSION['role'] = $user['role'];
-    $_SESSION['full_name'] = $user['full_name'];
-    $_SESSION['department_id'] = $user['department_id'] ?? null;
-    $_SESSION['office_id'] = $user['office_id'] ?? get_default_office_id();
+    $loginUsername = $scope === 'global' ? ($resolvedUser['username'] ?? $baseUsername) : ($resolvedUser['base_username'] . '.' . ($resolvedDept['slug'] ?? ''));
+    $_SESSION['user_id'] = $resolvedUser['id'] ?? $resolvedUser['base_username'] ?? $loginUsername;
+    $_SESSION['username'] = $loginUsername;
+    $_SESSION['full_name'] = $resolvedUser['full_name'] ?? $loginUsername;
+    $_SESSION['department_id'] = $resolvedDept['slug'] ?? null;
+    $_SESSION['office_id'] = $resolvedUser['office_id'] ?? get_default_office_id();
+    $_SESSION['department_read_only'] = ($resolvedDept['status'] ?? 'active') === 'archived';
 
-    log_event('login_success', $user['username']);
-    log_event('user_login', $user['username'], ['office_id' => $_SESSION['office_id'], 'role' => $_SESSION['role']]);
-    write_audit_log('auth', $user['username'], 'login', ['office_id' => $_SESSION['office_id']]);
+    $availableRoles = $scope === 'global' ? [($resolvedUser['role'] ?? 'superadmin')] : list_user_roles_for_selection($resolvedUser);
+    $_SESSION['available_roles'] = $availableRoles;
+
+    if (count($availableRoles) === 1) {
+        $_SESSION['acting_role'] = $availableRoles[0];
+        $_SESSION['role'] = $availableRoles[0];
+    } else {
+        $_SESSION['acting_role'] = null;
+        $_SESSION['role'] = null;
+    }
+
+    log_event('login_success', $loginUsername);
+    log_event('user_login', $loginUsername, ['office_id' => $_SESSION['office_id'], 'role' => $_SESSION['acting_role']]);
+    write_audit_log('auth', $loginUsername, 'login', ['office_id' => $_SESSION['office_id']]);
 
     return [
         'success' => true,
-        'user' => $user,
-        'force_password_change' => !empty($user['force_password_change']),
+        'user' => $resolvedUser,
+        'force_password_change' => !empty($resolvedUser['force_password_change']),
+        'require_role_selection' => count($availableRoles) > 1,
     ];
 }
 
@@ -179,7 +231,7 @@ function current_user(): ?array
     if (!is_logged_in()) {
         return null;
     }
-    return find_user_by_id($_SESSION['user_id']);
+    return find_user_by_username($_SESSION['username']);
 }
 
 function yojaka_current_user(): ?array
@@ -189,13 +241,19 @@ function yojaka_current_user(): ?array
 
 function yojaka_current_user_role(): ?string
 {
-    return $_SESSION['role'] ?? (current_user()['role'] ?? null);
+    return $_SESSION['acting_role'] ?? ($_SESSION['role'] ?? (current_user()['role'] ?? null));
+}
+
+function yojaka_acting_role(): ?string
+{
+    return yojaka_current_user_role();
 }
 
 function is_superadmin(?array $user = null): bool
 {
     $user = $user ?? current_user();
-    return is_array($user) && (($user['role'] ?? null) === 'superadmin');
+    $role = yojaka_current_user_role();
+    return $role === 'superadmin' || (is_array($user) && (($user['role'] ?? null) === 'superadmin'));
 }
 
 function parse_username_parts(string $username): array
@@ -230,7 +288,21 @@ function get_user_role_permissions(?string $username = null): array
         return [];
     }
 
-    $role = $user['role'] ?? null;
+    $role = yojaka_current_user_role();
+    if ($role === null) {
+        return [];
+    }
+
+    if ($role === 'superadmin') {
+        return ['*'];
+    }
+
+    [$baseUser, $baseRoleId, $deptSlug] = parse_username_parts($role);
+    if ($deptSlug !== null) {
+        $permissions = get_role_permissions($role);
+        return array_values(array_unique($permissions));
+    }
+
     $permissionsConfig = load_permissions_config();
     $rolePermissions = [];
     $roleSource = $permissionsConfig['roles'][$role] ?? $permissionsConfig['custom_roles'][$role] ?? null;
@@ -242,7 +314,6 @@ function get_user_role_permissions(?string $username = null): array
         }
     }
 
-    // Backward compatibility with config-based permissions
     global $config;
     if (empty($rolePermissions) && !empty($config['roles_permissions'][$role])) {
         $rolePermissions = $config['roles_permissions'][$role];
