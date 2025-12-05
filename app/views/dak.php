@@ -3,13 +3,18 @@ require_login();
 require_once __DIR__ . '/../acl.php';
 $currentUser = yojaka_current_user();
 $user = $currentUser;
-$canManageDak = user_has_permission('manage_dak');
+$canCreateDak = $currentUser ? has_permission($currentUser, 'dak.create') : false;
+$canForwardDak = $currentUser ? has_permission($currentUser, 'dak.forward') : false;
+$canCloseDak = $currentUser ? has_permission($currentUser, 'dak.close') : false;
+$canManageDak = $canCreateDak || $canForwardDak || $canCloseDak;
 $canViewAll = user_has_permission('view_all_records');
 $currentOfficeId = get_current_office_id();
 $currentLicense = get_current_office_license();
 $officeReadOnly = office_is_read_only($currentLicense);
 if (!$canManageDak && !user_has_permission('view_reports_basic')) {
-    require_permission('manage_dak');
+    http_response_code(403);
+    include __DIR__ . '/access_denied.php';
+    return;
 }
 $mode = $_GET['mode'] ?? 'list';
 $entries = load_dak_entries();
@@ -30,8 +35,8 @@ $usersList = load_users();
 $aiDraftText = '';
 
 if ($mode === 'create') {
-    if (!$canManageDak) {
-        require_permission('manage_dak');
+    if (!$canCreateDak) {
+        require_permission($currentUser ?? [], 'dak.create');
     }
     if ($officeReadOnly) {
         $errors[] = 'Office is read-only due to license status.';
@@ -39,6 +44,7 @@ if ($mode === 'create') {
 }
 
 if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_permission($currentUser ?? [], 'dak.create');
     $ai_action = $_POST['ai_action'] ?? null;
     $reference_no = trim($_POST['reference_no'] ?? '');
     $received_from = trim($_POST['received_from'] ?? '');
@@ -224,6 +230,7 @@ $targetId = $_GET['id'] ?? null;
                 $entry['updated_at'] = gmdate('c');
             }
             if (empty($errors) && isset($_POST['assign_to']) && $canManageDak) {
+                require_permission($currentUser ?? [], 'dak.forward');
                 $assignTo = trim($_POST['assign_to']);
                 if ($assignTo !== '') {
                     $entry['assigned_to'] = $assignTo;
@@ -252,6 +259,11 @@ $targetId = $_GET['id'] ?? null;
             if (empty($errors) && isset($_POST['new_state'])) {
                 $newState = $_POST['new_state'];
                 $currentState = $entry['workflow_state'] ?? get_default_workflow_state('dak');
+                if ($newState === 'closed') {
+                    require_permission($currentUser ?? [], 'dak.close');
+                } else {
+                    require_permission($currentUser ?? [], 'dak.forward');
+                }
                 if (can_transition_workflow('dak', $currentState, $newState, $user)) {
                     $entry['workflow_state'] = $newState;
                     if ($newState === 'closed') {

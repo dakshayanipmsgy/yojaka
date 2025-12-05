@@ -2,94 +2,103 @@
 require_once __DIR__ . '/../auth.php';
 require_once __DIR__ . '/../roles.php';
 require_once __DIR__ . '/../departments.php';
+require_once __DIR__ . '/../permissions_catalog.php';
 
 require_login();
 
 $currentUser = yojaka_current_user();
-$isSuperAdmin = is_superadmin($currentUser);
 $deptSlug = $currentUser ? get_current_department_slug($currentUser) : null;
-$isDeptAdmin = $deptSlug !== null && user_is_department_admin($currentUser, $deptSlug);
+$isSuperAdmin = $currentUser ? is_superadmin_user($currentUser) : false;
+$canManageRoles = $isSuperAdmin || ($currentUser && has_permission($currentUser, 'dept.roles.manage'));
 
-if (!$isSuperAdmin && !$isDeptAdmin) {
+if (!$canManageRoles) {
     http_response_code(403);
     include __DIR__ . '/access_denied.php';
     return;
 }
 
-$permissionsConfig = load_permissions_config();
-$rolesConfig = $permissionsConfig['roles'] ?? [];
+$catalog = load_permissions_catalog();
+$catalogPermissions = $catalog['permissions'] ?? [];
+$availablePermissionKeys = array_keys($catalogPermissions);
+sort($availablePermissionKeys);
+
+$rolesData = load_roles_permissions();
+$rolesConfig = $rolesData['roles'] ?? [];
 $messages = [];
 $errors = [];
 
-function collect_permissions_from_config(array $config): array
+function normalize_permissions(array $selected, array $allowedKeys, array &$errors): array
 {
-    $perms = [];
-    foreach ($config as $roleDef) {
-        $normalized = normalize_role_definition($roleDef);
-        foreach ($normalized['permissions'] as $p) {
-            $perms[] = $p;
+    $final = [];
+    foreach ($selected as $key) {
+        if (!in_array($key, $allowedKeys, true)) {
+            $errors[] = 'Invalid permission key: ' . htmlspecialchars($key);
+            continue;
         }
+        $final[] = $key;
     }
-    return array_values(array_unique($perms));
+    return array_values(array_unique($final));
 }
 
-$availablePermissions = collect_permissions_from_config($rolesConfig + ($permissionsConfig['custom_roles'] ?? []));
+function permission_label(string $key, array $catalogPermissions): string
+{
+    $meta = $catalogPermissions[$key] ?? [];
+    $label = $meta['label'] ?? $key;
+    $module = $meta['module'] ?? null;
+    return $module ? ($label . ' (' . $module . ')') : $label;
+}
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $isDeptAdmin) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $deptSlug !== null) {
     $action = $_POST['action'] ?? '';
+    $label = trim($_POST['label'] ?? '');
+    $selectedPermissions = $_POST['permissions'] ?? [];
+    $normalizedPermissions = normalize_permissions((array) $selectedPermissions, $availablePermissionKeys, $errors);
+
     if ($action === 'create_role') {
         $baseRoleId = trim($_POST['base_role_id'] ?? '');
-        $label = trim($_POST['label'] ?? '');
-        $perms = $_POST['permissions'] ?? [];
-
         if ($baseRoleId === '' || strpos($baseRoleId, '.') !== false) {
             $errors[] = 'Invalid base role ID.';
         } else {
             $roleId = $baseRoleId . '.' . $deptSlug;
             if (isset($rolesConfig[$roleId])) {
                 $errors[] = 'Role already exists.';
-            } else {
-                $rolesConfig[$roleId] = [
-                    'label' => $label !== '' ? $label : $baseRoleId,
-                    'permissions' => array_values($perms),
-                ];
-                $permissionsConfig['roles'] = $rolesConfig;
-                save_permissions_config($permissionsConfig);
-                $messages[] = "Role {$roleId} created.";
             }
+        }
+
+        if (empty($errors)) {
+            $rolesConfig[$roleId] = [
+                'label' => $label !== '' ? $label : $baseRoleId,
+                'permissions' => $normalizedPermissions,
+            ];
+            save_roles_permissions(['roles' => $rolesConfig]);
+            $messages[] = "Role {$roleId} created.";
+            $rolesData = load_roles_permissions();
+            $rolesConfig = $rolesData['roles'] ?? [];
         }
     } elseif ($action === 'update_role') {
         $roleId = $_POST['role_id'] ?? '';
-        $label = trim($_POST['label'] ?? '');
-        $perms = $_POST['permissions'] ?? [];
-
         if (!isset($rolesConfig[$roleId])) {
             $errors[] = 'Role not found.';
-        } elseif (substr($roleId, -strlen('.' . $deptSlug)) !== '.' . $deptSlug) {
+        } elseif (!$isSuperAdmin && substr($roleId, -strlen('.' . $deptSlug)) !== '.' . $deptSlug) {
             $errors[] = 'Cannot edit role outside your department.';
-        } else {
+        }
+
+        if (empty($errors)) {
             $rolesConfig[$roleId] = [
-                'label' => $label,
-                'permissions' => array_values($perms),
+                'label' => $label !== '' ? $label : $roleId,
+                'permissions' => $normalizedPermissions,
             ];
-            $permissionsConfig['roles'] = $rolesConfig;
-            save_permissions_config($permissionsConfig);
+            save_roles_permissions(['roles' => $rolesConfig]);
             $messages[] = 'Role updated.';
+            $rolesData = load_roles_permissions();
+            $rolesConfig = $rolesData['roles'] ?? [];
         }
     }
-
-    $permissionsConfig = load_permissions_config();
-    $rolesConfig = $permissionsConfig['roles'] ?? [];
-    $availablePermissions = collect_permissions_from_config($rolesConfig + ($permissionsConfig['custom_roles'] ?? []));
 }
 
 $visibleRoles = [];
 if ($isSuperAdmin) {
-    foreach ($rolesConfig as $roleId => $roleDef) {
-        if (!str_contains($roleId, '.') || str_starts_with($roleId, 'dept_admin.')) {
-            $visibleRoles[$roleId] = $roleDef;
-        }
-    }
+    $visibleRoles = $rolesConfig;
 } elseif ($deptSlug !== null) {
     foreach ($rolesConfig as $roleId => $roleDef) {
         if (substr($roleId, -strlen('.' . $deptSlug)) === '.' . $deptSlug) {
@@ -103,7 +112,7 @@ if ($isSuperAdmin) {
     <?php if ($isSuperAdmin): ?>
         Manage global role definitions. Department-specific roles are created by each department admin.
     <?php else: ?>
-        Create and edit roles scoped to your department (saved as <code>baseRoleId.<?= htmlspecialchars($deptSlug ?? ''); ?></code>).
+        Edit roles scoped to your department (saved as <code>baseRoleId.<?= htmlspecialchars($deptSlug ?? ''); ?></code>).
     <?php endif; ?>
 </div>
 <?php foreach ($messages as $msg): ?>
@@ -113,7 +122,7 @@ if ($isSuperAdmin) {
     <div class="alert alert-danger"><?= htmlspecialchars($err); ?></div>
 <?php endforeach; ?>
 
-<?php if ($isDeptAdmin): ?>
+<?php if ($deptSlug !== null): ?>
     <div class="card" style="margin-bottom: 1rem;">
         <div class="card-header">Create Department Role</div>
         <div class="card-body">
@@ -130,9 +139,10 @@ if ($isSuperAdmin) {
                 <div class="form-field">
                     <label>Permissions</label>
                     <div class="checkbox-group">
-                        <?php foreach ($availablePermissions as $perm): ?>
+                        <?php foreach ($availablePermissionKeys as $permKey): ?>
                             <label style="display:block;">
-                                <input type="checkbox" name="permissions[]" value="<?= htmlspecialchars($perm); ?>" /> <?= htmlspecialchars($perm); ?>
+                                <input type="checkbox" name="permissions[]" value="<?= htmlspecialchars($permKey); ?>" />
+                                <?= htmlspecialchars(permission_label($permKey, $catalogPermissions)); ?>
                             </label>
                         <?php endforeach; ?>
                     </div>
@@ -154,13 +164,23 @@ if ($isSuperAdmin) {
                 <tr><td colspan="4">No roles available.</td></tr>
             <?php else: ?>
                 <?php foreach ($visibleRoles as $roleId => $roleDef): ?>
-                    <?php $normalized = normalize_role_definition($roleDef); ?>
+                    <?php $rolePermissions = $roleDef['permissions'] ?? []; ?>
                     <tr>
                         <td><?= htmlspecialchars($roleId); ?></td>
-                        <td><?= htmlspecialchars($normalized['label'] ?? ''); ?></td>
-                        <td><?= htmlspecialchars(implode(', ', $normalized['permissions'])); ?></td>
+                        <td><?= htmlspecialchars($roleDef['label'] ?? $roleId); ?></td>
                         <td>
-                            <?php $canEdit = $isSuperAdmin || ($isDeptAdmin && substr($roleId, -strlen('.' . $deptSlug)) === '.' . $deptSlug); ?>
+                            <?php if (empty($rolePermissions)): ?>
+                                <span class="muted">No permissions</span>
+                            <?php else: ?>
+                                <ul style="margin:0; padding-left: 1.2rem;">
+                                    <?php foreach ($rolePermissions as $permKey): ?>
+                                        <li><?= htmlspecialchars(permission_label($permKey, $catalogPermissions)); ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php $canEdit = $isSuperAdmin || ($deptSlug !== null && substr($roleId, -strlen('.' . $deptSlug)) === '.' . $deptSlug); ?>
                             <?php if ($canEdit): ?>
                                 <details>
                                     <summary>Edit</summary>
@@ -169,14 +189,15 @@ if ($isSuperAdmin) {
                                         <input type="hidden" name="role_id" value="<?= htmlspecialchars($roleId); ?>" />
                                         <div class="form-field">
                                             <label>Label</label>
-                                            <input type="text" name="label" value="<?= htmlspecialchars($normalized['label'] ?? ''); ?>" />
+                                            <input type="text" name="label" value="<?= htmlspecialchars($roleDef['label'] ?? $roleId); ?>" />
                                         </div>
                                         <div class="form-field">
                                             <label>Permissions</label>
                                             <div class="checkbox-group">
-                                                <?php foreach ($availablePermissions as $perm): ?>
+                                                <?php foreach ($availablePermissionKeys as $permKey): ?>
                                                     <label style="display:block;">
-                                                        <input type="checkbox" name="permissions[]" value="<?= htmlspecialchars($perm); ?>" <?= in_array($perm, $normalized['permissions'], true) ? 'checked' : ''; ?> /> <?= htmlspecialchars($perm); ?>
+                                                        <input type="checkbox" name="permissions[]" value="<?= htmlspecialchars($permKey); ?>" <?= in_array($permKey, $rolePermissions, true) ? 'checked' : ''; ?> />
+                                                        <?= htmlspecialchars(permission_label($permKey, $catalogPermissions)); ?>
                                                     </label>
                                                 <?php endforeach; ?>
                                             </div>
