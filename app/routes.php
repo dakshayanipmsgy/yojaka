@@ -125,6 +125,11 @@ function resolve_route(string $page): array
             'view' => __DIR__ . '/views/admin_routes.php',
             'permission' => 'manage_office_config',
         ],
+        'admin_workflows' => [
+            'title' => 'Workflows / File Routes',
+            'view' => __DIR__ . '/views/admin_workflows.php',
+            'permission' => 'manage_office_config',
+        ],
         'admin_people' => [
             'title' => 'People & Users',
             'view' => __DIR__ . '/views/admin_people.php',
