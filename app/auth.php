@@ -1,6 +1,8 @@
 <?php
 // Authentication and user helper functions for Yojaka.
 
+require_once __DIR__ . '/users.php';
+
 function permissions_config_path(): string
 {
     return YOJAKA_DATA_PATH . '/org/permissions.json';
