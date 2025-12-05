@@ -104,7 +104,7 @@ function resolve_route(string $page): array
         'admin_departments' => [
             'title' => 'Department Profiles',
             'view' => __DIR__ . '/views/admin_departments.php',
-            'permission' => 'manage_departments',
+            'role' => 'superadmin',
         ],
         'admin_office' => [
             'title' => 'Office Settings',

@@ -131,3 +131,58 @@ function standardize_user_record(array $user): array
 
     return $user;
 }
+
+function next_user_id(array $users): int
+{
+    $max = 0;
+    foreach ($users as $user) {
+        $id = isset($user['id']) ? (int) $user['id'] : 0;
+        if ($id > $max) {
+            $max = $id;
+        }
+    }
+
+    return $max + 1;
+}
+
+function create_department_admin_user(string $deptSlug, string $deptName, string $deptAdminRoleId): array
+{
+    $username = 'admin.' . $deptSlug;
+    $existing = find_user($username);
+    if ($existing) {
+        return [
+            'username' => $username,
+            'password_plain' => null,
+            'created' => false,
+        ];
+    }
+
+    $passwordPlain = bin2hex(random_bytes(6));
+    $passwordHash = password_hash($passwordPlain, PASSWORD_DEFAULT);
+    $now = date('c');
+
+    $users = load_users();
+    $newUser = [
+        'id' => next_user_id($users),
+        'username' => $username,
+        'full_name' => 'Admin - ' . $deptName,
+        'password_hash' => $passwordHash,
+        'role' => $deptAdminRoleId,
+        'active' => true,
+        'force_password_change' => true,
+        'created_at' => $now,
+        'updated_at' => $now,
+        'department_id' => $deptSlug,
+        'department_slug' => $deptSlug,
+        'base_role_id' => 'dept_admin',
+    ];
+
+    $users[] = $newUser;
+    save_users($users);
+
+    return [
+        'username' => $username,
+        'password_plain' => $passwordPlain,
+        'created' => true,
+    ];
+}

@@ -92,6 +92,7 @@ if (!empty($viewFile) && file_exists($viewFile)) {
                     <?php
                     if (empty($item['visible'])) { continue; }
                     $pageKey = $item['page'] ?? '';
+                    if ($pageKey === 'admin_departments' && !$isSuperAdmin) { continue; }
                     $adminHidden = ['admin_rti', 'admin_dak', 'admin_inspection'];
                     if (in_array($pageKey, $adminHidden, true)) { continue; }
                     $permissionMap = [
@@ -129,6 +130,7 @@ if (!empty($viewFile) && file_exists($viewFile)) {
             <?php if ($isSuperAdmin): ?>
                 <div class="nav-section">Super Admin</div>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=superadmin_dashboard" class="nav-item<?= ($activePage ?? '') === 'superadmin_dashboard' ? ' active' : ''; ?>">Global Dashboard</a>
+                <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_departments" class="nav-item<?= ($activePage ?? '') === 'admin_departments' ? ' active' : ''; ?>">Departments</a>
                 <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=superadmin_offices" class="nav-item<?= ($activePage ?? '') === 'superadmin_offices' ? ' active' : ''; ?>">Offices</a>
             <?php endif; ?>
         </nav>
