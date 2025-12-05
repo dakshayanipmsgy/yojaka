@@ -1,5 +1,6 @@
 <?php
 // Department-scoped user storage (JSON only).
+require_once __DIR__ . '/core_helpers.php';
 require_once __DIR__ . '/departments.php';
 require_once __DIR__ . '/roles.php';
 require_once __DIR__ . '/auth.php';

@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/core_helpers.php';
 require_once __DIR__ . '/auth.php';
 
 /**
@@ -37,32 +38,6 @@ function acl_normalize(array $record): array {
 }
 
 /**
- * Parse username into [baseUser, baseRoleId, deptSlug].
- * Examples:
- * - "rkumar.ee.departmentabc" => ["rkumar", "ee", "departmentabc"]
- * - "admin.departmentabc"     => ["admin", null, "departmentabc"]
- * - "superadmin"              => ["superadmin", null, null]
- */
-function acl_parse_username_parts(?string $username): array {
-    if ($username === null) {
-        return [null, null, null];
-    }
-    $parts = explode('.', $username);
-    if (count($parts) >= 3) {
-        $deptSlug   = array_pop($parts);      // last
-        $baseRoleId = array_pop($parts);      // second last
-        $baseUser   = implode('.', $parts);   // remaining
-        return [$baseUser, $baseRoleId, $deptSlug];
-    }
-    if (count($parts) === 2) {
-        $deptSlug = array_pop($parts);
-        $baseUser = implode('.', $parts);
-        return [$baseUser, null, $deptSlug];
-    }
-    return [$username, null, null];
-}
-
-/**
  * Initialize ACL for a newly created record.
  *
  * - department_slug from current user.
@@ -74,7 +49,7 @@ function acl_initialize_new(array $record, array $currentUser, ?string $assignee
     $record = acl_normalize($record);
 
     $username = $currentUser['username'] ?? null;
-    [, , $deptSlug] = acl_parse_username_parts($username);
+    [, , $deptSlug] = parse_username_parts($username);
 
     $record['department_slug'] = $deptSlug;
     $record['owner'] = $username;
@@ -115,7 +90,7 @@ function acl_can_view(array $user, array $record): bool {
     $username = $user['username'] ?? null;
     $userRole = $user['role'] ?? null;
 
-    [, , $userDeptSlug] = acl_parse_username_parts($username);
+    [, , $userDeptSlug] = parse_username_parts($username);
 
     if ($userDeptSlug === null) {
         // superadmin or system user: no auto access

@@ -1,6 +1,8 @@
 <?php
 // Bootstrap file to initialize configuration, sessions, and dependencies.
 
+require_once __DIR__ . '/core_helpers.php';
+
 $config = require __DIR__ . '/../config/config.php';
 
 $debug = !empty($config['debug']);

@@ -1,6 +1,10 @@
 <?php
 // Workflow helper functions for Yojaka v1.3
 
+require_once __DIR__ . '/core_helpers.php';
+require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/acl.php';
+
 function workflow_definitions(): array
 {
     return [
@@ -170,7 +174,7 @@ function workflow_record_department(array $record, ?array $currentUser = null): 
         return $record['department_slug'];
     }
     if ($currentUser) {
-        [, , $deptSlug] = acl_parse_username_parts($currentUser['username'] ?? null);
+        [, , $deptSlug] = parse_username_parts($currentUser['username'] ?? null);
         return $deptSlug;
     }
     return null;
@@ -179,7 +183,7 @@ function workflow_record_department(array $record, ?array $currentUser = null): 
 function initialize_record_workflow(array $record, array $currentUser, array $workflowTemplate, ?string $assigneeUsername): array
 {
     $record = acl_normalize($record);
-    [, , $userDept] = acl_parse_username_parts($currentUser['username'] ?? null);
+    [, , $userDept] = parse_username_parts($currentUser['username'] ?? null);
     if (!$userDept) {
         return $record;
     }
@@ -234,7 +238,7 @@ function workflow_get_allowed_actions(array $record, array $currentUser, array $
     if (!acl_can_edit($currentUser, $record)) {
         return $actions;
     }
-    [, , $userDept] = acl_parse_username_parts($currentUser['username'] ?? null);
+    [, , $userDept] = parse_username_parts($currentUser['username'] ?? null);
     if ($userDept === null || $record['department_slug'] !== $userDept) {
         return $actions;
     }
@@ -270,7 +274,7 @@ function workflow_advance(array $record, array $currentUser, array $workflowTemp
     if (!acl_can_edit($currentUser, $record)) {
         return $record;
     }
-    [, , $userDept] = acl_parse_username_parts($currentUser['username'] ?? null);
+    [, , $userDept] = parse_username_parts($currentUser['username'] ?? null);
     if ($userDept === null || $record['department_slug'] !== $userDept) {
         return $record;
     }
@@ -325,7 +329,7 @@ function workflow_return(array $record, array $currentUser, array $workflowTempl
     if (!acl_can_edit($currentUser, $record)) {
         return $record;
     }
-    [, , $userDept] = acl_parse_username_parts($currentUser['username'] ?? null);
+    [, , $userDept] = parse_username_parts($currentUser['username'] ?? null);
     if ($userDept === null || $record['department_slug'] !== $userDept) {
         return $record;
     }
@@ -377,7 +381,7 @@ function workflow_close(array $record, array $currentUser, array $workflowTempla
     if (!acl_can_edit($currentUser, $record)) {
         return $record;
     }
-    [, , $userDept] = acl_parse_username_parts($currentUser['username'] ?? null);
+    [, , $userDept] = parse_username_parts($currentUser['username'] ?? null);
     if ($userDept === null || $record['department_slug'] !== $userDept) {
         return $record;
     }
