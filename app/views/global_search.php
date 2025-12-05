@@ -1,6 +1,9 @@
 <?php
 require_login();
 
+require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../acl.php';
+
 $q = trim($_GET['q'] ?? '');
 $dateFrom = $_GET['date_from'] ?? '';
 $dateTo = $_GET['date_to'] ?? '';
@@ -32,7 +35,8 @@ function gs_date_within(?string $dateValue, string $from, string $to): bool
     return true;
 }
 
-$user = current_user();
+$user = get_current_user();
+$currentUser = $user;
 $canViewAll = user_has_permission('view_all_records');
 $results = [];
 
@@ -89,7 +93,8 @@ if ($q !== '') {
     if (in_array('inspection', $selectedModules, true)) {
         $items = [];
         foreach (load_inspection_reports() as $rep) {
-            if (!$canViewAll && !user_has_permission('manage_inspection') && ($rep['created_by'] ?? '') !== ($user['username'] ?? '')) {
+            $rep = acl_normalize($rep);
+            if (!acl_can_view($currentUser, $rep)) {
                 continue;
             }
             if (!gs_date_within($rep['created_at'] ?? '', $dateFrom, $dateTo)) {

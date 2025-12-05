@@ -1,7 +1,11 @@
 <?php
 require_login();
 
-$user = current_user();
+require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../acl.php';
+
+$currentUser = get_current_user();
+$user = $currentUser;
 $canManageInspection = user_has_permission('manage_inspection');
 $canCreateDocuments = user_has_permission('create_documents');
 $canViewAll = user_has_permission('view_all_records');
@@ -115,6 +119,7 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['step
             'updated_at' => $now,
             'closed_at' => null,
         ];
+        $newReport = acl_initialize_new($newReport, $currentUser);
         $reports[] = $newReport;
         save_inspection_reports($reports);
         log_event('inspection_created', $user['username'] ?? null, [
@@ -133,9 +138,12 @@ if ($mode === 'view' && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action
     } else {
         $id = sanitize_text($_POST['id'] ?? '');
         $report = $id ? find_inspection_report_by_id($reports, $id) : null;
+        if ($report) {
+            $report = acl_normalize($report);
+        }
         if (!$report) {
             $errors[] = 'Inspection report not found.';
-        } elseif (!$canViewAll && ($report['created_by'] ?? '') !== ($user['username'] ?? '')) {
+        } elseif (!acl_can_edit($currentUser, $report)) {
             $errors[] = 'You are not allowed to update this inspection report.';
         } elseif (($report['status'] ?? '') === 'Closed') {
             $notice = 'Report is already closed.';
@@ -157,9 +165,13 @@ if ($mode === 'view' && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action
 if ($mode === 'view') {
     $id = $_GET['id'] ?? ($_POST['id'] ?? '');
     $report = $id ? find_inspection_report_by_id($reports, $id) : null;
+    if ($report) {
+        $report = acl_normalize($report);
+    }
     if (!$report) {
         $errors[] = 'Inspection report not found.';
-    } elseif (!$canViewAll && ($report['created_by'] ?? '') !== ($user['username'] ?? '')) {
+    } elseif (!acl_can_view($currentUser, $report)) {
+        http_response_code(403);
         $errors[] = 'You are not allowed to view this inspection report.';
         $report = null;
     }
@@ -176,12 +188,12 @@ if ($mode === 'view') {
 }
 
 if ($mode === 'list') {
-    if ($canViewAll || $canManageInspection) {
-        $visibleReports = $reports;
-    } else {
-        $visibleReports = array_filter($reports, function ($report) use ($user) {
-            return ($report['created_by'] ?? null) === ($user['username'] ?? null);
-        });
+    $visibleReports = [];
+    foreach ($reports as $reportRecord) {
+        $reportRecord = acl_normalize($reportRecord);
+        if (acl_can_view($currentUser, $reportRecord)) {
+            $visibleReports[] = $reportRecord;
+        }
     }
 }
 
@@ -447,7 +459,7 @@ if ($selectedTemplate && !($selectedTemplate['active'] ?? false)) {
         <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=inspection">Back to list</a>
         <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=inspection&mode=view&id=<?= urlencode($report['id']); ?>&download=1">Download HTML</a>
         <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=print_document&amp;type=inspection&amp;id=<?= urlencode($report['id']); ?>" target="_blank">Print</a>
-        <?php if (($report['status'] ?? '') !== 'Closed' && (($report['created_by'] ?? '') === ($user['username'] ?? '') || $canViewAll || $canManageInspection)): ?>
+        <?php if (($report['status'] ?? '') !== 'Closed' && acl_can_edit($currentUser, $report)): ?>
             <form method="post" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=inspection&mode=view&id=<?= urlencode($report['id']); ?>" style="display:inline-block;">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
                 <input type="hidden" name="action" value="close_report">
