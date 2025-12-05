@@ -1,112 +1,106 @@
 <?php
-require_permission('manage_departments');
+require_role('superadmin');
+require_once __DIR__ . '/../departments.php';
+require_once __DIR__ . '/../users.php';
+require_once __DIR__ . '/../roles.php';
 
 $departments = load_departments();
 $action = $_GET['action'] ?? 'list';
-$action = in_array($action, ['list', 'create', 'edit'], true) ? $action : 'list';
+$action = in_array($action, ['list', 'create', 'edit', 'toggle'], true) ? $action : 'list';
 $errors = [];
 $notice = '';
+$generatedAdmin = null;
 $csrfToken = $_SESSION['dept_csrf'] ?? bin2hex(random_bytes(16));
 $_SESSION['dept_csrf'] = $csrfToken;
 
-function short_text($text, $length = 60)
-{
-    $clean = trim((string) $text);
-    if (mb_strlen($clean) <= $length) {
-        return $clean;
-    }
-    return mb_substr($clean, 0, $length) . '…';
-}
-
-if (($action === 'create' || $action === 'edit') && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] === 'POST') && in_array($action, ['create', 'edit'], true)) {
     $submittedToken = $_POST['csrf_token'] ?? '';
     if (!$submittedToken || !hash_equals($_SESSION['dept_csrf'], $submittedToken)) {
         $errors[] = 'Security token mismatch. Please retry.';
     }
 
-    $id = trim($_POST['id'] ?? '');
     $name = trim($_POST['name'] ?? '');
-    $address = trim($_POST['address'] ?? '');
-    $contact = trim($_POST['contact'] ?? '');
-    $logoPath = trim($_POST['logo_path'] ?? '');
-    $headerHtml = $_POST['letterhead_header_html'] ?? '';
-    $footerHtml = $_POST['letterhead_footer_html'] ?? '';
-    $signatory = $_POST['default_signatory_block'] ?? '';
-    $isDefault = !empty($_POST['is_default']);
+    $active = !empty($_POST['active']);
+    $description = trim($_POST['description'] ?? '');
+    $slug = $action === 'edit' ? ($_POST['slug'] ?? '') : '';
 
-    if ($id === '' || preg_match('/\s/', $id)) {
-        $errors[] = 'ID is required and should not contain spaces.';
-    }
     if ($name === '') {
-        $errors[] = 'Name is required.';
+        $errors[] = 'Department name is required.';
     }
 
-    if ($action === 'create' && find_department_by_id($departments, $id)) {
-        $errors[] = 'Department ID must be unique.';
+    if ($action === 'create') {
+        $slug = slugify_department_name($name, $departments);
+    }
+
+    if ($slug === '') {
+        $errors[] = 'Unable to generate department slug.';
     }
 
     if (empty($errors)) {
-        $departmentData = [
-            'id' => $id,
+        $departments[$slug] = [
+            'id' => $slug,
             'name' => $name,
-            'address' => $address,
-            'contact' => $contact,
-            'logo_path' => $logoPath,
-            'letterhead_header_html' => $headerHtml,
-            'letterhead_footer_html' => $footerHtml,
-            'default_signatory_block' => $signatory,
-            'is_default' => $isDefault,
+            'slug' => $slug,
+            'description' => $description,
+            'active' => $active,
         ];
+        save_departments($departments);
 
         if ($action === 'create') {
-            $departments[] = $departmentData;
+            $adminUsername = 'admin.' . $slug;
+            $password = substr(str_replace(['/', '+', '='], '', base64_encode(random_bytes(18))), 0, 12);
+            $adminUser = [
+                'username' => $adminUsername,
+                'full_name' => $name . ' Admin',
+                'role' => 'dept_admin',
+                'active' => true,
+                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                'department_slug' => $slug,
+                'created_at' => gmdate('c'),
+                'updated_at' => gmdate('c'),
+            ];
+            save_user($adminUser);
+            $generatedAdmin = ['username' => $adminUsername, 'password' => $password];
+            $notice = 'Department created. Initial admin user generated.';
         } else {
-            foreach ($departments as &$dept) {
-                if (($dept['id'] ?? '') === $id) {
-                    $dept = array_merge($dept, $departmentData);
-                    break;
-                }
-            }
-            unset($dept);
+            $notice = 'Department updated.';
         }
-
-        if ($isDefault) {
-            foreach ($departments as &$dept) {
-                $dept['is_default'] = ($dept['id'] === $id);
-            }
-            unset($dept);
-        }
-
-        save_departments($departments);
-        header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=admin_departments');
-        exit;
     }
 }
 
-if ($action === 'list' && isset($_GET['set_default']) && isset($_GET['id'])) {
-    $submittedToken = $_GET['token'] ?? '';
-    if ($submittedToken && hash_equals($_SESSION['dept_csrf'], $submittedToken)) {
-        $targetId = $_GET['id'];
-        foreach ($departments as &$dept) {
-            $dept['is_default'] = (($dept['id'] ?? '') === $targetId);
-        }
-        unset($dept);
-        save_departments($departments);
-        $notice = 'Default department updated.';
+if ($action === 'toggle' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $submittedToken = $_POST['csrf_token'] ?? '';
+    $slug = $_POST['slug'] ?? '';
+    if (!$submittedToken || !hash_equals($_SESSION['dept_csrf'], $submittedToken)) {
+        $errors[] = 'Security token mismatch. Please retry.';
+    } elseif (!isset($departments[$slug])) {
+        $errors[] = 'Department not found.';
     } else {
-        $errors[] = 'Invalid request token.';
+        $departments[$slug]['active'] = empty($departments[$slug]['active']);
+        save_departments($departments);
+        $notice = 'Department status updated.';
+        $action = 'list';
     }
 }
 
 $editDepartment = null;
 if ($action === 'edit') {
-    $deptId = $_GET['id'] ?? '';
-    $editDepartment = $deptId ? find_department_by_id($departments, $deptId) : null;
-    if (!$editDepartment) {
+    $slug = $_GET['slug'] ?? '';
+    if ($slug && isset($departments[$slug])) {
+        $editDepartment = $departments[$slug];
+    } else {
         $errors[] = 'Department not found.';
+        $action = 'list';
     }
 }
 ?>
+
+<div class="flex" style="justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <h2>Departments</h2>
+    <?php if ($action === 'list'): ?>
+        <a class="btn-primary" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_departments&action=create">Create Department</a>
+    <?php endif; ?>
+</div>
 
 <?php if (!empty($errors)): ?>
     <div class="alert alert-danger">
@@ -122,39 +116,44 @@ if ($action === 'edit') {
     <div class="alert alert-success"><?= htmlspecialchars($notice); ?></div>
 <?php endif; ?>
 
-<?php if ($action === 'list'): ?>
-    <div class="actions" style="margin-bottom:1rem; display:flex; justify-content: space-between; align-items:center;">
-        <div><strong>Department Profiles</strong></div>
-        <a class="btn-primary" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_departments&action=create">Create New Department</a>
+<?php if ($generatedAdmin): ?>
+    <div class="alert info">
+        <strong>Initial Admin Credentials</strong><br>
+        Username: <?= htmlspecialchars($generatedAdmin['username']); ?><br>
+        Password: <?= htmlspecialchars($generatedAdmin['password']); ?><br>
+        Please share these with the department admin securely.
     </div>
+<?php endif; ?>
+
+<?php if ($action === 'list'): ?>
     <div class="table-responsive">
         <table class="table">
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th>Slug</th>
                     <th>Name</th>
-                    <th>Address</th>
-                    <th>Contact</th>
-                    <th>Default</th>
-                    <th></th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($departments)): ?>
-                    <tr><td colspan="6">No departments found.</td></tr>
+                    <tr><td colspan="5">No departments defined.</td></tr>
                 <?php else: ?>
                     <?php foreach ($departments as $dept): ?>
                         <tr>
-                            <td><?= htmlspecialchars($dept['id'] ?? ''); ?></td>
+                            <td><?= htmlspecialchars($dept['slug'] ?? $dept['id'] ?? ''); ?></td>
                             <td><?= htmlspecialchars($dept['name'] ?? ''); ?></td>
-                            <td><?= htmlspecialchars(short_text($dept['address'] ?? '')); ?></td>
-                            <td><?= htmlspecialchars(short_text($dept['contact'] ?? '')); ?></td>
-                            <td><?= !empty($dept['is_default']) ? '<span class="badge">Yes</span>' : 'No'; ?></td>
+                            <td><?= htmlspecialchars($dept['description'] ?? ''); ?></td>
+                            <td><?= !empty($dept['active']) ? '<span class="badge">Active</span>' : '<span class="badge warn">Inactive</span>'; ?></td>
                             <td>
-                                <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_departments&action=edit&id=<?= urlencode($dept['id']); ?>">Edit</a>
-                                <?php if (empty($dept['is_default'])): ?>
-                                    <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_departments&action=list&set_default=1&id=<?= urlencode($dept['id']); ?>&token=<?= htmlspecialchars($csrfToken); ?>">Set Default</a>
-                                <?php endif; ?>
+                                <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_departments&action=edit&slug=<?= urlencode($dept['slug'] ?? ''); ?>">Edit</a>
+                                <form method="post" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_departments&action=toggle" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+                                    <input type="hidden" name="slug" value="<?= htmlspecialchars($dept['slug'] ?? ''); ?>">
+                                    <button type="submit" class="button"><?= !empty($dept['active']) ? 'Deactivate' : 'Activate'; ?></button>
+                                </form>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -162,47 +161,26 @@ if ($action === 'edit') {
             </tbody>
         </table>
     </div>
-<?php elseif ($action === 'create' || ($action === 'edit' && $editDepartment)): ?>
-    <?php $formData = $editDepartment ?? ['id' => '', 'name' => '', 'address' => '', 'contact' => '', 'logo_path' => '', 'letterhead_header_html' => '', 'letterhead_footer_html' => '', 'default_signatory_block' => '', 'is_default' => false]; ?>
-    <form method="post" class="form-stacked" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_departments&action=<?= htmlspecialchars($action); ?><?= $editDepartment ? '&id=' . urlencode($editDepartment['id']) : ''; ?>">
+<?php elseif ($action === 'create' || $editDepartment): ?>
+    <?php $formData = $editDepartment ?? ['name' => '', 'description' => '', 'slug' => '', 'active' => true]; ?>
+    <form method="post" class="form-stacked" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_departments&action=<?= htmlspecialchars($action); ?><?= $editDepartment ? '&slug=' . urlencode($formData['slug']) : ''; ?>">
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken); ?>">
+        <?php if ($editDepartment): ?>
+            <input type="hidden" name="slug" value="<?= htmlspecialchars($formData['slug']); ?>">
+        <?php endif; ?>
         <div class="form-field">
-            <label for="id">Department ID *</label>
-            <input type="text" id="id" name="id" value="<?= htmlspecialchars($formData['id']); ?>" <?= $action === 'edit' ? 'readonly' : 'required'; ?>>
-        </div>
-        <div class="form-field">
-            <label for="name">Name *</label>
+            <label for="name">Department Name *</label>
             <input type="text" id="name" name="name" value="<?= htmlspecialchars($formData['name']); ?>" required>
         </div>
         <div class="form-field">
-            <label for="address">Address</label>
-            <textarea id="address" name="address" rows="3"><?= htmlspecialchars($formData['address']); ?></textarea>
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="3"><?= htmlspecialchars($formData['description'] ?? ''); ?></textarea>
         </div>
         <div class="form-field">
-            <label for="contact">Contact</label>
-            <textarea id="contact" name="contact" rows="3"><?= htmlspecialchars($formData['contact']); ?></textarea>
-        </div>
-        <div class="form-field">
-            <label for="logo_path">Logo Path</label>
-            <input type="text" id="logo_path" name="logo_path" value="<?= htmlspecialchars($formData['logo_path']); ?>" placeholder="assets/images/logo.png">
-        </div>
-        <div class="form-field">
-            <label for="letterhead_header_html">Letterhead Header HTML</label>
-            <textarea id="letterhead_header_html" name="letterhead_header_html" rows="4"><?= htmlspecialchars($formData['letterhead_header_html']); ?></textarea>
-        </div>
-        <div class="form-field">
-            <label for="letterhead_footer_html">Letterhead Footer HTML</label>
-            <textarea id="letterhead_footer_html" name="letterhead_footer_html" rows="4"><?= htmlspecialchars($formData['letterhead_footer_html']); ?></textarea>
-        </div>
-        <div class="form-field">
-            <label for="default_signatory_block">Default Signatory Block</label>
-            <textarea id="default_signatory_block" name="default_signatory_block" rows="3"><?= htmlspecialchars($formData['default_signatory_block']); ?></textarea>
-        </div>
-        <div class="form-field">
-            <label><input type="checkbox" name="is_default" value="1" <?= !empty($formData['is_default']) ? 'checked' : ''; ?>> Set as default department</label>
+            <label><input type="checkbox" name="active" value="1" <?= !empty($formData['active']) ? 'checked' : ''; ?>> Active</label>
         </div>
         <div class="form-actions">
-            <button class="btn-primary" type="submit">Save Department</button>
+            <button class="btn-primary" type="submit">Save</button>
             <a class="button" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_departments">Cancel</a>
         </div>
     </form>

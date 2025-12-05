@@ -82,32 +82,10 @@ function get_all_roles_for_dropdown(): array
 
 function ensure_users_have_departments(): void
 {
-    $users = load_users();
-    if (empty($users)) {
-        return;
-    }
-    $departments = load_departments();
-    $defaultDept = get_default_department($departments);
-    if (!$defaultDept) {
-        return;
-    }
-    $defaultId = $defaultDept['id'];
-    $defaultOfficeId = get_default_office_id();
-    $updated = false;
-    foreach ($users as &$user) {
-        if (empty($user['department_id'])) {
-            $user['department_id'] = $defaultId;
-            $updated = true;
-        }
-        if (empty($user['office_id'])) {
-            $user['office_id'] = $defaultOfficeId;
-            $updated = true;
-        }
-    }
-    unset($user);
-    if ($updated) {
-        save_users($users);
-    }
+    // Legacy shim retained for backward compatibility; departments are now
+    // inferred from usernames and role suffixes, so we avoid mutating stored
+    // records here.
+    return;
 }
 
 function create_default_admin_if_needed(array $config): void
@@ -219,12 +197,13 @@ function get_user_role_permissions(?string $username = null): array
     $role = $user['role'] ?? null;
     $permissionsConfig = load_permissions_config();
     $rolePermissions = [];
-    if ($role && !empty($permissionsConfig['roles'][$role])) {
-        $rolePermissions = $permissionsConfig['roles'][$role];
-    }
-
-    if ($role && !empty($permissionsConfig['custom_roles'][$role])) {
-        $rolePermissions = array_merge($rolePermissions, $permissionsConfig['custom_roles'][$role]);
+    $roleSource = $permissionsConfig['roles'][$role] ?? $permissionsConfig['custom_roles'][$role] ?? null;
+    if ($role && $roleSource) {
+        if (is_array($roleSource) && isset($roleSource['permissions']) && is_array($roleSource['permissions'])) {
+            $rolePermissions = $roleSource['permissions'];
+        } elseif (is_array($roleSource)) {
+            $rolePermissions = $roleSource;
+        }
     }
 
     // Backward compatibility with config-based permissions
