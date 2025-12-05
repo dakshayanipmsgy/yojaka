@@ -19,7 +19,7 @@ function guc_normalize_record(array $record): array
     $record['allowed_users'] = array_values(array_unique(array_filter($record['allowed_users'])));
 
     if ($record['department_slug'] === null && !empty($record['owner'])) {
-        [, , $deptSlug] = acl_parse_username_parts($record['owner']);
+        [, , $deptSlug] = parse_username_parts($record['owner']);
         if ($deptSlug !== null) {
             $record['department_slug'] = $deptSlug;
         }

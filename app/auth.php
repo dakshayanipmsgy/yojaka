@@ -1,6 +1,7 @@
 <?php
 // Authentication and user helper functions for Yojaka.
 
+require_once __DIR__ . '/core_helpers.php';
 require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/roles.php';
 require_once __DIR__ . '/permissions_catalog.php';
@@ -258,25 +259,6 @@ function is_superadmin(?array $user = null): bool
     $user = $user ?? current_user();
     $role = yojaka_current_user_role();
     return $role === 'superadmin' || (is_array($user) && (($user['role'] ?? null) === 'superadmin'));
-}
-
-function parse_username_parts(string $username): array
-{
-    $parts = explode('.', $username);
-    if (count($parts) >= 3) {
-        $deptSlug = array_pop($parts);
-        $baseRoleId = array_pop($parts);
-        $baseUser = implode('.', $parts);
-        return [$baseUser, $baseRoleId, $deptSlug];
-    }
-
-    if (count($parts) === 2) {
-        $deptSlug = array_pop($parts);
-        $baseUser = implode('.', $parts);
-        return [$baseUser, null, $deptSlug];
-    }
-
-    return [$username, null, null];
 }
 
 function get_current_department_slug(array $user): ?string

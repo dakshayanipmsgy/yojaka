@@ -6,7 +6,7 @@ require_once __DIR__ . '/../critical_actions.php';
 require_once __DIR__ . '/../departments.php';
 
 $user = current_user();
-[,, $deptSlug] = acl_parse_username_parts($user['username'] ?? null);
+[,, $deptSlug] = parse_username_parts($user['username'] ?? null);
 $isSuperAdmin = ($user['role'] ?? '') === 'superadmin';
 $isDeptAdmin = strpos($user['role'] ?? '', 'dept_admin.') === 0;
 

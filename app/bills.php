@@ -53,7 +53,7 @@ function bills_normalize_record(array $bill): array
     $bill['allowed_users'] = array_values(array_unique(array_filter($bill['allowed_users'])));
 
     if ($bill['department_slug'] === null && !empty($bill['owner'])) {
-        [, , $deptSlug] = acl_parse_username_parts($bill['owner']);
+        [, , $deptSlug] = parse_username_parts($bill['owner']);
         if ($deptSlug !== null) {
             $bill['department_slug'] = $deptSlug;
         }

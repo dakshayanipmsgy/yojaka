@@ -1,28 +1,8 @@
 <?php
 // Department-scoped role helpers with JSON storage.
+require_once __DIR__ . '/core_helpers.php';
 require_once __DIR__ . '/departments.php';
 require_once __DIR__ . '/permissions_catalog.php';
-
-if (!function_exists('parse_username_parts')) {
-    function parse_username_parts(string $username): array
-    {
-        $parts = explode('.', $username);
-        if (count($parts) >= 3) {
-            $deptSlug = array_pop($parts);
-            $baseRoleId = array_pop($parts);
-            $baseUser = implode('.', $parts);
-            return [$baseUser, $baseRoleId, $deptSlug];
-        }
-
-        if (count($parts) === 2) {
-            $deptSlug = array_pop($parts);
-            $baseUser = implode('.', $parts);
-            return [$baseUser, null, $deptSlug];
-        }
-
-        return [$username, null, null];
-    }
-}
 
 function roles_permissions_path(): string
 {
