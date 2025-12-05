@@ -1,7 +1,11 @@
 <?php
+require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../acl.php';
+require_once __DIR__ . '/../bills.php';
 require_once __DIR__ . '/print_layout.php';
 
 $billId = (string) ($id ?? '');
+$currentUser = get_current_user();
 $bills = load_bills();
 $bill = find_bill_by_id($bills, $billId);
 $officeId = get_current_office_id();
@@ -9,6 +13,14 @@ $officeId = get_current_office_id();
 if (!$bill) {
     http_response_code(404);
     echo 'Bill not found.';
+    exit;
+}
+
+$bill = bills_normalize_record($bill);
+
+if (!acl_can_view($currentUser, $bill)) {
+    http_response_code(403);
+    echo 'You do not have access to this bill.';
     exit;
 }
 

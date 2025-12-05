@@ -1,11 +1,22 @@
 <?php
+require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../acl.php';
+
 require_login();
 require_permission('create_documents');
 require_module_enabled('bills');
 
-$user = current_user();
+$currentUser = get_current_user();
+$user = $currentUser;
 $officeConfig = load_office_config();
-$bills = load_bills();
+$allBills = load_bills();
+$bills = [];
+foreach ($allBills as $billRecord) {
+    $billRecord = bills_normalize_record($billRecord);
+    if (acl_can_view($currentUser, $billRecord)) {
+        $bills[] = $billRecord;
+    }
+}
 $contractors = load_contractors();
 $mode = $_GET['mode'] ?? 'list';
 $action = $_GET['action'] ?? null;
@@ -79,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mode === 'create') {
         }
 
         $calculated = calculate_bill_totals($items, $deductions);
-        $billId = generate_next_bill_id($bills);
+        $billId = generate_next_bill_id($allBills);
         if ($billNo === '') {
             $billNo = get_id_prefix('bill', 'BILL') . '/' . date('Y') . '/' . str_pad(count($bills) + 1, 3, '0', STR_PAD_LEFT);
         }
@@ -112,8 +123,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mode === 'create') {
             'last_action_at' => gmdate('c'),
         ];
 
-        $bills[] = $newBill;
-        save_bills($bills);
+        $newBill = acl_initialize_new($newBill, $currentUser, $newBill['assigned_to'] ?? null);
+        $newBill['assigned_to'] = $newBill['assignee'];
+
+        $allBills[] = $newBill;
+        save_bills($allBills);
         log_event('bill_generated', $user['username'] ?? null, ['bill_id' => $billId, 'bill_no' => $billNo]);
 
         header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=bills&mode=view&id=' . urlencode($billId));
@@ -130,12 +144,25 @@ if ($mode === 'view') {
             break;
         }
     }
-    if (!$bill || (!$canViewAll && ($bill['created_by'] ?? '') !== ($user['username'] ?? ''))) {
+    if (!$bill) {
+        echo '<div class="alert alert-danger">Bill not found or access denied.</div>';
+        return;
+    }
+
+    $bill = bills_normalize_record($bill);
+
+    if (!acl_can_view($currentUser, $bill)) {
+        http_response_code(403);
         echo '<div class="alert alert-danger">Bill not found or access denied.</div>';
         return;
     }
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['attachment_upload'])) {
+        if (!acl_can_edit($currentUser, $bill)) {
+            http_response_code(403);
+            echo '<div class="alert alert-danger">You cannot edit this bill.</div>';
+            return;
+        }
         $submittedToken = $_POST['csrf_token'] ?? '';
         if (!$submittedToken || !hash_equals($_SESSION['csrf_token'], $submittedToken)) {
             echo '<div class="alert alert-danger">Security token mismatch.</div>';
@@ -143,17 +170,21 @@ if ($mode === 'view') {
             if (isset($_POST['assign_to'])) {
                 $assignTo = trim($_POST['assign_to']);
                 $bill['assigned_to'] = $assignTo !== '' ? $assignTo : null;
+                $bill['assignee'] = $bill['assigned_to'];
+                if (!empty($bill['assignee'])) {
+                    $bill = acl_share_with_user($bill, $bill['assignee']);
+                }
                 $bill['last_action'] = 'assigned';
                 $bill['last_action_at'] = gmdate('c');
                 $bill['updated_at'] = gmdate('c');
-                foreach ($bills as &$entry) {
+                foreach ($allBills as &$entry) {
                     if (($entry['id'] ?? '') === $bill['id']) {
                         $entry = $bill;
                         break;
                     }
                 }
                 unset($entry);
-                save_bills($bills);
+                save_bills($allBills);
                 if (!empty($bill['assigned_to'])) {
                     create_notification($bill['assigned_to'], 'bills', $bill['id'], 'bill_assigned', 'Bill assigned to you', ($bill['bill_no'] ?? $bill['id']) . ' has been assigned.');
                 }
@@ -175,14 +206,14 @@ if ($mode === 'view') {
                     $bill['last_action'] = 'workflow_changed';
                     $bill['last_action_at'] = gmdate('c');
                     $bill['updated_at'] = gmdate('c');
-                    foreach ($bills as &$entry) {
+                    foreach ($allBills as &$entry) {
                         if (($entry['id'] ?? '') === $bill['id']) {
                             $entry = $bill;
                             break;
                         }
                     }
                     unset($entry);
-                    save_bills($bills);
+                    save_bills($allBills);
                     log_event('bill_workflow_changed', $user['username'] ?? null, ['bill_id' => $bill['id'], 'new_state' => $newState]);
                     if (!empty($bill['created_by'])) {
                         create_notification($bill['created_by'], 'bills', $bill['id'], 'bill_workflow_changed', 'Bill status updated', ($bill['bill_no'] ?? $bill['id']) . ' moved to ' . $newState);
@@ -487,7 +518,7 @@ $search = trim($_GET['q'] ?? '');
 $statusFilter = trim($_GET['status'] ?? '');
 $filtered = [];
 foreach ($bills as $bill) {
-    if (!$canViewAll && ($bill['created_by'] ?? '') !== ($user['username'] ?? '')) {
+    if (!acl_can_view($currentUser, $bill)) {
         continue;
     }
     if ($search !== '') {

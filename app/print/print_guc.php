@@ -1,19 +1,24 @@
 <?php
+require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../acl.php';
+require_once __DIR__ . '/../guc.php';
 require_once __DIR__ . '/print_layout.php';
 
 $recordId = (string) ($id ?? '');
-$records = load_document_records('guc');
-$record = null;
-foreach ($records as $item) {
-    if (($item['id'] ?? '') === $recordId) {
-        $record = $item;
-        break;
-    }
-}
+$currentUser = get_current_user();
+$record = find_guc_record($recordId);
 
 if (!$record) {
     http_response_code(404);
     echo 'GUC document not found.';
+    exit;
+}
+
+$record = guc_normalize_record($record);
+
+if (!acl_can_view($currentUser, $record)) {
+    http_response_code(403);
+    echo 'You do not have access to this GUC.';
     exit;
 }
 

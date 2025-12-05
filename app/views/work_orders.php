@@ -1,4 +1,8 @@
 <?php
+require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../acl.php';
+require_once __DIR__ . '/../work_orders.php';
+
 require_login();
 require_permission('create_documents');
 
@@ -6,15 +10,16 @@ $category = 'work_order';
 $allTemplates = load_document_templates();
 $templates = get_templates_by_category($allTemplates, $category);
 $departments = load_departments();
-$user = current_user();
+$currentUser = get_current_user();
+$user = $currentUser;
 $userDepartment = get_user_department($user, $departments);
-$allRecords = load_document_records($category);
-$records = $allRecords;
+$allRecords = load_work_orders();
+$records = [];
 
-if (!user_has_permission('view_all_records')) {
-    $records = array_values(array_filter($records, function ($rec) use ($user) {
-        return ($rec['created_by'] ?? null) === ($user['username'] ?? null);
-    }));
+foreach ($allRecords as $rec) {
+    if (acl_can_view($currentUser, $rec)) {
+        $records[] = $rec;
+    }
 }
 
 $mode = $_GET['mode'] ?? 'list';
@@ -41,7 +46,10 @@ if ($mode === 'view') {
         return;
     }
 
-    if (!user_has_permission('view_all_records') && ($record['created_by'] ?? null) !== ($user['username'] ?? null)) {
+    $record = work_order_normalize_record($record);
+
+    if (!acl_can_view($currentUser, $record)) {
+        http_response_code(403);
         echo '<p class="error">You do not have access to this record.</p>';
         return;
     }
@@ -189,8 +197,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $mode === 'create') {
             'created_at' => $now,
             'updated_at' => $now,
         ];
+        $record = acl_initialize_new($record, $currentUser);
         $allRecords[] = $record;
-        save_document_records($category, $allRecords);
+        save_work_orders($allRecords);
         log_event('work_order_generated', $user['username'] ?? null, [
             'id' => $docId,
             'template_id' => $selectedTemplate['id'] ?? '',
