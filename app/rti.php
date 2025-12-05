@@ -1,5 +1,6 @@
 <?php
 // RTI helper functions for Yojaka v0.4
+require_once __DIR__ . '/acl.php';
 
 function rti_cases_path(): string
 {
@@ -37,7 +38,18 @@ function load_rti_cases(): array
     return array_map(function ($case) use ($currentOffice) {
         $case = ensure_record_office($case, $currentOffice);
         $case = ensure_archival_defaults($case);
-        return enrich_workflow_defaults('rti', $case);
+        $case = enrich_workflow_defaults('rti', $case);
+        $case = acl_normalize($case);
+        if ($case['owner'] === null && !empty($case['created_by'])) {
+            $case['owner'] = $case['created_by'];
+            $case['allowed_users'][] = $case['created_by'];
+            $case['allowed_users'] = array_values(array_unique($case['allowed_users']));
+        }
+        if ($case['assignee'] === null && !empty($case['assigned_to'])) {
+            $case['assignee'] = $case['assigned_to'];
+        }
+        $case['allowed_users'] = array_values(array_unique($case['allowed_users']));
+        return $case;
     }, $data);
 }
 

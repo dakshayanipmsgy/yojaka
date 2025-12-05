@@ -1,7 +1,9 @@
 <?php
 require_login();
+require_once __DIR__ . '/../acl.php';
 
-$user = current_user();
+$currentUser = get_current_user();
+$user = $currentUser;
 $canManage = user_has_permission('manage_rti');
 $canViewAll = user_has_permission('view_all_records');
 $currentOfficeId = get_current_office_id();
@@ -10,7 +12,7 @@ $officeReadOnly = office_is_read_only($currentLicense);
 if (!$canManage && !user_has_permission('view_reports_basic')) {
     require_permission('manage_rti');
 }
-$cases = load_rti_cases();
+$cases = array_map('acl_normalize', load_rti_cases());
 $mode = $_GET['mode'] ?? 'list';
 $mode = in_array($mode, ['list', 'create', 'view'], true) ? $mode : 'list';
 $errors = [];
@@ -91,6 +93,9 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             'last_action_at' => $now,
             'office_id' => $currentOfficeId,
         ];
+        $assigneeUsername = $newCase['assigned_to'] ?? ($user['username'] ?? null);
+        $newCase = acl_initialize_new($newCase, $currentUser, $assigneeUsername);
+        $newCase['assigned_to'] = $newCase['assignee'] ?? $newCase['assigned_to'];
         $cases[] = $newCase;
         save_rti_cases($cases);
         log_event('rti_created', $user['username'] ?? null, [
@@ -106,15 +111,15 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($mode === 'view') {
     $id = $_GET['id'] ?? '';
     $case = $id ? find_rti_by_id($cases, $id) : null;
-    if ($case && !$canViewAll && ($case['office_id'] ?? $currentOfficeId) !== $currentOfficeId) {
-        $errors[] = 'You cannot access RTI cases from other offices.';
-        $case = null;
+    if ($case) {
+        $case = acl_normalize($case);
     }
     if (!$case) {
         $errors[] = 'RTI case not found.';
-    } elseif (!$canViewAll && ($case['created_by'] ?? '') !== ($user['username'] ?? '')) {
-        $errors[] = 'You are not allowed to view this RTI.';
-        $case = null;
+    } elseif (!acl_can_view($currentUser ?? [], $case)) {
+        http_response_code(403);
+        echo "You do not have access to this RTI case.";
+        exit;
     }
 
     if ($case) {
@@ -139,7 +144,11 @@ if ($mode === 'view') {
             if (empty($errors) && isset($_POST['assign_to']) && $canManage) {
                 $assignTo = trim($_POST['assign_to']);
                 if ($assignTo !== '') {
+                    $case = acl_normalize($case);
                     $case['assigned_to'] = $assignTo;
+                    $case['assignee'] = $assignTo;
+                    $case['allowed_users'][] = $assignTo;
+                    $case['allowed_users'] = array_values(array_unique($case['allowed_users']));
                     $case['workflow_state'] = $case['workflow_state'] === 'new' ? 'assigned' : $case['workflow_state'];
                     $case['last_action'] = 'assigned';
                     $case['last_action_at'] = gmdate('c');
@@ -189,16 +198,20 @@ if ($mode === 'view') {
 }
 
 if ($mode === 'list') {
-    if ($canViewAll || $canManage) {
-        $visibleCases = $cases;
-    } else {
-        $visibleCases = array_filter($cases, function ($case) use ($user) {
-            return ($case['created_by'] ?? null) === ($user['username'] ?? null);
-        });
+    $visibleCases = [];
+    foreach ($cases as $case) {
+        $case = acl_normalize($case);
+        if (acl_can_view($currentUser ?? [], $case)) {
+            $visibleCases[] = $case;
+        }
     }
 
     if (!$canViewAll) {
         $visibleCases = filter_records_by_office($visibleCases, $currentOfficeId);
+    }
+
+    if (is_superadmin($currentUser)) {
+        $notice = 'RTI records are private to departments and are not visible to superadmin.';
     }
 
     $searchTerm = trim($_GET['q'] ?? '');
@@ -244,6 +257,10 @@ if ($mode === 'list') {
             <?php endforeach; ?>
         </ul>
     </div>
+<?php endif; ?>
+
+<?php if ($notice !== ''): ?>
+    <div class="alert alert-info"><?= htmlspecialchars($notice); ?></div>
 <?php endif; ?>
 
 <?php if ($mode === 'list'): ?>
