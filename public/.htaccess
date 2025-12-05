@@ -1,6 +1,0 @@
-Options -Indexes
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  # Protect non-public directories if accessed through public root
-  RewriteRule ^(app|data|config|logs)/ - [F,L]
-</IfModule>

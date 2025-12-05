@@ -1,3 +1,0 @@
-username,full_name,role,department_id,staff_id,active
-admin,System Administrator,admin,dept_main,S-0001,true
-ae_rohan,Rohan Gupta,officer,dept_main,S-0002,true

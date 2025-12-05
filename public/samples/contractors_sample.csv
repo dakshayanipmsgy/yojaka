@@ -1,3 +1,0 @@
-contractor_id,name,category,department_id,address,phone,email,active
-C-0001,ABC Constructions,Class A,dept_pwd,"Some address here",9999990001,abc@example.com,true
-C-0002,XYZ Builders,Class B,dept_health,"Another address",9999990002,xyz@example.com,true
