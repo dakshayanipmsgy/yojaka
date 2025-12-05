@@ -2,7 +2,7 @@
 require_login();
 require_once __DIR__ . '/../acl.php';
 
-$currentUser = get_current_user();
+$currentUser = yojaka_current_user();
 $user = $currentUser;
 $canManage = user_has_permission('manage_rti');
 $canViewAll = user_has_permission('view_all_records');

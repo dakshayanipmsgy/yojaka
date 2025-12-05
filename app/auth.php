@@ -182,12 +182,12 @@ function current_user(): ?array
     return find_user_by_id($_SESSION['user_id']);
 }
 
-function get_current_user(): ?array
+function yojaka_current_user(): ?array
 {
     return current_user();
 }
 
-function get_current_user_role(): ?string
+function yojaka_current_user_role(): ?string
 {
     return $_SESSION['role'] ?? (current_user()['role'] ?? null);
 }

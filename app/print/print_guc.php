@@ -5,7 +5,7 @@ require_once __DIR__ . '/../guc.php';
 require_once __DIR__ . '/print_layout.php';
 
 $recordId = (string) ($id ?? '');
-$currentUser = get_current_user();
+$currentUser = yojaka_current_user();
 $record = find_guc_record($recordId);
 
 if (!$record) {

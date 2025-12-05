@@ -6,7 +6,7 @@ require_login();
 require_permission('create_documents');
 require_module_enabled('bills');
 
-$currentUser = get_current_user();
+$currentUser = yojaka_current_user();
 $user = $currentUser;
 $officeConfig = load_office_config();
 $allBills = load_bills();

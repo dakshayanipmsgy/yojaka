@@ -3,7 +3,7 @@ require_once __DIR__ . '/print_layout.php';
 require_once __DIR__ . '/../auth.php';
 require_once __DIR__ . '/../acl.php';
 
-$currentUser = get_current_user();
+$currentUser = yojaka_current_user();
 
 $reportId = (string) ($id ?? '');
 $reports = load_inspection_reports();

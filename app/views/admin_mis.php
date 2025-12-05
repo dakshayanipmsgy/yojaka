@@ -7,7 +7,7 @@ if (!user_has_permission('view_mis_reports')) {
 require_once __DIR__ . '/../auth.php';
 require_once __DIR__ . '/../acl.php';
 
-$currentUser = get_current_user();
+$currentUser = yojaka_current_user();
 
 $officeConfig = load_office_config();
 $dateFormat = $officeConfig['date_format_php'] ?? 'Y-m-d';

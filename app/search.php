@@ -91,7 +91,7 @@ function search_bills(array $criteria): array
 function search_inspection(array $criteria): array
 {
     $results = search_with_index_or_scan('inspection', $criteria, 'load_inspection_reports');
-    $currentUser = get_current_user();
+    $currentUser = yojaka_current_user();
     $filtered = [];
     foreach ($results as $record) {
         $record = acl_normalize($record);
@@ -110,7 +110,7 @@ function search_documents(array $criteria): array
     };
     $results = search_with_index_or_scan('documents', $criteria, $loader);
 
-    $currentUser = get_current_user();
+    $currentUser = yojaka_current_user();
     $filtered = [];
 
     foreach ($results as $record) {
