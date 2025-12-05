@@ -1,6 +1,8 @@
 <?php
 require_login();
-$user = current_user();
+require_once __DIR__ . '/../acl.php';
+$currentUser = get_current_user();
+$user = $currentUser;
 $canManageDak = user_has_permission('manage_dak');
 $canViewAll = user_has_permission('view_all_records');
 $currentOfficeId = get_current_office_id();
@@ -11,6 +13,13 @@ if (!$canManageDak && !user_has_permission('view_reports_basic')) {
 }
 $mode = $_GET['mode'] ?? 'list';
 $entries = load_dak_entries();
+$visibleEntries = [];
+foreach ($entries as $entryRecord) {
+    $entryRecord = acl_normalize($entryRecord);
+    if (acl_can_view($currentUser, $entryRecord)) {
+        $visibleEntries[] = $entryRecord;
+    }
+}
 $errors = [];
 $attachmentErrors = [];
 $attachmentNotice = '';
@@ -56,7 +65,7 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($errors) && !$officeReadOnly) {
             $now = gmdate('c');
             $dakId = generate_next_dak_id($entries);
-            $entries[] = [
+            $newEntry = [
                 'id' => $dakId,
                 'reference_no' => $reference_no,
                 'received_from' => $received_from,
@@ -77,10 +86,13 @@ if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 'movements' => [],
                 'department_id' => $user['department_id'] ?? 'dept_default',
             ];
+            $newEntry = acl_initialize_new($newEntry, $currentUser, $newEntry['assigned_to'] ?? null);
+            $newEntry['assigned_to'] = $newEntry['assignee'];
 
-            file_flow_initialize($entries[array_key_last($entries)], 'dak', $user['department_id'] ?? 'dept_default', $currentOfficeId);
+            file_flow_initialize($newEntry, 'dak', $user['department_id'] ?? 'dept_default', $currentOfficeId);
 
-            append_dak_movement($entries[array_key_last($entries)], 'created', null, $user['username'] ?? null, 'Dak entry created');
+            append_dak_movement($newEntry, 'created', null, $user['username'] ?? null, 'Dak entry created');
+            $entries[] = $newEntry;
             save_dak_entries($entries);
             log_event('dak_created', $user['username'] ?? null, ['dak_id' => $dakId]);
             log_dak_movement($dakId, 'created', null, $user['username'] ?? null, 'Dak entry created');
@@ -131,14 +143,15 @@ $targetId = $_GET['id'] ?? null;
     $entry = null;
     foreach ($entries as $e) {
         if (($e['id'] ?? '') === $targetId) {
-            $entry = $e;
+            $entry = acl_normalize($e);
             break;
         }
     }
     $routeSuggestions = $entry ? predict_next_positions($entry) : [];
     ?>
-    <?php if ($entry && !$canViewAll && ($entry['office_id'] ?? $currentOfficeId) !== $currentOfficeId): ?>
-        <p class="alert error">You cannot view dak entries from another office.</p>
+    <?php if ($entry && !acl_can_view($currentUser, $entry)): ?>
+        <?php http_response_code(403); ?>
+        <p class="alert error">You do not have access to this file.</p>
         <?php $entry = null; ?>
     <?php endif; ?>
     <?php if (!$entry): ?>
@@ -149,6 +162,11 @@ $targetId = $_GET['id'] ?? null;
         write_audit_log('dak', $entry['id'], 'view');
         $entryChanged = false;
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST['attachment_upload'])) {
+            if (!acl_can_edit($currentUser, $entry)) {
+                http_response_code(403);
+                echo "You cannot edit this file.";
+                exit;
+            }
             $submittedToken = $_POST['csrf_token'] ?? '';
             if (!$submittedToken || !hash_equals($csrfToken, $submittedToken)) {
                 $errors[] = 'Security token mismatch. Please try again.';
@@ -171,6 +189,9 @@ $targetId = $_GET['id'] ?? null;
                     if (!file_flow_forward_with_handover($entry, $user['username'] ?? '', $targetUser, $_POST['remarks'] ?? '')) {
                         $errors[] = 'Unable to move forward.';
                     } else {
+                        $entry['assignee'] = $targetUser;
+                        $entry['assigned_to'] = $targetUser;
+                        $entry = acl_share_with_user($entry, $targetUser);
                         append_dak_movement($entry, 'forwarded', $user['username'] ?? null, $targetUser, $_POST['remarks'] ?? '', [
                             'status' => 'pending',
                             'accepted_by' => null,
@@ -196,6 +217,10 @@ $targetId = $_GET['id'] ?? null;
                     }
                 }
                 file_flow_sync_assignment($entry);
+                if (!empty($entry['assigned_to'])) {
+                    $entry['assignee'] = $entry['assigned_to'];
+                    $entry = acl_share_with_user($entry, $entry['assigned_to']);
+                }
                 $entry['updated_at'] = gmdate('c');
             }
             if (empty($errors) && isset($_POST['assign_to']) && $canManageDak) {
@@ -206,6 +231,8 @@ $targetId = $_GET['id'] ?? null;
                     $entry['last_action'] = 'assigned';
                     $entry['last_action_at'] = gmdate('c');
                     $entry['updated_at'] = gmdate('c');
+                    $entry['assignee'] = $assignTo;
+                    $entry = acl_share_with_user($entry, $assignTo);
                     append_dak_movement($entry, 'assigned', $entry['created_by'] ?? null, $assignTo, 'Assigned via admin');
                     foreach ($entries as &$item) {
                         if (($item['id'] ?? '') === $entry['id']) {
@@ -564,15 +591,7 @@ $targetId = $_GET['id'] ?? null;
     <?php endif; ?>
 <?php else: ?>
     <?php
-    $userDak = [];
-    foreach ($entries as $entry) {
-        if (!$canViewAll && ($entry['office_id'] ?? $currentOfficeId) !== $currentOfficeId) {
-            continue;
-        }
-        if ($canViewAll || $canManageDak || ($entry['assigned_to'] ?? null) === ($user['username'] ?? null) || ($entry['created_by'] ?? null) === ($user['username'] ?? null)) {
-            $userDak[] = $entry;
-        }
-    }
+    $userDak = $visibleEntries;
     ?>
     <div class="actions">
         <?php if ($canManageDak && !$officeReadOnly): ?>

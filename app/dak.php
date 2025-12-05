@@ -1,6 +1,8 @@
 <?php
 // Dak & File Movement helper functions
 
+require_once __DIR__ . '/acl.php';
+
 function dak_entries_path(): string
 {
     global $config;
@@ -79,6 +81,23 @@ function load_dak_entries(): array
         unset($movement);
         $entry = enrich_workflow_defaults('dak', $entry);
         $entry = file_flow_apply_acceptance_defaults($entry);
+        $entry = acl_normalize($entry);
+        if ($entry['owner'] === null && !empty($entry['created_by'])) {
+            $entry['owner'] = $entry['created_by'];
+            $entry['allowed_users'][] = $entry['created_by'];
+        }
+        if ($entry['owner'] === null && !empty($entry['from_user'])) {
+            $entry['owner'] = $entry['from_user'];
+            $entry['allowed_users'][] = $entry['from_user'];
+        }
+        if ($entry['assignee'] === null && !empty($entry['assigned_to'])) {
+            $entry['assignee'] = $entry['assigned_to'];
+            $entry['allowed_users'][] = $entry['assigned_to'];
+        }
+        if ($entry['department_slug'] === null && !empty($entry['department_id'])) {
+            $entry['department_slug'] = $entry['department_id'];
+        }
+        $entry['allowed_users'] = array_values(array_unique($entry['allowed_users']));
         return $entry;
     }, $data);
 }
@@ -182,6 +201,8 @@ function assign_dak_to_user(array &$entries, string $dak_id, string $username): 
         if (($entry['id'] ?? '') === $dak_id) {
             $from = $entry['assigned_to'] ?? null;
             $entry['assigned_to'] = $username;
+            $entry['assignee'] = $username;
+            $entry = acl_share_with_user($entry, $username);
             $entry['status'] = $entry['status'] === 'Closed' ? $entry['status'] : 'Assigned';
             $entry['updated_at'] = gmdate('c');
             append_dak_movement($entry, 'assigned', $from, $username, 'Assigned to user');
@@ -197,6 +218,8 @@ function forward_dak(array &$entries, string $dak_id, ?string $from_user, string
     foreach ($entries as &$entry) {
         if (($entry['id'] ?? '') === $dak_id) {
             $entry['assigned_to'] = $to_user;
+            $entry['assignee'] = $to_user;
+            $entry = acl_share_with_user($entry, $to_user);
             $entry['status'] = $entry['status'] === 'Closed' ? $entry['status'] : 'Assigned';
             $entry['updated_at'] = gmdate('c');
             append_dak_movement($entry, 'forwarded', $from_user, $to_user, $remarks);
