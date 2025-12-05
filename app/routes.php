@@ -17,7 +17,6 @@ function resolve_route(string $page): array
         'admin_users' => [
             'title' => 'User List',
             'view' => __DIR__ . '/views/admin_users.php',
-            'permission' => 'manage_users',
         ],
         'admin_logs' => [
             'title' => 'Usage Logs',
@@ -169,7 +168,6 @@ function resolve_route(string $page): array
         'admin_roles' => [
             'title' => 'Role Management',
             'view' => __DIR__ . '/views/admin_roles.php',
-            'permission' => 'manage_users',
         ],
         'superadmin_offices' => [
             'title' => 'Super Admin Offices',

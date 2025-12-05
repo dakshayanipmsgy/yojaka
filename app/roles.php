@@ -3,14 +3,13 @@
 
 function get_current_department_slug_for_user(array $user): ?string
 {
-    $username = $user['username'] ?? '';
-    if ($username === '' || $username === 'superadmin') {
-        return null;
+    if (!function_exists('parse_username_parts')) {
+        require_once __DIR__ . '/auth.php';
     }
 
-    $parts = explode('.', $username);
-    if (count($parts) >= 2) {
-        return (string) end($parts);
+    [$baseUser, $baseRoleId, $deptSlug] = parse_username_parts($user['username'] ?? '');
+    if ($deptSlug !== null) {
+        return $deptSlug;
     }
 
     return $user['department_slug'] ?? ($user['department_id'] ?? null);
@@ -38,6 +37,11 @@ function extract_base_role_id(string $roleId): string
 function build_department_username(string $baseUsername, string $baseRoleId, string $deptSlug): string
 {
     return $baseUsername . '.' . $baseRoleId . '.' . $deptSlug;
+}
+
+function user_is_department_admin(array $user, string $deptSlug): bool
+{
+    return isset($user['role']) && $user['role'] === 'dept_admin.' . $deptSlug;
 }
 
 function normalize_role_definition($roleDef): array

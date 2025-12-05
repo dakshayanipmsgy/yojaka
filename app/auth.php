@@ -182,6 +182,11 @@ function current_user(): ?array
     return find_user_by_id($_SESSION['user_id']);
 }
 
+function get_current_user(): ?array
+{
+    return current_user();
+}
+
 function get_current_user_role(): ?string
 {
     return $_SESSION['role'] ?? (current_user()['role'] ?? null);
@@ -191,6 +196,31 @@ function is_superadmin(?array $user = null): bool
 {
     $user = $user ?? current_user();
     return is_array($user) && (($user['role'] ?? null) === 'superadmin');
+}
+
+function parse_username_parts(string $username): array
+{
+    $parts = explode('.', $username);
+    if (count($parts) >= 3) {
+        $deptSlug = array_pop($parts);
+        $baseRoleId = array_pop($parts);
+        $baseUser = implode('.', $parts);
+        return [$baseUser, $baseRoleId, $deptSlug];
+    }
+
+    if (count($parts) === 2) {
+        $deptSlug = array_pop($parts);
+        $baseUser = implode('.', $parts);
+        return [$baseUser, null, $deptSlug];
+    }
+
+    return [$username, null, null];
+}
+
+function get_current_department_slug(array $user): ?string
+{
+    [$baseUser, $baseRoleId, $deptSlug] = parse_username_parts($user['username'] ?? '');
+    return $deptSlug;
 }
 
 function get_user_role_permissions(?string $username = null): array
