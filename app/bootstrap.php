@@ -1,6 +1,16 @@
 <?php
 // Bootstrap file for Yojaka
 
+// Start secure session early
+if (session_status() === PHP_SESSION_NONE) {
+    session_name('YOJAKA_SESSION');
+    session_set_cookie_params([
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    session_start();
+}
+
 // Load configuration
 $config = require __DIR__ . '/../config/app.php';
 
@@ -38,16 +48,37 @@ spl_autoload_register(function ($class) use ($config) {
 });
 
 // Ensure essential data directories exist
+$dataRoot = $config['paths']['data'] ?? __DIR__ . '/../data';
 $dataPaths = [
-    $config['paths']['data'] ?? __DIR__ . '/../data',
-    ($config['paths']['data'] ?? __DIR__ . '/../data') . '/departments',
-    ($config['paths']['data'] ?? __DIR__ . '/../data') . '/logs',
+    $dataRoot,
+    $dataRoot . '/departments',
+    $dataRoot . '/logs',
+    $dataRoot . '/system',
 ];
 
 foreach ($dataPaths as $path) {
     if (!is_dir($path)) {
         mkdir($path, 0755, true);
     }
+}
+
+// Bootstrap default superadmin if user store is missing
+$usersFile = $dataRoot . '/system/users.json';
+if (!file_exists($usersFile)) {
+    $defaultPassword = 'changeMe123!';
+    $defaultUser = [
+        [
+            'id' => '1',
+            'username' => 'superadmin',
+            'password_hash' => password_hash($defaultPassword, PASSWORD_DEFAULT),
+            'role' => 'superadmin',
+            'created_at' => date('c'),
+        ],
+    ];
+
+    file_put_contents($usersFile, json_encode($defaultUser, JSON_PRETTY_PRINT), LOCK_EX);
+
+    $_SESSION['default_superadmin_notice'] = 'Default Superadmin created. Username: superadmin, Password: changeMe123! Please change this later.';
 }
 
 // Determine base URL if not set

@@ -5,6 +5,28 @@ class Controller
 {
     protected $layout = __DIR__ . '/../views/layouts/base.php';
 
+    protected function getCurrentUser()
+    {
+        return Auth::currentUser();
+    }
+
+    protected function requireLogin($role = null)
+    {
+        if (!Auth::isLoggedIn()) {
+            $_SESSION['intended_route'] = $_GET['route'] ?? '';
+            $this->redirect('?route=auth/login');
+        }
+
+        if ($role !== null) {
+            $user = $this->getCurrentUser();
+            if (!$user || ($user['role'] ?? null) !== $role) {
+                http_response_code(403);
+                echo '403 Forbidden';
+                exit;
+            }
+        }
+    }
+
     protected function render($view, array $data = [])
     {
         $viewFile = __DIR__ . '/../views/' . $view . '.php';

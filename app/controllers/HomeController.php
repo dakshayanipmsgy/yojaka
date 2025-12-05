@@ -21,6 +21,7 @@ class HomeController extends Controller
             'appName' => 'Yojaka',
             'tagline' => 'Government Work, Files & Documents – Digitally Organized',
             'diagnostics' => $diagnostics,
+            'notice' => $_SESSION['default_superadmin_notice'] ?? null,
         ]);
     }
 }
