@@ -1,4 +1,6 @@
 <?php
+
+require_once __DIR__ . '/meeting_minutes.php';
 // Lightweight index helpers
 
 function index_path_for_module(string $module): string

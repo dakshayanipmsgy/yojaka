@@ -1,19 +1,24 @@
 <?php
+require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../acl.php';
+require_once __DIR__ . '/../meeting_minutes.php';
 require_once __DIR__ . '/print_layout.php';
 
 $recordId = (string) ($id ?? '');
-$records = load_document_records('meeting_minutes');
-$record = null;
-foreach ($records as $item) {
-    if (($item['id'] ?? '') === $recordId) {
-        $record = $item;
-        break;
-    }
-}
+$currentUser = get_current_user();
+$record = find_meeting_minutes_record($recordId);
 
 if (!$record) {
     http_response_code(404);
     echo 'Meeting minutes not found.';
+    exit;
+}
+
+$record = meeting_minutes_normalize_record($record);
+
+if (!acl_can_view($currentUser, $record)) {
+    http_response_code(403);
+    echo 'You do not have access to these meeting minutes.';
     exit;
 }
 

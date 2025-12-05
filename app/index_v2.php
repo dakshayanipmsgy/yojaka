@@ -1,6 +1,8 @@
 <?php
 // Global Indexing Engine v2
 
+require_once __DIR__ . '/meeting_minutes.php';
+
 function index_v2_dir(): string
 {
     return YOJAKA_DATA_PATH . '/index_v2';

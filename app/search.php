@@ -3,6 +3,7 @@
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/acl.php';
+require_once __DIR__ . '/meeting_minutes.php';
 
 function search_paginate(array $items, int $page = 1, int $limit = 25): array
 {
@@ -107,5 +108,20 @@ function search_documents(array $criteria): array
     $loader = function () {
         return array_merge(load_meeting_minutes(), load_work_orders(), load_guc_documents());
     };
-    return search_with_index_or_scan('documents', $criteria, $loader);
+    $results = search_with_index_or_scan('documents', $criteria, $loader);
+
+    $currentUser = get_current_user();
+    $filtered = [];
+
+    foreach ($results as $record) {
+        if (($record['category'] ?? '') === 'meeting_minutes') {
+            $record = meeting_minutes_normalize_record($record);
+            if (!acl_can_view($currentUser, $record)) {
+                continue;
+            }
+        }
+        $filtered[] = $record;
+    }
+
+    return $filtered;
 }
