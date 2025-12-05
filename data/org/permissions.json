@@ -1,71 +1,92 @@
 {
   "roles": {
-    "superadmin": ["*"],
-    "admin": [
-      "manage_users",
-      "manage_hierarchy",
-      "manage_routes",
-      "manage_master_data",
-      "manage_templates",
-      "view_all_files",
-      "manage_departments",
-      "view_logs",
-      "manage_rti",
-      "manage_dak",
-      "manage_inspection",
-      "view_reports_basic",
-      "view_mis_reports",
-      "admin_backup",
-      "manage_office_config",
-      "manage_bills",
-      "manage_documents_repository",
-      "manage_housekeeping",
-      "view_letters",
-      "view_meeting_minutes",
-      "view_work_orders",
-      "view_guc",
-      "view_bills",
-      "view_global_search",
-      "view_inspection",
-      "view_dak"
-    ],
-    "officer": [
-      "view_assigned_files",
-      "move_files",
-      "edit_files",
-      "manage_rti",
-      "manage_dak",
-      "manage_inspection",
-      "view_reports_basic",
-      "create_documents",
-      "manage_bills",
-      "manage_documents_repository",
-      "view_letters",
-      "view_meeting_minutes",
-      "view_work_orders",
-      "view_guc",
-      "view_bills",
-      "view_global_search",
-      "view_inspection",
-      "view_dak"
-    ],
-    "clerk": [
-      "create_dak",
-      "move_files",
-      "view_assigned_files",
-      "create_documents",
-      "manage_dak",
-      "view_reports_basic",
-      "manage_bills",
-      "view_letters",
-      "view_meeting_minutes",
-      "view_work_orders",
-      "view_guc",
-      "view_bills",
-      "view_global_search",
-      "view_inspection",
-      "view_dak"
-    ]
+    "superadmin": {
+      "label": "Superadmin",
+      "permissions": ["*"]
+    },
+    "dept_admin": {
+      "label": "Department Admin",
+      "permissions": [
+        "manage_users",
+        "manage_roles",
+        "view_all",
+        "view_global_search"
+      ]
+    },
+    "admin": {
+      "label": "Admin",
+      "permissions": [
+        "manage_users",
+        "manage_hierarchy",
+        "manage_routes",
+        "manage_master_data",
+        "manage_templates",
+        "view_all_files",
+        "manage_departments",
+        "view_logs",
+        "manage_rti",
+        "manage_dak",
+        "manage_inspection",
+        "view_reports_basic",
+        "view_mis_reports",
+        "admin_backup",
+        "manage_office_config",
+        "manage_bills",
+        "manage_documents_repository",
+        "manage_housekeeping",
+        "view_letters",
+        "view_meeting_minutes",
+        "view_work_orders",
+        "view_guc",
+        "view_bills",
+        "view_global_search",
+        "view_inspection",
+        "view_dak"
+      ]
+    },
+    "officer": {
+      "label": "Officer",
+      "permissions": [
+        "view_assigned_files",
+        "move_files",
+        "edit_files",
+        "manage_rti",
+        "manage_dak",
+        "manage_inspection",
+        "view_reports_basic",
+        "create_documents",
+        "manage_bills",
+        "manage_documents_repository",
+        "view_letters",
+        "view_meeting_minutes",
+        "view_work_orders",
+        "view_guc",
+        "view_bills",
+        "view_global_search",
+        "view_inspection",
+        "view_dak"
+      ]
+    },
+    "clerk": {
+      "label": "Clerk",
+      "permissions": [
+        "create_dak",
+        "move_files",
+        "view_assigned_files",
+        "create_documents",
+        "manage_dak",
+        "view_reports_basic",
+        "manage_bills",
+        "view_letters",
+        "view_meeting_minutes",
+        "view_work_orders",
+        "view_guc",
+        "view_bills",
+        "view_global_search",
+        "view_inspection",
+        "view_dak"
+      ]
+    }
   },
   "custom_roles": {}
 }

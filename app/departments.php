@@ -1,18 +1,14 @@
 <?php
-// Department profile management helpers
+// Department profile management helpers with tenant slugs encoded in usernames/roles.
 
 function departments_directory(): string
 {
-    global $config;
-    $dir = $config['departments_data_path'] ?? (YOJAKA_DATA_PATH . '/departments');
-    return rtrim($dir, DIRECTORY_SEPARATOR);
+    return YOJAKA_DATA_PATH . '/org';
 }
 
 function departments_path(): string
 {
-    global $config;
-    $file = $config['departments_file'] ?? 'departments.json';
-    return departments_directory() . DIRECTORY_SEPARATOR . $file;
+    return departments_directory() . DIRECTORY_SEPARATOR . 'departments.json';
 }
 
 function ensure_departments_storage(): void
@@ -22,26 +18,9 @@ function ensure_departments_storage(): void
         @mkdir($dir, 0755, true);
     }
 
-    $htaccess = $dir . DIRECTORY_SEPARATOR . '.htaccess';
-    if (!file_exists($htaccess)) {
-        @file_put_contents($htaccess, "Deny from all\n<IfModule mod_autoindex.c>\n  Options -Indexes\n</IfModule>\n");
-    }
-
     $path = departments_path();
     if (!file_exists($path) || filesize($path) === 0) {
-        $default = [
-            [
-                'id' => 'dept_default',
-                'name' => 'Default Government Office',
-                'address' => '123 Secretariat Lane, Capital City',
-                'contact' => 'Phone: 000-000000 | Email: office@example.gov',
-                'logo_path' => 'assets/images/default_logo.png',
-                'letterhead_header_html' => '<div class="letterhead-block"><strong>Government Office</strong><div>Official Correspondence</div></div>',
-                'letterhead_footer_html' => '<div class="letterhead-block">This is a system generated document.</div>',
-                'default_signatory_block' => '<p><em>Authorized Signatory</em></p>',
-                'is_default' => true,
-            ],
-        ];
+        $default = [];
         save_departments($default);
     }
 }
@@ -63,13 +42,7 @@ function load_departments(): array
 
 function index_departments_by_id(array $departments): array
 {
-    $indexed = [];
-    foreach ($departments as $dept) {
-        if (isset($dept['id'])) {
-            $indexed[$dept['id']] = $dept;
-        }
-    }
-    return $indexed;
+    return $departments;
 }
 
 function get_department_label(?string $departmentId, array $departments): string
@@ -98,7 +71,7 @@ function save_departments(array $departments): bool
     if (flock($handle, LOCK_EX)) {
         ftruncate($handle, 0);
         rewind($handle);
-        fwrite($handle, json_encode($departments, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        fwrite($handle, json_encode($departments, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
         fflush($handle);
         flock($handle, LOCK_UN);
     }
@@ -109,17 +82,21 @@ function save_departments(array $departments): bool
 function get_default_department(array $departments): ?array
 {
     foreach ($departments as $dept) {
-        if (!empty($dept['is_default'])) {
+        if (!empty($dept['is_default']) || !empty($dept['active'])) {
             return $dept;
         }
     }
-    return $departments[0] ?? null;
+    $values = array_values($departments);
+    return $values[0] ?? null;
 }
 
 function find_department_by_id(array $departments, string $id): ?array
 {
+    if (isset($departments[$id])) {
+        return $departments[$id];
+    }
     foreach ($departments as $dept) {
-        if (($dept['id'] ?? '') === $id) {
+        if (($dept['id'] ?? '') === $id || ($dept['slug'] ?? '') === $id) {
             return $dept;
         }
     }
@@ -128,15 +105,30 @@ function find_department_by_id(array $departments, string $id): ?array
 
 function get_user_department(?array $user, ?array $departments = null): ?array
 {
+    require_once __DIR__ . '/roles.php';
     $departments = $departments ?? load_departments();
-    $deptId = $user['department_id'] ?? null;
-    if ($deptId) {
-        $dept = find_department_by_id($departments, $deptId);
-        if ($dept) {
-            return $dept;
-        }
+    $deptSlug = $user ? get_current_department_slug_for_user($user) : null;
+    if ($deptSlug && isset($departments[$deptSlug])) {
+        return $departments[$deptSlug];
     }
     return get_default_department($departments);
+}
+
+function slugify_department_name(string $name, array $departments): string
+{
+    $slug = strtolower($name);
+    $slug = preg_replace('/[^a-z0-9]+/', '_', $slug);
+    $slug = trim($slug, '_');
+    if ($slug === '') {
+        $slug = 'dept';
+    }
+    $base = $slug;
+    $counter = 1;
+    while (isset($departments[$slug])) {
+        $slug = $base . '_' . $counter;
+        $counter++;
+    }
+    return $slug;
 }
 
 ?>

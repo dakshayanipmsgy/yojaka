@@ -1,62 +1,81 @@
 <?php
 require_permission('manage_users');
+require_once __DIR__ . '/../roles.php';
+
+$currentUser = current_user();
+$isSuperAdmin = ($currentUser['role'] ?? '') === 'superadmin';
+$deptSlug = $currentUser ? get_current_department_slug_for_user($currentUser) : null;
+
 $permissionsConfig = load_permissions_config();
 $messages = [];
 $errors = [];
-$availablePermissions = [];
-foreach ($permissionsConfig['roles'] as $perms) {
-    foreach ($perms as $p) {
-        $availablePermissions[] = $p;
+
+function collect_permissions_from_config(array $config): array
+{
+    $perms = [];
+    foreach ($config as $roleDef) {
+        $normalized = normalize_role_definition($roleDef);
+        foreach ($normalized['permissions'] as $p) {
+            $perms[] = $p;
+        }
     }
+    return array_values(array_unique($perms));
 }
-$availablePermissions = array_values(array_unique($availablePermissions));
+
+$availablePermissions = collect_permissions_from_config(($permissionsConfig['roles'] ?? []) + ($permissionsConfig['custom_roles'] ?? []));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'create_role') {
-        $name = strtolower(trim($_POST['role_name'] ?? ''));
+        $baseRole = strtolower(trim($_POST['role_name'] ?? ''));
+        $label = trim($_POST['role_label'] ?? '');
         $perms = $_POST['permissions'] ?? [];
-        if ($name === '') {
-            $errors[] = 'Role name is required.';
+        if ($baseRole === '' || !preg_match('/^[a-z0-9_\.]+$/', $baseRole)) {
+            $errors[] = 'Role name is required and should contain only letters, numbers, underscores or dots.';
         } else {
-            $permissionsConfig['custom_roles'][$name] = array_values(array_unique(array_filter($perms)));
-            save_permissions_config($permissionsConfig);
-            $messages[] = 'Role saved.';
-        }
-    } elseif ($action === 'assign_user') {
-        $username = trim($_POST['username'] ?? '');
-        $role = trim($_POST['role'] ?? '');
-        $users = load_users();
-        $updated = false;
-        foreach ($users as &$u) {
-            if (strcasecmp($u['username'] ?? '', $username) === 0) {
-                $u['role'] = $role;
-                $updated = true;
-                break;
+            $roleId = $baseRole;
+            if (!$isSuperAdmin) {
+                if ($deptSlug === null) {
+                    $errors[] = 'Department context missing for role creation.';
+                } else {
+                    $roleId = make_department_role_id($baseRole, $deptSlug);
+                }
+            }
+            if (empty($errors)) {
+                $permissionsConfig['roles'][$roleId] = [
+                    'label' => $label !== '' ? $label : ucfirst(str_replace('_', ' ', $baseRole)),
+                    'permissions' => array_values(array_unique(array_filter($perms))),
+                ];
+                save_permissions_config($permissionsConfig);
+                $messages[] = 'Role saved.';
             }
         }
-        unset($u);
-        if ($updated) {
-            save_users($users);
-            $messages[] = 'User role updated.';
-        } else {
-            $errors[] = 'User not found.';
-        }
     } elseif ($action === 'delete_role') {
-        $name = trim($_POST['role_name'] ?? '');
-        if (isset($permissionsConfig['custom_roles'][$name])) {
-            unset($permissionsConfig['custom_roles'][$name]);
+        $roleName = trim($_POST['role_name'] ?? '');
+        $canDelete = $isSuperAdmin || ($deptSlug && str_ends_with($roleName, '.' . $deptSlug));
+        if ($canDelete && isset($permissionsConfig['roles'][$roleName])) {
+            unset($permissionsConfig['roles'][$roleName]);
             save_permissions_config($permissionsConfig);
             $messages[] = 'Role removed.';
+        } else {
+            $errors[] = 'Unable to delete role.';
         }
     }
     $permissionsConfig = load_permissions_config();
+    $availablePermissions = collect_permissions_from_config(($permissionsConfig['roles'] ?? []) + ($permissionsConfig['custom_roles'] ?? []));
 }
 
-$users = load_users();
+$rolePool = $permissionsConfig['roles'] ?? [];
+if (!$isSuperAdmin) {
+    $rolePool = filter_roles_for_department($rolePool, $deptSlug, false);
+}
 ?>
 <div class="alert info">
-    Define custom roles and assign permissions beyond the built-in set.
+    <?php if ($isSuperAdmin): ?>
+        Define global roles (e.g., superadmin, dept_admin) or other shared permissions.
+    <?php else: ?>
+        Roles will be saved with your department suffix (e.g., <code>ee.<?= htmlspecialchars($deptSlug ?? 'dept'); ?></code>).
+    <?php endif; ?>
 </div>
 <?php foreach ($messages as $msg): ?>
     <div class="alert success"><?= htmlspecialchars($msg); ?></div>
@@ -69,8 +88,10 @@ $users = load_users();
         <h3>Create / Update Role</h3>
         <form method="post" class="form-stacked">
             <input type="hidden" name="action" value="create_role" />
-            <label>Role name</label>
+            <label>Role name (base ID)</label>
             <input type="text" name="role_name" required />
+            <label>Display label (optional)</label>
+            <input type="text" name="role_label" />
             <label>Permissions</label>
             <div class="checkbox-group">
                 <?php foreach ($availablePermissions as $perm): ?>
@@ -82,65 +103,31 @@ $users = load_users();
             <button class="btn primary" type="submit">Save Role</button>
         </form>
     </section>
-    <section>
-        <h3>Assign Role to User</h3>
-        <form method="post" class="form-stacked">
-            <input type="hidden" name="action" value="assign_user" />
-            <label>Username</label>
-            <input type="text" name="username" required />
-            <label>Role</label>
-            <select name="role" required>
-                <?php foreach (array_keys($permissionsConfig['roles'] + $permissionsConfig['custom_roles']) as $roleName): ?>
-                    <option value="<?= htmlspecialchars($roleName); ?>"><?= htmlspecialchars($roleName); ?></option>
-                <?php endforeach; ?>
-            </select>
-            <button class="btn" type="submit">Assign</button>
-        </form>
-    </section>
 </div>
 <hr>
 <h3>Existing Roles</h3>
 <table class="table">
     <thead>
-        <tr><th>Role</th><th>Permissions</th><th>Type</th><th>Actions</th></tr>
+        <tr><th>Role</th><th>Label</th><th>Permissions</th><th>Actions</th></tr>
     </thead>
     <tbody>
-        <?php foreach ($permissionsConfig['roles'] as $name => $perms): ?>
+        <?php foreach ($rolePool as $name => $def): ?>
+            <?php $normalized = normalize_role_definition($def); ?>
             <tr>
                 <td><?= htmlspecialchars($name); ?></td>
-                <td><?= htmlspecialchars(implode(', ', $perms)); ?></td>
-                <td>Built-in</td>
-                <td>-</td>
-            </tr>
-        <?php endforeach; ?>
-        <?php foreach ($permissionsConfig['custom_roles'] as $name => $perms): ?>
-            <tr>
-                <td><?= htmlspecialchars($name); ?></td>
-                <td><?= htmlspecialchars(implode(', ', $perms)); ?></td>
-                <td>Custom</td>
+                <td><?= htmlspecialchars($normalized['label'] ?? ''); ?></td>
+                <td><?= htmlspecialchars(implode(', ', $normalized['permissions'])); ?></td>
                 <td>
-                    <form method="post" style="display:inline-block;" onsubmit="return confirm('Delete role?');">
-                        <input type="hidden" name="action" value="delete_role" />
-                        <input type="hidden" name="role_name" value="<?= htmlspecialchars($name); ?>" />
-                        <button class="btn danger" type="submit">Delete</button>
-                    </form>
+                    <?php if ($isSuperAdmin || ($deptSlug && str_ends_with($name, '.' . $deptSlug))): ?>
+                        <form method="post" style="display:inline-block;" onsubmit="return confirm('Delete role?');">
+                            <input type="hidden" name="action" value="delete_role" />
+                            <input type="hidden" name="role_name" value="<?= htmlspecialchars($name); ?>" />
+                            <button class="btn danger" type="submit">Delete</button>
+                        </form>
+                    <?php else: ?>
+                        <span class="muted">-</span>
+                    <?php endif; ?>
                 </td>
-            </tr>
-        <?php endforeach; ?>
-    </tbody>
-</table>
-
-<h3>Users</h3>
-<table class="table">
-    <thead>
-        <tr><th>Username</th><th>Full Name</th><th>Role</th></tr>
-    </thead>
-    <tbody>
-        <?php foreach ($users as $u): ?>
-            <tr>
-                <td><?= htmlspecialchars($u['username'] ?? ''); ?></td>
-                <td><?= htmlspecialchars($u['full_name'] ?? ''); ?></td>
-                <td><?= htmlspecialchars($u['role'] ?? ''); ?></td>
             </tr>
         <?php endforeach; ?>
     </tbody>

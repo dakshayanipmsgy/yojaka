@@ -2,7 +2,6 @@
 // Main layout template
 $user = current_user();
 $pageTitle = $pageTitle ?? i18n_get('app.title');
-$department = $user ? get_user_department($user) : null;
 $officeConfig = get_current_office_config();
 $currentLicense = get_current_office_license();
 $officeReadOnly = office_is_read_only($currentLicense);
@@ -54,9 +53,6 @@ if (!empty($viewFile) && file_exists($viewFile)) {
         <div class="user-meta">
             <div class="name">Logged in as: <?= htmlspecialchars($user['full_name'] ?? ''); ?></div>
             <div class="role badge"><?= htmlspecialchars($user['role'] ?? ''); ?></div>
-            <?php if ($department): ?>
-                <div class="dept muted">Dept: <?= htmlspecialchars($department['name'] ?? ''); ?></div>
-            <?php endif; ?>
             <form method="post" action="<?= YOJAKA_BASE_URL; ?>/app.php?page=change_language" style="display:inline-block; margin-right:8px;">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'] ?? ($_SESSION['csrf_token'] = bin2hex(random_bytes(16)))); ?>" />
                 <select name="lang" onchange="this.form.submit()">
@@ -79,21 +75,12 @@ if (!empty($viewFile) && file_exists($viewFile)) {
         <nav class="sidebar">
             <div class="nav-section">Main</div>
             <?php
-            $moduleRequirements = [
-                'rti' => 'rti',
-                'dak' => 'dak',
-                'inspection' => 'inspection',
-                'meeting_minutes' => 'meeting_minutes',
-                'work_orders' => 'work_orders',
-                'guc' => 'guc',
-                'bills' => 'bills',
-            ];
+            $mainWhitelist = ['dashboard', 'my_tasks', 'global_search'];
             foreach ($menuConfig['main'] as $item):
                 if (empty($item['visible'])) { continue; }
                 $pageKey = $item['page'] ?? '';
+                if (!in_array($pageKey, $mainWhitelist, true)) { continue; }
                 $permissionKey = $item['permission'] ?? null;
-                $requiresModule = $moduleRequirements[$pageKey] ?? null;
-                if ($requiresModule && !is_module_enabled($requiresModule)) { continue; }
                 if (!user_has_permission($permissionKey)) { continue; }
                 $label = i18n_get($item['label_key'] ?? $pageKey);
                 ?>
@@ -105,6 +92,8 @@ if (!empty($viewFile) && file_exists($viewFile)) {
                     <?php
                     if (empty($item['visible'])) { continue; }
                     $pageKey = $item['page'] ?? '';
+                    $adminHidden = ['admin_rti', 'admin_dak', 'admin_inspection'];
+                    if (in_array($pageKey, $adminHidden, true)) { continue; }
                     $permissionMap = [
                         'admin_users' => 'manage_users',
                         'admin_roles' => 'manage_users',
