@@ -126,6 +126,9 @@ if (!empty($viewFile) && file_exists($viewFile)) {
                     ?>
                     <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=<?= htmlspecialchars($pageKey); ?>" class="nav-item<?= ($activePage ?? '') === $pageKey ? ' active' : ''; ?>"><?= htmlspecialchars($label); ?></a>
                 <?php endforeach; ?>
+                <?php if (user_has_permission('manage_office_config')): ?>
+                    <a href="<?= YOJAKA_BASE_URL; ?>/app.php?page=admin_workflows" class="nav-item<?= ($activePage ?? '') === 'admin_workflows' ? ' active' : ''; ?>">Workflows / File Routes</a>
+                <?php endif; ?>
             <?php endif; ?>
             <?php if ($isSuperAdmin): ?>
                 <div class="nav-section">Super Admin</div>

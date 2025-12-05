@@ -99,6 +99,7 @@ function execute_critical_action(array $action): bool
     $payload = $action['payload'] ?? [];
     require_once __DIR__ . '/roles.php';
     require_once __DIR__ . '/users.php';
+    require_once __DIR__ . '/workflow.php';
 
     switch ($type) {
         case 'role.update':
@@ -114,6 +115,10 @@ function execute_critical_action(array $action): bool
                 return set_department_status($dept, (string) $payload['status']);
             }
             return false;
+        case 'workflow.update_structure':
+            return apply_workflow_update_structure($dept, (array) $payload);
+        case 'workflow.delete':
+            return apply_workflow_delete($dept, (array) $payload);
         default:
             return false;
     }
