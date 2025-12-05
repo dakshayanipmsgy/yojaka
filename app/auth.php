@@ -187,6 +187,12 @@ function get_current_user_role(): ?string
     return $_SESSION['role'] ?? (current_user()['role'] ?? null);
 }
 
+function is_superadmin(?array $user = null): bool
+{
+    $user = $user ?? current_user();
+    return is_array($user) && (($user['role'] ?? null) === 'superadmin');
+}
+
 function get_user_role_permissions(?string $username = null): array
 {
     $user = $username ? find_user_by_username($username) : current_user();
@@ -223,6 +229,10 @@ function user_has_permission(?string $permission, ?bool $strictMode = null): boo
 
     if (!is_logged_in()) {
         return false;
+    }
+
+    if (is_superadmin()) {
+        return true;
     }
 
     $permissions = get_user_role_permissions();
