@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "permissions": {
+    "rti.create": {
+      "label": "Create RTI Case",
+      "module": "rti",
+      "description": "User can create a new RTI record."
+    },
+    "rti.edit": {
+      "label": "Edit RTI Case",
+      "module": "rti",
+      "description": "User can edit RTI records they are allowed to access."
+    },
+    "rti.forward": {
+      "label": "Forward RTI Case",
+      "module": "rti",
+      "description": "User can forward RTI in workflow."
+    },
+    "rti.close": {
+      "label": "Close RTI Case",
+      "module": "rti",
+      "description": "User can close RTI case in workflow."
+    },
+
+    "dak.create": {
+      "label": "Create Dak Entry",
+      "module": "dak",
+      "description": "Create new incoming/outgoing Dak record."
+    },
+    "dak.forward": {
+      "label": "Forward Dak",
+      "module": "dak",
+      "description": "Forward Dak file along workflow."
+    },
+    "dak.close": {
+      "label": "Close Dak",
+      "module": "dak",
+      "description": "Mark Dak as closed."
+    },
+
+    "inspection.create": {
+      "label": "Create Inspection Report",
+      "module": "inspection",
+      "description": ""
+    },
+    "inspection.edit": {
+      "label": "Edit Inspection Report",
+      "module": "inspection",
+      "description": ""
+    },
+    "inspection.forward": {
+      "label": "Forward Inspection Report",
+      "module": "inspection",
+      "description": ""
+    },
+    "inspection.close": {
+      "label": "Close Inspection Report",
+      "module": "inspection",
+      "description": ""
+    },
+
+    "meeting.create": {
+      "label": "Create Meeting Minutes",
+      "module": "meeting_minutes",
+      "description": ""
+    },
+    "meeting.edit": {
+      "label": "Edit Meeting Minutes",
+      "module": "meeting_minutes",
+      "description": ""
+    },
+    "meeting.forward": {
+      "label": "Forward Meeting Minutes",
+      "module": "meeting_minutes",
+      "description": ""
+    },
+    "meeting.close": {
+      "label": "Close Meeting Minutes",
+      "module": "meeting_minutes",
+      "description": ""
+    },
+
+    "work_orders.create": {
+      "label": "Create Work Order",
+      "module": "work_orders",
+      "description": ""
+    },
+    "work_orders.edit": {
+      "label": "Edit Work Order",
+      "module": "work_orders",
+      "description": ""
+    },
+    "work_orders.approve": {
+      "label": "Approve Work Order",
+      "module": "work_orders",
+      "description": ""
+    },
+    "work_orders.close": {
+      "label": "Close Work Order",
+      "module": "work_orders",
+      "description": ""
+    },
+
+    "guc.create": {
+      "label": "Create GUC",
+      "module": "guc",
+      "description": ""
+    },
+    "guc.edit": {
+      "label": "Edit GUC",
+      "module": "guc",
+      "description": ""
+    },
+    "guc.approve": {
+      "label": "Approve GUC",
+      "module": "guc",
+      "description": ""
+    },
+
+    "bills.create": {
+      "label": "Create Bill",
+      "module": "bills",
+      "description": ""
+    },
+    "bills.edit": {
+      "label": "Edit Bill",
+      "module": "bills",
+      "description": ""
+    },
+    "bills.verify": {
+      "label": "Verify Bill",
+      "module": "bills",
+      "description": ""
+    },
+
+    "templates.global.manage": {
+      "label": "Manage Global Templates",
+      "module": "templates",
+      "description": "Create and manage global templates",
+      "internal": true
+    },
+
+    "dept.roles.manage": {
+      "label": "Manage Department Roles",
+      "module": "admin",
+      "description": "Create roles and assign permissions within a department."
+    },
+    "dept.users.manage": {
+      "label": "Manage Department Users",
+      "module": "admin",
+      "description": "Create and manage users within a department."
+    },
+    "dept.workflows.manage": {
+      "label": "Manage Department Workflows",
+      "module": "admin",
+      "description": "Create and manage workflow templates for a department."
+    }
+  }
+}

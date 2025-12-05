@@ -4,13 +4,19 @@ require_once __DIR__ . '/../acl.php';
 
 $currentUser = yojaka_current_user();
 $user = $currentUser;
-$canManage = user_has_permission('manage_rti');
+$canCreateRti = $currentUser ? has_permission($currentUser, 'rti.create') : false;
+$canEditRti = $currentUser ? has_permission($currentUser, 'rti.edit') : false;
+$canForwardRti = $currentUser ? has_permission($currentUser, 'rti.forward') : false;
+$canCloseRti = $currentUser ? has_permission($currentUser, 'rti.close') : false;
+$canManage = $canCreateRti || $canEditRti || $canForwardRti || $canCloseRti;
 $canViewAll = user_has_permission('view_all_records');
 $currentOfficeId = get_current_office_id();
 $currentLicense = get_current_office_license();
 $officeReadOnly = office_is_read_only($currentLicense);
 if (!$canManage && !user_has_permission('view_reports_basic')) {
-    require_permission('manage_rti');
+    http_response_code(403);
+    include __DIR__ . '/access_denied.php';
+    return;
 }
 $cases = array_map('acl_normalize', load_rti_cases());
 $mode = $_GET['mode'] ?? 'list';
@@ -32,8 +38,8 @@ function sanitize_field($value): string
 }
 
 if ($mode === 'create') {
-    if (!$canManage) {
-        require_permission('manage_rti');
+    if (!$canCreateRti) {
+        require_permission($currentUser ?? [], 'rti.create');
     }
     if ($officeReadOnly) {
         $errors[] = 'This office is in read-only mode because the license is expired or invalid.';
@@ -41,6 +47,7 @@ if ($mode === 'create') {
 }
 
 if ($mode === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_permission($currentUser ?? [], 'rti.create');
     $submittedToken = $_POST['csrf_token'] ?? '';
     if (!$submittedToken || !hash_equals($_SESSION['rti_csrf_token'], $submittedToken)) {
         $errors[] = 'Security token mismatch. Please try again.';
@@ -132,7 +139,8 @@ if ($mode === 'view') {
             if ($officeReadOnly) {
                 $errors[] = 'This office is in read-only mode; changes are blocked.';
             }
-            if (empty($errors) && isset($_POST['archive_action']) && $canManage && empty($case['archived'])) {
+            if (empty($errors) && isset($_POST['archive_action']) && $canEditRti && empty($case['archived'])) {
+                require_permission($currentUser ?? [], 'rti.edit');
                 archive_entity($case, trim($_POST['archive_reason'] ?? 'Manual archive'));
                 update_rti_case($cases, $case);
                 save_rti_cases($cases);
@@ -141,7 +149,8 @@ if ($mode === 'view') {
                 header('Location: ' . YOJAKA_BASE_URL . '/app.php?page=rti&mode=view&id=' . urlencode($case['id']));
                 exit;
             }
-            if (empty($errors) && isset($_POST['assign_to']) && $canManage) {
+            if (empty($errors) && isset($_POST['assign_to']) && $canEditRti) {
+                require_permission($currentUser ?? [], 'rti.edit');
                 $assignTo = trim($_POST['assign_to']);
                 if ($assignTo !== '') {
                     $case = acl_normalize($case);
@@ -165,6 +174,11 @@ if ($mode === 'view') {
             if (empty($errors) && isset($_POST['new_state'])) {
                 $newState = $_POST['new_state'];
                 $currentState = $case['workflow_state'] ?? get_default_workflow_state('rti');
+                if ($newState === 'closed') {
+                    require_permission($currentUser ?? [], 'rti.close');
+                } else {
+                    require_permission($currentUser ?? [], 'rti.forward');
+                }
                 if (can_transition_workflow('rti', $currentState, $newState, $user)) {
                     $case['workflow_state'] = $newState;
                     if ($newState === 'closed') {
@@ -268,7 +282,7 @@ if ($mode === 'list') {
         <div>
             <strong>Your RTI cases</strong> <?= ($canViewAll || $canManage) ? '(all cases shown per your permissions)' : ''; ?>
         </div>
-        <?php if ($canManage && !$officeReadOnly): ?>
+        <?php if ($canCreateRti && !$officeReadOnly): ?>
             <a class="btn-primary" href="<?= YOJAKA_BASE_URL; ?>/app.php?page=rti&mode=create">Create New RTI</a>
         <?php elseif ($officeReadOnly): ?>
             <span class="muted">Creation disabled - office is in read-only mode.</span>

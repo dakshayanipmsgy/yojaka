@@ -2,6 +2,8 @@
 // Authentication and user helper functions for Yojaka.
 
 require_once __DIR__ . '/users.php';
+require_once __DIR__ . '/roles.php';
+require_once __DIR__ . '/permissions_catalog.php';
 
 function permissions_config_path(): string
 {
@@ -299,10 +301,14 @@ function get_user_role_permissions(?string $username = null): array
         return ['*'];
     }
 
+    $permissions = get_role_permissions($role);
+    if (!empty($permissions)) {
+        return array_values(array_unique($permissions));
+    }
+
     [$baseUser, $baseRoleId, $deptSlug] = parse_username_parts($role);
     if ($deptSlug !== null) {
-        $permissions = get_role_permissions($role);
-        return array_values(array_unique($permissions));
+        return [];
     }
 
     $permissionsConfig = load_permissions_config();
@@ -324,6 +330,35 @@ function get_user_role_permissions(?string $username = null): array
     return array_values(array_unique($rolePermissions));
 }
 
+function is_superadmin_user(array $user): bool
+{
+    $roleId = $user['role'] ?? yojaka_current_user_role();
+    return $roleId === 'superadmin';
+}
+
+function has_permission(array $user, string $permission): bool
+{
+    if ($permission === '') {
+        return true;
+    }
+
+    if (is_superadmin_user($user)) {
+        return true;
+    }
+
+    $roleId = $user['role'] ?? yojaka_current_user_role();
+    if ($roleId === null) {
+        return false;
+    }
+
+    $perms = get_role_permissions($roleId);
+    if (in_array('*', $perms, true)) {
+        return true;
+    }
+
+    return in_array($permission, $perms, true);
+}
+
 function user_has_permission(?string $permission, ?bool $strictMode = null): bool
 {
     if ($permission === null || $permission === '') {
@@ -334,16 +369,12 @@ function user_has_permission(?string $permission, ?bool $strictMode = null): boo
         return false;
     }
 
-    if (is_superadmin()) {
-        return true;
+    $currentUser = yojaka_current_user();
+    if ($currentUser === null) {
+        return false;
     }
 
-    $permissions = get_user_role_permissions();
-    if (in_array('*', $permissions, true)) {
-        return true;
-    }
-
-    if (in_array($permission, $permissions, true)) {
+    if (has_permission($currentUser, $permission)) {
         return true;
     }
 
@@ -371,10 +402,18 @@ function require_role(string $role): void
     }
 }
 
-function require_permission(string $permission): void
+function require_permission($userOrPermission, ?string $permission = null): void
 {
-    if (!user_has_permission($permission)) {
-        include __DIR__ . '/views/access_denied.php';
+    $currentUser = is_array($userOrPermission) ? $userOrPermission : yojaka_current_user();
+    $permissionKey = is_string($userOrPermission) && $permission === null ? $userOrPermission : $permission;
+
+    if ($permissionKey === null) {
+        return;
+    }
+
+    if (!is_array($currentUser) || !has_permission($currentUser, $permissionKey)) {
+        http_response_code(403);
+        echo 'You do not have permission to perform this action.';
         exit;
     }
 }
