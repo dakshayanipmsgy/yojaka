@@ -98,4 +98,22 @@ class DeptAdminController
 
         return yojaka_render_view('deptadmin/roles_create', $data, 'main');
     }
+
+    public function workflows()
+    {
+        yojaka_require_dept_admin();
+
+        $user = yojaka_current_user();
+        $deptSlug = $user['department_slug'] ?? '';
+        $department = $deptSlug ? yojaka_find_department_by_slug($deptSlug) : null;
+        $workflows = $deptSlug ? yojaka_workflows_load_for_department($deptSlug) : [];
+
+        $data = [
+            'title' => 'Department Workflows',
+            'department' => $department,
+            'workflows' => $workflows,
+        ];
+
+        return yojaka_render_view('deptadmin/workflows', $data, 'main');
+    }
 }

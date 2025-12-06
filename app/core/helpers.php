@@ -3,14 +3,18 @@
 
 function yojaka_url(string $path = ''): string
 {
-    $normalizedBase = BASE_URL;
+    $base = rtrim(yojaka_config('base_url', ''), '/');
     $trimmedPath = ltrim($path, '/');
 
-    if ($normalizedBase === '') {
+    if ($trimmedPath === '') {
+        return ($base === '' ? '' : $base) . '/';
+    }
+
+    if ($base === '') {
         return '/' . $trimmedPath;
     }
 
-    return rtrim($normalizedBase, '/') . '/' . $trimmedPath;
+    return $base . '/' . $trimmedPath;
 }
 
 function yojaka_escape(string $value): string

@@ -18,6 +18,7 @@
                         <th>Title</th>
                         <th>Reference</th>
                         <th>Status</th>
+                        <th>Step</th>
                         <th>Created</th>
                         <th>Assignee</th>
                         <th></th>
@@ -30,6 +31,7 @@
                             <td><?php echo yojaka_escape($record['title'] ?? ''); ?></td>
                             <td><?php echo yojaka_escape($record['reference_no'] ?? ''); ?></td>
                             <td><?php echo yojaka_escape($record['status'] ?? ''); ?></td>
+                            <td><?php echo yojaka_escape($record['workflow']['current_step'] ?? ''); ?></td>
                             <td><?php echo yojaka_escape($record['created_at'] ?? ''); ?></td>
                             <td><?php echo yojaka_escape($record['assignee_username'] ?? ''); ?></td>
                             <td><a href="<?php echo yojaka_url('index.php?r=dak/view&id=' . urlencode($record['id'] ?? '')); ?>">View</a></td>

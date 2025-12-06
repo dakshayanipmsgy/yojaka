@@ -27,6 +27,7 @@
                 <span class="muted">Logged in as superadmin</span>
             <?php elseif (yojaka_is_dept_admin()): ?>
                 <a href="<?php echo yojaka_url('index.php?r=deptadmin/dashboard'); ?>">Department Admin Dashboard</a>
+                <a href="<?php echo yojaka_url('index.php?r=deptadmin/workflows'); ?>">Workflows</a>
                 <?php $currentUser = yojaka_current_user(); ?>
                 <?php if ($currentUser && (($currentUser['user_type'] ?? '') === 'dept_admin' || yojaka_has_permission($currentUser, 'dak.create'))): ?>
                     <a href="<?php echo yojaka_url('index.php?r=dak/list'); ?>">Dak</a>

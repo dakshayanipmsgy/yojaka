@@ -23,6 +23,7 @@ function yojaka_dispatch(string $route)
         'superadmin/dashboard' => ['SuperadminController', 'dashboard'],
         'deptadmin/dashboard' => ['DeptAdminController', 'dashboard'],
         'deptadmin/roles/create' => ['DeptAdminController', 'roles_create'],
+        'deptadmin/workflows' => ['DeptAdminController', 'workflows'],
         'deptadmin/users' => ['DeptUsersController', 'index'],
         'deptadmin/users/create' => ['DeptUsersController', 'create'],
         'deptadmin/users/edit' => ['DeptUsersController', 'edit'],
@@ -32,6 +33,9 @@ function yojaka_dispatch(string $route)
         'dak/create' => ['DakController', 'create'],
         'dak/view' => ['DakController', 'view'],
         'dak/edit' => ['DakController', 'edit'],
+        'dak/forward' => ['DakController', 'forward'],
+        'dak/return' => ['DakController', 'return_action'],
+        'dak/close' => ['DakController', 'close'],
     ];
 
     if (!isset($controllerMap[$route])) {
