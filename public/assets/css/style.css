@@ -1,0 +1,139 @@
+:root {
+    --primary: #1e4d8a;
+    --accent: #f5f7fb;
+    --text: #1c1f26;
+    --muted: #6b7280;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text);
+    background: #f9fafb;
+    line-height: 1.6;
+}
+
+.site-header {
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.branding h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.branding a {
+    text-decoration: none;
+    color: var(--primary);
+}
+
+.branding .tagline {
+    margin: 4px 0 0 0;
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.nav {
+    display: flex;
+    gap: 12px;
+}
+
+.nav a {
+    text-decoration: none;
+    color: var(--primary);
+    font-weight: 600;
+    padding: 8px 10px;
+    border-radius: 6px;
+}
+
+.nav a:hover {
+    background: var(--accent);
+}
+
+.nav a.muted {
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.content {
+    max-width: 960px;
+    margin: 32px auto;
+    padding: 0 16px;
+}
+
+.hero {
+    background: white;
+    padding: 24px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03);
+}
+
+.hero h1 {
+    margin-top: 0;
+    color: var(--primary);
+}
+
+.features,
+.future {
+    margin-top: 24px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03);
+}
+
+.features h2,
+.future h2 {
+    margin-top: 0;
+}
+
+.features ul,
+.future ul {
+    padding-left: 20px;
+}
+
+.page-intro {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.03);
+}
+
+.error {
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    color: #991b1b;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.site-footer {
+    text-align: center;
+    padding: 16px;
+    color: var(--muted);
+    font-size: 14px;
+    border-top: 1px solid #e5e7eb;
+    background: white;
+}
+
+@media (max-width: 640px) {
+    .nav {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .nav a {
+        padding: 8px 6px;
+    }
+}
