@@ -10,7 +10,8 @@ function yojaka_auth_login(array $user): void
     $_SESSION['auth'] = [
         'user_id' => $user['id'] ?? null,
         'username' => $user['username'] ?? null,
-        'role' => $user['role'] ?? null,
+        'user_type' => $user['user_type'] ?? null,
+        'department_slug' => $user['department_slug'] ?? null,
     ];
 }
 
@@ -49,7 +50,16 @@ function yojaka_is_superadmin(): bool
         return false;
     }
 
-    return isset($_SESSION['auth']['role']) && $_SESSION['auth']['role'] === 'superadmin';
+    return isset($_SESSION['auth']['user_type']) && $_SESSION['auth']['user_type'] === 'superadmin';
+}
+
+function yojaka_is_dept_admin(): bool
+{
+    if (!yojaka_is_logged_in()) {
+        return false;
+    }
+
+    return isset($_SESSION['auth']['user_type']) && $_SESSION['auth']['user_type'] === 'dept_admin';
 }
 
 function yojaka_require_login(): void

@@ -21,6 +21,8 @@ function yojaka_dispatch(string $route)
         'auth/login' => ['AuthController', 'login'],
         'auth/logout' => ['AuthController', 'logout'],
         'superadmin/dashboard' => ['SuperadminController', 'dashboard'],
+        'deptadmin/dashboard' => ['DeptAdminController', 'dashboard'],
+        'deptadmin/roles/create' => ['DeptAdminController', 'roles_create'],
     ];
 
     if (!isset($controllerMap[$route])) {

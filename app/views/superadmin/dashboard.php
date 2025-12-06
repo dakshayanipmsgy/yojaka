@@ -7,6 +7,10 @@
     <div class="alert alert-success"><?php echo yojaka_escape($message); ?></div>
 <?php endif; ?>
 
+<?php if (!empty($adminNotice)): ?>
+    <div class="alert alert-info"><?php echo yojaka_escape($adminNotice); ?></div>
+<?php endif; ?>
+
 <?php if (!empty($error)): ?>
     <div class="alert alert-error"><?php echo yojaka_escape($error); ?></div>
 <?php endif; ?>
