@@ -233,11 +233,16 @@ class LettersController
         $template = yojaka_templates_find_letter_for_department($deptSlug, $record['template_id'] ?? '');
         $rendered = $template ? yojaka_templates_render_html($template, $record['fields'] ?? []) : '';
 
+        $canPrint = ($user['user_type'] ?? '') === 'dept_admin' || yojaka_has_permission($user, 'letters.print');
+        $pdfAvailable = $canPrint && yojaka_pdf_is_available();
+
         $data = [
             'title' => 'Letter Details',
             'record' => $record,
             'template' => $template,
             'renderedHtml' => $rendered,
+            'canPrint' => $canPrint,
+            'pdfAvailable' => $pdfAvailable,
             'canEdit' => $record['status'] === 'draft'
                 && yojaka_acl_can_edit_record($user, $record)
                 && ((($user['user_type'] ?? '') === 'dept_admin') || yojaka_has_permission($user, 'letters.edit')),
@@ -345,14 +350,73 @@ class LettersController
         }
 
         $template = yojaka_templates_find_letter_for_department($deptSlug, $record['template_id'] ?? '');
-        $rendered = $template ? yojaka_templates_render_html($template, $record['fields'] ?? []) : '';
+        $branding = yojaka_branding_load_letterhead($deptSlug);
+        $fullHtml = yojaka_letters_render_full_html($branding, $template, $record);
 
         $data = [
-            'record' => $record,
-            'template' => $template,
-            'renderedHtml' => $rendered,
+            'fullHtml' => $fullHtml,
         ];
 
         return yojaka_render_view('letters/print', $data, '');
+    }
+
+    public function pdf()
+    {
+        $user = $this->requireDeptUserOrAdmin();
+        $this->requireLettersPermission($user, 'letters.print');
+
+        $deptSlug = $user['department_slug'] ?? '';
+        $id = trim($_GET['id'] ?? '');
+        $record = $id ? yojaka_letters_load_record($deptSlug, $id) : null;
+
+        if (!$record) {
+            http_response_code(404);
+            return yojaka_render_view('errors/404', ['route' => 'letters/pdf'], 'main');
+        }
+
+        if (!yojaka_acl_can_view_record($user, $record)) {
+            http_response_code(403);
+            return yojaka_render_view('errors/403', ['message' => 'Access denied'], 'main');
+        }
+
+        $template = yojaka_templates_find_letter_for_department($deptSlug, $record['template_id'] ?? '');
+        $branding = yojaka_branding_load_letterhead($deptSlug);
+        $fullHtml = yojaka_letters_render_full_html($branding, $template, $record);
+
+        if (!yojaka_pdf_is_available()) {
+            http_response_code(503);
+            return yojaka_render_view('errors/500', ['message' => 'PDF generation is not available on this server.'], 'main');
+        }
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'yojaka_pdf_');
+        if (!$tmpPath) {
+            http_response_code(500);
+            return yojaka_render_view('errors/500', ['message' => 'Unable to create temporary file for PDF.'], 'main');
+        }
+
+        $result = yojaka_pdf_render_html_to_pdf($fullHtml, $tmpPath);
+        if (!$result || !file_exists($tmpPath)) {
+            @unlink($tmpPath);
+            http_response_code(500);
+            return yojaka_render_view('errors/500', ['message' => 'Failed to generate PDF.'], 'main');
+        }
+
+        yojaka_audit_log_action(
+            $deptSlug,
+            'letters',
+            $record['id'],
+            'letters.pdf_download',
+            'Downloaded letter as PDF',
+            []
+        );
+
+        header('Content-Type: application/pdf');
+        $filename = ($record['id'] ?? 'letter') . '.pdf';
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($tmpPath));
+
+        readfile($tmpPath);
+        unlink($tmpPath);
+        exit;
     }
 }

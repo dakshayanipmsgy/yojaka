@@ -95,6 +95,61 @@ function yojaka_templates_render_html(array $template, array $data): string
     }, $html);
 }
 
+function yojaka_letters_render_full_html(array $departmentBranding, ?array $letterTemplate, array $letterRecord): string
+{
+    $deptSlug = $letterRecord['department_slug'] ?? '';
+    $bodyHtml = $letterTemplate ? yojaka_templates_render_html($letterTemplate, $letterRecord['fields'] ?? []) : '';
+
+    $logoUri = $deptSlug !== '' ? yojaka_branding_logo_data_uri($deptSlug, $departmentBranding['logo_file'] ?? null) : null;
+    $departmentName = trim($departmentBranding['department_name'] ?? '');
+    $departmentAddress = trim($departmentBranding['department_address'] ?? '');
+    $headerHtml = $departmentBranding['header_html'] ?? '';
+    $footerHtml = $departmentBranding['footer_html'] ?? '';
+
+    $logoBlock = $logoUri ? '<img src="' . yojaka_escape($logoUri) . '" alt="Department Logo" class="letterhead-logo" />' : '';
+    $nameBlock = $departmentName !== '' ? '<div class="letterhead-name">' . yojaka_escape($departmentName) . '</div>' : '';
+    $addressBlock = $departmentAddress !== ''
+        ? '<div class="letterhead-address">' . nl2br(yojaka_escape($departmentAddress)) . '</div>'
+        : '';
+
+    $html = '<!DOCTYPE html>'
+        . '<html lang="en">'
+        . '<head>'
+        . '<meta charset="utf-8">'
+        . '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        . '<title>Letter</title>'
+        . '<style>'
+        . 'body { font-family: Arial, sans-serif; color: #111; margin: 30px; }'
+        . '.letter-wrapper { max-width: 900px; margin: 0 auto; }'
+        . '.letterhead-header { border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; }'
+        . '.letterhead-brand { flex: 1; }'
+        . '.letterhead-logo { max-height: 80px; max-width: 160px; object-fit: contain; }'
+        . '.letterhead-name { font-size: 20px; font-weight: bold; }'
+        . '.letterhead-address { white-space: pre-line; color: #444; margin-top: 4px; }'
+        . '.letterhead-extra { margin-top: 8px; font-size: 13px; color: #333; }'
+        . '.letter-body { font-size: 14px; line-height: 1.6; }'
+        . '.letter-body p { margin-bottom: 12px; }'
+        . '.letterhead-footer { margin-top: 30px; padding-top: 12px; border-top: 1px solid #ccc; font-size: 12px; color: #444; }'
+        . '@media print { .print-note { display: none; } body { margin: 20mm; } }'
+        . '</style>'
+        . '</head>'
+        . '<body>'
+        . '<div class="letter-wrapper">'
+        . '<div class="print-note"><p><strong>Print Preview:</strong> Use your browser print dialog to print or save as PDF.</p><hr></div>'
+        . '<div class="letterhead-header">'
+        . ($logoBlock !== '' ? '<div class="letterhead-logo-wrap">' . $logoBlock . '</div>' : '')
+        . '<div class="letterhead-brand">' . $nameBlock . $addressBlock . '</div>'
+        . '</div>'
+        . ($headerHtml !== '' ? '<div class="letterhead-extra">' . $headerHtml . '</div>' : '')
+        . '<div class="letter-body">' . $bodyHtml . '</div>'
+        . ($footerHtml !== '' ? '<div class="letterhead-footer">' . $footerHtml . '</div>' : '')
+        . '</div>'
+        . '</body>'
+        . '</html>';
+
+    return $html;
+}
+
 function yojaka_templates_ensure_seeded(): void
 {
     $globalDir = yojaka_config('paths.data_path') . '/system/templates';
