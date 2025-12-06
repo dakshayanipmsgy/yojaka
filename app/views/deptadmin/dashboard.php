@@ -56,6 +56,14 @@
 
 <section class="panel">
     <div class="panel-header">
+        <h2>Workflows</h2>
+        <a class="button" href="<?php echo yojaka_url('index.php?r=deptadmin/workflows'); ?>">View Workflows</a>
+    </div>
+    <p>Review the current dak routing template for your department. A richer editor will be added soon.</p>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
         <h2>Users</h2>
         <a class="button" href="<?php echo yojaka_url('index.php?r=deptadmin/users'); ?>">Manage Users</a>
     </div>

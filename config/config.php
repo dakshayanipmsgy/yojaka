@@ -1,6 +1,6 @@
 <?php
 return [
-    'base_url' => '/yojaka',
+    'base_url' => '/yojaka/public',
     'environment' => 'development',
     'paths' => [
         'root_path' => dirname(__DIR__),

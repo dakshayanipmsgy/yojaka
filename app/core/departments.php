@@ -109,7 +109,9 @@ function yojaka_departments_initialize_storage(string $deptSlug): void
         $basePath . '/config',
         $basePath . '/roles',
         $basePath . '/users',
+        $basePath . '/workflows',
         $basePath . '/modules',
+        $basePath . '/modules/dak',
     ];
 
     foreach ($folders as $folder) {
@@ -122,6 +124,9 @@ function yojaka_departments_initialize_storage(string $deptSlug): void
     if (!file_exists($rolesFile)) {
         file_put_contents($rolesFile, json_encode([], JSON_PRETTY_PRINT), LOCK_EX);
     }
+
+    // Seed default workflows for the department if none exist yet.
+    yojaka_workflows_seed_default($deptSlug);
 }
 
 function yojaka_update_department_status(string $id, string $status): bool

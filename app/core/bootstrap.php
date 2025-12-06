@@ -52,6 +52,7 @@ require_once __DIR__ . '/router.php';
 require_once __DIR__ . '/view.php';
 require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/departments.php';
+require_once __DIR__ . '/workflows.php';
 require_once __DIR__ . '/permissions.php';
 require_once __DIR__ . '/roles.php';
 require_once __DIR__ . '/department_users.php';
