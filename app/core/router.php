@@ -37,6 +37,11 @@ function yojaka_dispatch(string $route)
         'dak/forward' => ['DakController', 'forward'],
         'dak/return' => ['DakController', 'return_action'],
         'dak/close' => ['DakController', 'close'],
+        'letters/list' => ['LettersController', 'list'],
+        'letters/create' => ['LettersController', 'create'],
+        'letters/view' => ['LettersController', 'view'],
+        'letters/edit' => ['LettersController', 'edit'],
+        'letters/print' => ['LettersController', 'print'],
     ];
 
     if (!isset($controllerMap[$route])) {

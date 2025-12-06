@@ -17,7 +17,13 @@
     <h2>Next steps</h2>
     <?php if (!empty($user) && yojaka_has_permission($user, 'dak.create')): ?>
         <p><a class="button" href="<?php echo yojaka_url('index.php?r=dak/list'); ?>">Go to Dak (My Files)</a></p>
-    <?php else: ?>
+    <?php endif; ?>
+
+    <?php if (!empty($user) && yojaka_has_permission($user, 'letters.view')): ?>
+        <p><a class="button" href="<?php echo yojaka_url('index.php?r=letters/list'); ?>">Letters &amp; Notices</a></p>
+    <?php endif; ?>
+
+    <?php if (empty($user) || (!yojaka_has_permission($user, 'dak.create') && !yojaka_has_permission($user, 'letters.view'))): ?>
         <p>Module links for your assigned role will appear here in future phases.</p>
     <?php endif; ?>
 </section>

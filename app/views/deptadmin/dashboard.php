@@ -80,6 +80,14 @@
 
 <section class="panel">
     <div class="panel-header">
+        <h2>Letters &amp; Notices</h2>
+        <a class="button" href="<?php echo yojaka_url('index.php?r=letters/list'); ?>">Letters</a>
+    </div>
+    <p>Use templates to draft official letters for your department.</p>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
         <h2>Audit Log</h2>
         <a class="button" href="<?php echo yojaka_url('index.php?r=deptadmin/audit'); ?>">View Audit Log</a>
     </div>

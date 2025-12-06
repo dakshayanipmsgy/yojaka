@@ -41,6 +41,12 @@ $YOJAKA_PERMISSION_CATALOG = [
         'bills.edit',
         'bills.verify',
     ],
+    'letters' => [
+        'letters.create',
+        'letters.edit',
+        'letters.view',
+        'letters.print',
+    ],
     'admin' => [
         'dept.roles.manage',
         'dept.users.manage',

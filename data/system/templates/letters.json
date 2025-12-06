@@ -1,0 +1,19 @@
+[
+  {
+    "id": "letter_generic_en",
+    "module": "letters",
+    "scope": "global",
+    "name": "Generic Official Letter (English)",
+    "description": "Standard outward letter format with heading, subject, body and signature.",
+    "placeholders": [
+      {"key": "letter_date", "label": "Letter Date"},
+      {"key": "to_name", "label": "Recipient Name"},
+      {"key": "to_address", "label": "Recipient Address"},
+      {"key": "subject", "label": "Subject"},
+      {"key": "body", "label": "Body Text"},
+      {"key": "signatory_name", "label": "Signatory Name"},
+      {"key": "signatory_designation", "label": "Signatory Designation"}
+    ],
+    "html": "<div class=\"yojaka-letter\">\n  <p>Date: {{letter_date}}</p>\n  <p>To,<br>{{to_name}}<br>{{to_address}}</p>\n  <p><strong>Subject:</strong> {{subject}}</p>\n  <p>{{body}}</p>\n  <p>Yours faithfully,<br>{{signatory_name}}<br>{{signatory_designation}}</p>\n</div>"
+  }
+]
