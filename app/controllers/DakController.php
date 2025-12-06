@@ -205,6 +205,19 @@ class DakController
 
                 yojaka_dak_save_record($deptSlug, $record);
 
+                yojaka_audit_log_action(
+                    $deptSlug,
+                    'dak',
+                    $record['id'],
+                    'dak.create',
+                    'Created Dak record',
+                    [
+                        'title' => $record['title'],
+                        'reference_no' => $record['reference_no'],
+                        'status' => $record['status'],
+                    ]
+                );
+
                 header('Location: ' . yojaka_url('index.php?r=dak/view&id=' . urlencode($id) . '&message=created'));
                 exit;
             }
@@ -278,6 +291,9 @@ class DakController
         $canReturn = $roleAllowedAtStep && !$isClosed && yojaka_has_permission($user, 'dak.forward') && !empty($allowedPrevSteps);
         $canClose = $roleAllowedAtStep && !$isClosed && yojaka_has_permission($user, 'dak.close') && (!empty($currentStep['is_terminal']) || empty($currentStep));
 
+        $auditEntries = yojaka_audit_load_for_record($deptSlug, 'dak', $record['id'], 200);
+        $timeline = yojaka_record_timeline($record, $auditEntries);
+
         $data = [
             'title' => 'View Dak',
             'record' => $record,
@@ -290,6 +306,8 @@ class DakController
             'canClose' => $canClose,
             'allowedNextSteps' => $allowedNextSteps,
             'allowedPrevSteps' => $allowedPrevSteps,
+            'timeline' => $timeline,
+            'auditEntries' => $auditEntries,
         ];
 
         return yojaka_render_view('dak/view', $data, 'main');
@@ -346,6 +364,19 @@ class DakController
                 $record['updated_at'] = date('c');
 
                 yojaka_dak_save_record($deptSlug, $record);
+
+                yojaka_audit_log_action(
+                    $deptSlug,
+                    'dak',
+                    $record['id'],
+                    'dak.edit',
+                    'Edited Dak record',
+                    [
+                        'title' => $record['title'],
+                        'reference_no' => $record['reference_no'],
+                        'status' => $record['status'],
+                    ]
+                );
 
                 header('Location: ' . yojaka_url('index.php?r=dak/view&id=' . urlencode($record['id']) . '&message=updated'));
                 exit;
@@ -428,6 +459,21 @@ class DakController
 
                 yojaka_dak_save_record($deptSlug, $record);
 
+                yojaka_audit_log_action(
+                    $deptSlug,
+                    'dak',
+                    $record['id'],
+                    'dak.forward',
+                    'Forwarded Dak',
+                    [
+                        'workflow_step_from' => $context['currentStepId'],
+                        'workflow_step_to' => $toStep,
+                        'from_user' => $actor,
+                        'to_user' => $assigneeUsername,
+                        'comment' => $comment,
+                    ]
+                );
+
                 header('Location: ' . yojaka_url('index.php?r=dak/view&id=' . urlencode($record['id']) . '&message=forwarded'));
                 exit;
             }
@@ -502,6 +548,21 @@ class DakController
 
                 yojaka_dak_save_record($deptSlug, $record);
 
+                yojaka_audit_log_action(
+                    $deptSlug,
+                    'dak',
+                    $record['id'],
+                    'dak.return',
+                    'Returned Dak',
+                    [
+                        'workflow_step_from' => $context['currentStepId'],
+                        'workflow_step_to' => $toStep,
+                        'from_user' => $actor,
+                        'to_user' => $assigneeUsername,
+                        'comment' => $comment,
+                    ]
+                );
+
                 header('Location: ' . yojaka_url('index.php?r=dak/view&id=' . urlencode($record['id']) . '&message=returned'));
                 exit;
             }
@@ -559,6 +620,19 @@ class DakController
             ];
 
             yojaka_dak_save_record($deptSlug, $record);
+
+            yojaka_audit_log_action(
+                $deptSlug,
+                'dak',
+                $record['id'],
+                'dak.close',
+                'Closed Dak record',
+                [
+                    'workflow_step' => $context['currentStepId'],
+                    'status' => $record['status'],
+                    'comment' => $comment,
+                ]
+            );
 
             header('Location: ' . yojaka_url('index.php?r=dak/view&id=' . urlencode($record['id']) . '&message=closed'));
             exit;

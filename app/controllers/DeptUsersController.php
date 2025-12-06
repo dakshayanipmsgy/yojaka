@@ -14,15 +14,32 @@ class DeptUsersController
             $userId = isset($_POST['user_id']) ? trim($_POST['user_id']) : '';
             if ($userId !== '') {
                 $users = yojaka_dept_users_load($deptSlug);
+                $updatedUser = null;
                 foreach ($users as &$user) {
                     if (($user['id'] ?? '') === $userId) {
                         $user['status'] = ($user['status'] ?? 'active') === 'active' ? 'disabled' : 'active';
                         $user['updated_at'] = date('c');
+                        $updatedUser = $user;
                         break;
                     }
                 }
                 unset($user);
                 yojaka_dept_users_save($deptSlug, $users);
+
+                if ($updatedUser) {
+                    yojaka_audit_log_action(
+                        $deptSlug,
+                        'users',
+                        $updatedUser['id'] ?? null,
+                        'users.update',
+                        'Updated department user status',
+                        [
+                            'username_base' => $updatedUser['username_base'] ?? '',
+                            'status' => $updatedUser['status'] ?? '',
+                        ]
+                    );
+                }
+
                 $_SESSION['deptadmin_success'] = 'User status updated successfully';
                 header('Location: ' . yojaka_url('index.php?r=deptadmin/users'));
                 exit;
@@ -116,6 +133,19 @@ class DeptUsersController
 
                 $saved = yojaka_dept_users_add($deptSlug, $userData);
                 if ($saved) {
+                    yojaka_audit_log_action(
+                        $deptSlug,
+                        'users',
+                        $saved['id'] ?? null,
+                        'users.create',
+                        'Created department user',
+                        [
+                            'username_base' => $saved['username_base'] ?? '',
+                            'login_identities' => $saved['login_identities'] ?? [],
+                            'status' => $saved['status'] ?? '',
+                        ]
+                    );
+
                     $_SESSION['deptadmin_success'] = 'User created. Initial password: ' . $passwordPlain;
                     header('Location: ' . yojaka_url('index.php?r=deptadmin/users'));
                     exit;
@@ -184,6 +214,7 @@ class DeptUsersController
 
             if (empty($errors)) {
                 $users = yojaka_dept_users_load($deptSlug);
+                $updatedUser = null;
                 foreach ($users as &$existing) {
                     if (($existing['id'] ?? '') === $userId) {
                         $existing['display_name'] = $form['display_name'];
@@ -193,12 +224,27 @@ class DeptUsersController
                             $existing['login_identities'][] = ($existing['username_base'] ?? '') . '.' . $roleId;
                         }
                         $existing['updated_at'] = date('c');
+                        $updatedUser = $existing;
                         break;
                     }
                 }
                 unset($existing);
 
                 if (yojaka_dept_users_save($deptSlug, $users)) {
+                    if ($updatedUser) {
+                        yojaka_audit_log_action(
+                            $deptSlug,
+                            'users',
+                            $updatedUser['id'] ?? null,
+                            'users.update',
+                            'Updated department user',
+                            [
+                                'username_base' => $updatedUser['username_base'] ?? '',
+                                'login_identities' => $updatedUser['login_identities'] ?? [],
+                            ]
+                        );
+                    }
+
                     $_SESSION['deptadmin_success'] = 'User updated successfully';
                     header('Location: ' . yojaka_url('index.php?r=deptadmin/users'));
                     exit;
@@ -260,6 +306,17 @@ class DeptUsersController
                 unset($existing);
 
                 if (yojaka_dept_users_save($deptSlug, $users)) {
+                    yojaka_audit_log_action(
+                        $deptSlug,
+                        'users',
+                        $user['id'] ?? null,
+                        'users.password_reset',
+                        'Reset password for department user',
+                        [
+                            'username_base' => $user['username_base'] ?? '',
+                        ]
+                    );
+
                     $_SESSION['deptadmin_success'] = 'Password updated successfully.';
                     header('Location: ' . yojaka_url('index.php?r=deptadmin/users'));
                     exit;
