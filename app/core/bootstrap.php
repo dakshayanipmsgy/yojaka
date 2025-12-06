@@ -67,6 +67,42 @@ require_once __DIR__ . '/templates.php';
 require_once __DIR__ . '/letters.php';
 require_once __DIR__ . '/pdf.php';
 
+function yojaka_migrate_dept_users_to_per_department(): void
+{
+    $dataPath = yojaka_config('data_path', yojaka_config('paths.data_path'));
+    $usersFile = $dataPath . '/system/users.json';
+
+    if (!file_exists($usersFile)) {
+        return;
+    }
+
+    $users = json_decode(@file_get_contents($usersFile), true);
+    if (!is_array($users)) {
+        return;
+    }
+
+    $remaining = [];
+    foreach ($users as $user) {
+        $type = $user['user_type'] ?? null;
+        $deptSlug = $user['department_slug'] ?? null;
+
+        if ($type === 'dept_user' && $deptSlug) {
+            yojaka_dept_users_ensure_storage($deptSlug);
+            yojaka_dept_users_upsert($deptSlug, $user);
+        } else {
+            $remaining[] = $user;
+        }
+    }
+
+    if (count($remaining) !== count($users)) {
+        file_put_contents(
+            $usersFile,
+            json_encode($remaining, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            LOCK_EX
+        );
+    }
+}
+
 function yojaka_migrate_dept_admin_accounts(): void
 {
     $departments = yojaka_load_departments();
@@ -82,6 +118,8 @@ function yojaka_migrate_dept_admin_accounts(): void
         yojaka_users_ensure_dept_admin($deptSlug, $deptName);
     }
 }
+
+yojaka_migrate_dept_users_to_per_department();
 
 // Ensure the default superadmin user exists for first-run setup.
 yojaka_seed_superadmin();

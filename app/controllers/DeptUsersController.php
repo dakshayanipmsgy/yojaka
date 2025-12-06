@@ -104,9 +104,9 @@ class DeptUsersController
                 }
             }
 
-            if (yojaka_dept_users_find_by_base($deptSlug, $form['username_base'])) {
-                $errors[] = 'A user with that username base already exists in this department.';
-            }
+                if (yojaka_dept_users_find_by_base($deptSlug, $form['username_base'])) {
+                    $errors[] = 'A user with that username base already exists in this department.';
+                }
 
             if (empty($form['role_ids'])) {
                 $errors[] = 'At least one role must be selected.';
@@ -115,10 +115,7 @@ class DeptUsersController
             if (empty($errors)) {
                 $now = date('c');
                 $passwordPlain = 'User@123';
-                $loginIdentities = [];
-                foreach ($form['role_ids'] as $roleId) {
-                    $loginIdentities[] = $form['username_base'] . '.' . $roleId;
-                }
+                $loginIdentities = yojaka_dept_users_generate_login_identities($deptSlug, $form['username_base'], $form['role_ids']);
 
                 $userData = [
                     'username_base' => $form['username_base'],
@@ -129,6 +126,9 @@ class DeptUsersController
                     'status' => 'active',
                     'created_at' => $now,
                     'updated_at' => $now,
+                    'user_type' => 'dept_user',
+                    'department_slug' => $deptSlug,
+                    'must_change_password' => false,
                 ];
 
                 $saved = yojaka_dept_users_add($deptSlug, $userData);
@@ -219,10 +219,11 @@ class DeptUsersController
                     if (($existing['id'] ?? '') === $userId) {
                         $existing['display_name'] = $form['display_name'];
                         $existing['role_ids'] = $form['role_ids'];
-                        $existing['login_identities'] = [];
-                        foreach ($form['role_ids'] as $roleId) {
-                            $existing['login_identities'][] = ($existing['username_base'] ?? '') . '.' . $roleId;
-                        }
+                        $existing['login_identities'] = yojaka_dept_users_generate_login_identities(
+                            $deptSlug,
+                            $existing['username_base'] ?? '',
+                            $form['role_ids']
+                        );
                         $existing['updated_at'] = date('c');
                         $updatedUser = $existing;
                         break;
