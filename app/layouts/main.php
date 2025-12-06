@@ -20,8 +20,17 @@
         <nav class="nav">
             <a href="<?php echo yojaka_url('index.php'); ?>">Home</a>
             <a href="<?php echo yojaka_url('index.php?r=about'); ?>">About</a>
-            <a href="<?php echo yojaka_url('index.php?r=admin'); ?>" class="muted">Admin (coming soon)</a>
-            <a href="<?php echo yojaka_url('index.php?r=login'); ?>" class="muted">Login</a>
+
+            <?php if (yojaka_is_superadmin()): ?>
+                <a href="<?php echo yojaka_url('index.php?r=superadmin/dashboard'); ?>">Superadmin Dashboard</a>
+                <a href="<?php echo yojaka_url('index.php?r=auth/logout'); ?>">Logout</a>
+                <span class="muted">Logged in as superadmin</span>
+            <?php elseif (yojaka_is_logged_in()): ?>
+                <a href="#" class="muted">Dashboard</a>
+                <a href="<?php echo yojaka_url('index.php?r=auth/logout'); ?>">Logout</a>
+            <?php else: ?>
+                <a href="<?php echo yojaka_url('index.php?r=auth/login'); ?>">Login</a>
+            <?php endif; ?>
         </nav>
     </header>
 

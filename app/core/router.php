@@ -18,6 +18,9 @@ function yojaka_dispatch(string $route)
     $controllerMap = [
         'home' => ['HomeController', 'index'],
         'about' => ['AboutController', 'index'],
+        'auth/login' => ['AuthController', 'login'],
+        'auth/logout' => ['AuthController', 'logout'],
+        'superadmin/dashboard' => ['SuperadminController', 'dashboard'],
     ];
 
     if (!isset($controllerMap[$route])) {
