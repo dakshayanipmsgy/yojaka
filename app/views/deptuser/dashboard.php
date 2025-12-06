@@ -23,6 +23,10 @@
         <p><a class="button" href="<?php echo yojaka_url('index.php?r=letters/list'); ?>">Letters &amp; Notices</a></p>
     <?php endif; ?>
 
+    <?php if (!empty($user) && (yojaka_has_permission($user, 'rti.create') || yojaka_has_permission($user, 'rti.forward'))): ?>
+        <p><a class="button" href="<?php echo yojaka_url('index.php?r=rti/list'); ?>">RTI Cases</a></p>
+    <?php endif; ?>
+
     <?php if (empty($user) || (!yojaka_has_permission($user, 'dak.create') && !yojaka_has_permission($user, 'letters.view'))): ?>
         <p>Module links for your assigned role will appear here in future phases.</p>
     <?php endif; ?>

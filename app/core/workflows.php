@@ -124,11 +124,12 @@ function yojaka_workflow_allowed_prev_steps(array $workflow, string $currentStep
 function yojaka_workflows_seed_default(string $deptSlug): void
 {
     $filePath = yojaka_workflows_file_path($deptSlug);
+    $existing = [];
     if (file_exists($filePath)) {
         $raw = file_get_contents($filePath);
         $decoded = $raw ? json_decode($raw, true) : null;
-        if (is_array($decoded) && !empty($decoded)) {
-            return;
+        if (is_array($decoded)) {
+            $existing = $decoded;
         }
     }
 
@@ -168,5 +169,63 @@ function yojaka_workflows_seed_default(string $deptSlug): void
         ],
     ];
 
-    yojaka_workflows_save_for_department($deptSlug, [$defaultDakWorkflow]);
+    $defaultRtiWorkflow = [
+        'id' => 'rti_default',
+        'module' => 'rti',
+        'name' => 'Default RTI Route',
+        'description' => 'Clerk → PIO → FAA route for RTI cases.',
+        'steps' => [
+            [
+                'id' => 'rticlerk',
+                'label' => 'RTI Clerk',
+                'allowed_roles' => ['rticlerk.' . $deptSlug],
+                'allow_forward_to' => ['pio'],
+                'allow_return_to' => [],
+                'is_terminal' => false,
+                'default_due_days' => 0,
+            ],
+            [
+                'id' => 'pio',
+                'label' => 'Public Information Officer',
+                'allowed_roles' => ['pio.' . $deptSlug],
+                'allow_forward_to' => ['faa'],
+                'allow_return_to' => ['rticlerk'],
+                'is_terminal' => false,
+                'default_due_days' => 30,
+            ],
+            [
+                'id' => 'faa',
+                'label' => 'First Appellate Authority',
+                'allowed_roles' => ['faa.' . $deptSlug],
+                'allow_forward_to' => [],
+                'allow_return_to' => ['pio'],
+                'is_terminal' => true,
+                'default_due_days' => 45,
+            ],
+        ],
+    ];
+
+    $workflows = [];
+    $dakExists = false;
+    $rtiExists = false;
+
+    foreach ($existing as $workflow) {
+        if (($workflow['id'] ?? '') === 'dak_default') {
+            $dakExists = true;
+        }
+        if (($workflow['id'] ?? '') === 'rti_default') {
+            $rtiExists = true;
+        }
+        $workflows[] = $workflow;
+    }
+
+    if (!$dakExists) {
+        $workflows[] = $defaultDakWorkflow;
+    }
+
+    if (!$rtiExists) {
+        $workflows[] = $defaultRtiWorkflow;
+    }
+
+    yojaka_workflows_save_for_department($deptSlug, $workflows);
 }

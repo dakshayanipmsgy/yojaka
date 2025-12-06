@@ -96,6 +96,14 @@
 
 <section class="panel">
     <div class="panel-header">
+        <h2>RTI Cases</h2>
+        <a class="button" href="<?php echo yojaka_url('index.php?r=rti/list'); ?>">Manage RTI</a>
+    </div>
+    <p>Register applications, route them via workflow, and link replies.</p>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
         <h2>Reports Dashboard</h2>
         <a class="button" href="<?php echo yojaka_url('index.php?r=deptadmin/reports'); ?>">View Reports</a>
     </div>

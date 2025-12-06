@@ -112,6 +112,7 @@ function yojaka_departments_initialize_storage(string $deptSlug): void
         $basePath . '/workflows',
         $basePath . '/modules',
         $basePath . '/modules/dak',
+        $basePath . '/modules/rti',
     ];
 
     foreach ($folders as $folder) {

@@ -7,6 +7,7 @@ $YOJAKA_PERMISSION_CATALOG = [
         'rti.edit',
         'rti.forward',
         'rti.close',
+        'rti.reply',
     ],
     'dak' => [
         'dak.create',
