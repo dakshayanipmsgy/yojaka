@@ -86,3 +86,16 @@ function yojaka_roles_find_by_role_id(string $deptSlug, string $roleId): ?array
 
     return null;
 }
+
+function yojaka_roles_find_by_local_key(string $deptSlug, string $localKey): ?array
+{
+    $roles = yojaka_roles_load_for_department($deptSlug);
+
+    foreach ($roles as $role) {
+        if (($role['local_key'] ?? '') === $localKey) {
+            return $role;
+        }
+    }
+
+    return null;
+}

@@ -53,3 +53,11 @@
         </div>
     <?php endif; ?>
 </section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h2>Users</h2>
+        <a class="button" href="<?php echo yojaka_url('index.php?r=deptadmin/users'); ?>">Manage Users</a>
+    </div>
+    <p>Use the Users area to onboard officers, assign roles, and manage their login identities.</p>
+</section>

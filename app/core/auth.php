@@ -9,9 +9,12 @@ function yojaka_auth_login(array $user): void
 
     $_SESSION['auth'] = [
         'user_id' => $user['id'] ?? null,
-        'username' => $user['username'] ?? null,
+        'username' => $user['username'] ?? ($user['username_base'] ?? null),
         'user_type' => $user['user_type'] ?? null,
         'department_slug' => $user['department_slug'] ?? null,
+        'login_identity' => $user['login_identity'] ?? null,
+        'role_id' => $user['role_id'] ?? null,
+        'username_base' => $user['username_base'] ?? null,
     ];
 }
 
@@ -33,6 +36,21 @@ function yojaka_current_user(): ?array
     $userId = $_SESSION['auth']['user_id'] ?? null;
     if ($userId === null) {
         return null;
+    }
+
+    $userType = $_SESSION['auth']['user_type'] ?? null;
+
+    if ($userType === 'dept_user') {
+        $deptSlug = $_SESSION['auth']['department_slug'] ?? '';
+        $deptUser = $deptSlug ? yojaka_dept_users_find_by_id($deptSlug, $userId) : null;
+        if ($deptUser) {
+            $deptUser['user_type'] = 'dept_user';
+            $deptUser['login_identity'] = $_SESSION['auth']['login_identity'] ?? null;
+            $deptUser['role_id'] = $_SESSION['auth']['role_id'] ?? null;
+            $deptUser['username_base'] = $_SESSION['auth']['username_base'] ?? ($deptUser['username_base'] ?? null);
+        }
+
+        return $deptUser ?: null;
     }
 
     $user = yojaka_find_user_by_id($userId);
@@ -60,6 +78,15 @@ function yojaka_is_dept_admin(): bool
     }
 
     return isset($_SESSION['auth']['user_type']) && $_SESSION['auth']['user_type'] === 'dept_admin';
+}
+
+function yojaka_is_dept_user(): bool
+{
+    if (!yojaka_is_logged_in()) {
+        return false;
+    }
+
+    return isset($_SESSION['auth']['user_type']) && $_SESSION['auth']['user_type'] === 'dept_user';
 }
 
 function yojaka_require_login(): void
