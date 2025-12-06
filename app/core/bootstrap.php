@@ -4,6 +4,11 @@
 
 $config = require dirname(__DIR__, 2) . '/config/config.php';
 
+// Start session early for authentication handling.
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Simple configuration accessor.
 function yojaka_config(string $key, $default = null)
 {
@@ -45,3 +50,9 @@ if ($environment === 'development') {
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/router.php';
 require_once __DIR__ . '/view.php';
+require_once __DIR__ . '/users.php';
+require_once __DIR__ . '/departments.php';
+require_once __DIR__ . '/auth.php';
+
+// Ensure the default superadmin user exists for first-run setup.
+yojaka_seed_superadmin();
