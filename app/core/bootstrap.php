@@ -61,6 +61,11 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/acl.php';
 require_once __DIR__ . '/audit.php';
 require_once __DIR__ . '/dak.php';
+require_once __DIR__ . '/templates.php';
+require_once __DIR__ . '/letters.php';
 
 // Ensure the default superadmin user exists for first-run setup.
 yojaka_seed_superadmin();
+
+// Seed system templates used across modules (idempotent).
+yojaka_templates_ensure_seeded();
