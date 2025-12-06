@@ -54,6 +54,7 @@ require_once __DIR__ . '/users.php';
 require_once __DIR__ . '/departments.php';
 require_once __DIR__ . '/permissions.php';
 require_once __DIR__ . '/roles.php';
+require_once __DIR__ . '/department_users.php';
 require_once __DIR__ . '/rbac.php';
 require_once __DIR__ . '/auth.php';
 

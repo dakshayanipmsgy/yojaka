@@ -16,7 +16,11 @@ function yojaka_has_permission(array $user, string $permission): bool
         }
     }
 
-    // Future phases: check department user roles & permissions.
+    if (($user['user_type'] ?? '') === 'dept_user') {
+        $rolePermissions = yojaka_current_role_permissions();
+        return in_array($permission, $rolePermissions, true);
+    }
+
     return false;
 }
 
@@ -48,4 +52,40 @@ function yojaka_require_dept_admin(): void
         echo yojaka_render_view('errors/403', ['message' => 'Department admin access required'], 'main');
         exit;
     }
+}
+
+function yojaka_require_dept_user(): void
+{
+    $user = yojaka_current_user();
+    if (!$user) {
+        header('Location: ' . yojaka_url('index.php?r=auth/login'));
+        exit;
+    }
+
+    if (($user['user_type'] ?? '') !== 'dept_user' || ($user['status'] ?? '') !== 'active') {
+        http_response_code(403);
+        echo yojaka_render_view('errors/403', ['message' => 'Department user access required'], 'main');
+        exit;
+    }
+}
+
+function yojaka_current_role_permissions(): array
+{
+    $user = yojaka_current_user();
+    if (!$user || ($user['user_type'] ?? '') !== 'dept_user') {
+        return [];
+    }
+
+    $deptSlug = $user['department_slug'] ?? '';
+    $roleId = $user['role_id'] ?? null;
+    if ($deptSlug === '' || !$roleId) {
+        return [];
+    }
+
+    $role = yojaka_roles_find_by_role_id($deptSlug, $roleId);
+    if (!$role) {
+        return [];
+    }
+
+    return $role['permissions'] ?? [];
 }

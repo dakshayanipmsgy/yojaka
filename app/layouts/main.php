@@ -30,6 +30,11 @@
                 <a href="<?php echo yojaka_url('index.php?r=auth/logout'); ?>">Logout</a>
                 <?php $currentUser = yojaka_current_user(); ?>
                 <span class="muted">Logged in as Admin (<?php echo yojaka_escape($currentUser['department_slug'] ?? ''); ?>)</span>
+            <?php elseif (yojaka_is_dept_user()): ?>
+                <a href="<?php echo yojaka_url('index.php?r=deptuser/dashboard'); ?>">Dept User Dashboard</a>
+                <a href="<?php echo yojaka_url('index.php?r=auth/logout'); ?>">Logout</a>
+                <?php $currentUser = yojaka_current_user(); ?>
+                <span class="muted">Logged in as <?php echo yojaka_escape($currentUser['login_identity'] ?? ''); ?></span>
             <?php elseif (yojaka_is_logged_in()): ?>
                 <a href="#" class="muted">Dashboard</a>
                 <a href="<?php echo yojaka_url('index.php?r=auth/logout'); ?>">Logout</a>
