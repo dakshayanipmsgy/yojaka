@@ -286,6 +286,7 @@ class DakController
                     'assignee_username' => $loginIdentity,
                     'allowed_users' => [],
                     'allowed_roles' => [],
+                    'attachments' => [],
                     'workflow' => [
                         'workflow_id' => $selectedWorkflow['id'] ?? null,
                         'current_step' => $initialStepId,
@@ -350,6 +351,10 @@ class DakController
         if (!yojaka_acl_can_view_record($user, $record)) {
             http_response_code(403);
             return yojaka_render_view('errors/403', ['message' => 'Access denied'], 'main');
+        }
+
+        if (!isset($record['attachments']) || !is_array($record['attachments'])) {
+            $record['attachments'] = [];
         }
 
         $canEdit = yojaka_acl_can_edit_record($user, $record);

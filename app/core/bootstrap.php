@@ -60,6 +60,7 @@ require_once __DIR__ . '/rbac.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/acl.php';
 require_once __DIR__ . '/audit.php';
+require_once __DIR__ . '/attachments.php';
 require_once __DIR__ . '/dak.php';
 require_once __DIR__ . '/templates.php';
 require_once __DIR__ . '/letters.php';

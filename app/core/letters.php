@@ -113,6 +113,10 @@ function yojaka_letters_save_record(string $deptSlug, array $record): void
 {
     yojaka_letters_ensure_storage($deptSlug);
 
+    if (!isset($record['attachments']) || !is_array($record['attachments'])) {
+        $record['attachments'] = [];
+    }
+
     $recordPath = yojaka_letters_get_base_path($deptSlug) . '/records/' . ($record['id'] ?? '');
     $recordPath = rtrim($recordPath, '/') . '.json';
 
