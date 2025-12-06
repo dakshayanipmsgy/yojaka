@@ -51,6 +51,7 @@ $YOJAKA_PERMISSION_CATALOG = [
         'dept.roles.manage',
         'dept.users.manage',
         'dept.workflows.manage',
+        'dept.reports.view',
     ],
 ];
 

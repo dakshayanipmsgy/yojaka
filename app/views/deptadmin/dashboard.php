@@ -88,6 +88,14 @@
 
 <section class="panel">
     <div class="panel-header">
+        <h2>Reports Dashboard</h2>
+        <a class="button" href="<?php echo yojaka_url('index.php?r=deptadmin/reports'); ?>">View Reports</a>
+    </div>
+    <p>Review dak and letter statistics, workload summaries, and activity trends.</p>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
         <h2>Audit Log</h2>
         <a class="button" href="<?php echo yojaka_url('index.php?r=deptadmin/audit'); ?>">View Audit Log</a>
     </div>
