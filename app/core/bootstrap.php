@@ -61,9 +61,11 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/acl.php';
 require_once __DIR__ . '/audit.php';
 require_once __DIR__ . '/attachments.php';
+require_once __DIR__ . '/branding.php';
 require_once __DIR__ . '/dak.php';
 require_once __DIR__ . '/templates.php';
 require_once __DIR__ . '/letters.php';
+require_once __DIR__ . '/pdf.php';
 
 function yojaka_migrate_dept_admin_accounts(): void
 {

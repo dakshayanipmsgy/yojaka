@@ -5,7 +5,12 @@
             <?php if (!empty($canEdit)): ?>
                 <a class="button" href="<?php echo yojaka_url('index.php?r=letters/edit&id=' . urlencode($record['id'] ?? '')); ?>">Edit</a>
             <?php endif; ?>
-            <a class="button secondary" href="<?php echo yojaka_url('index.php?r=letters/print&id=' . urlencode($record['id'] ?? '')); ?>" target="_blank">Print</a>
+            <?php if (!empty($canPrint)): ?>
+                <a class="button secondary" href="<?php echo yojaka_url('index.php?r=letters/print&id=' . urlencode($record['id'] ?? '')); ?>" target="_blank">Print</a>
+            <?php endif; ?>
+            <?php if (!empty($pdfAvailable)): ?>
+                <a class="button" href="<?php echo yojaka_url('index.php?r=letters/pdf&id=' . urlencode($record['id'] ?? '')); ?>">Download PDF</a>
+            <?php endif; ?>
         </div>
     </div>
     <p>Template: <?php echo yojaka_escape($template['name'] ?? ($record['template_id'] ?? 'Unknown')); ?></p>

@@ -72,6 +72,14 @@
 
 <section class="panel">
     <div class="panel-header">
+        <h2>Branding / Letterhead</h2>
+        <a class="button" href="<?php echo yojaka_url('index.php?r=deptadmin/branding/letterhead'); ?>">Configure Branding</a>
+    </div>
+    <p>Manage department name, address, logo, and header/footer blocks used by letters, print, and PDFs.</p>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
         <h2>Dak</h2>
         <a class="button" href="<?php echo yojaka_url('index.php?r=dak/list'); ?>">Dak (department records)</a>
     </div>
