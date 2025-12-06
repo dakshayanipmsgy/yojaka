@@ -33,19 +33,19 @@ class AuthController
                     }
                 } else {
                     // Department user identity flow.
-                    $identityParts = yojaka_parse_login_identity($username);
-                    if ($identityParts) {
-                        $deptSlug = $identityParts['department_slug'];
-                        $roleId = $identityParts['role_id'];
-                        $deptUser = yojaka_dept_users_find_by_login_identity($username);
+                    $parts = explode('.', $username, 3);
+                    if (count($parts) === 3) {
+                        [$usernameBase, $roleLocalKey, $deptSlug] = $parts;
+                        $roleId = $roleLocalKey . '.' . $deptSlug;
+                        $deptUser = yojaka_dept_users_find_by_login_identity($deptSlug, $username);
                         $role = yojaka_roles_find_by_role_id($deptSlug, $roleId);
 
                         if ($deptUser && $role && ($deptUser['status'] ?? '') === 'active' && in_array($roleId, $deptUser['role_ids'] ?? [], true)) {
                             if (isset($deptUser['password_hash']) && password_verify($password, $deptUser['password_hash'])) {
                                 $sessionUser = [
                                     'id' => $deptUser['id'] ?? null,
-                                    'username' => $deptUser['username_base'] ?? null,
-                                    'username_base' => $deptUser['username_base'] ?? null,
+                                    'username' => $usernameBase,
+                                    'username_base' => $usernameBase,
                                     'user_type' => 'dept_user',
                                     'department_slug' => $deptSlug,
                                     'login_identity' => $username,

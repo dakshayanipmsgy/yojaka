@@ -527,8 +527,12 @@ class DakController
             $assigneeUsername = $user['login_identity'] ?? ($user['username'] ?? '');
             if ($toUser !== '') {
                 $assigneeUsername = $toUser;
-                $targetUser = yojaka_dept_users_find_by_login_identity($toUser);
-                if (!$targetUser || ($targetUser['department_slug'] ?? '') !== $deptSlug) {
+                $identityParts = yojaka_parse_login_identity($toUser);
+                $targetUser = $identityParts && ($identityParts['department_slug'] ?? '') === $deptSlug
+                    ? yojaka_dept_users_find_by_login_identity($deptSlug, $toUser)
+                    : null;
+
+                if (!$targetUser) {
                     $errors[] = 'Assignee not found in this department.';
                 }
             }
@@ -616,8 +620,12 @@ class DakController
             $assigneeUsername = $user['login_identity'] ?? ($user['username'] ?? '');
             if ($toUser !== '') {
                 $assigneeUsername = $toUser;
-                $targetUser = yojaka_dept_users_find_by_login_identity($toUser);
-                if (!$targetUser || ($targetUser['department_slug'] ?? '') !== $deptSlug) {
+                $identityParts = yojaka_parse_login_identity($toUser);
+                $targetUser = $identityParts && ($identityParts['department_slug'] ?? '') === $deptSlug
+                    ? yojaka_dept_users_find_by_login_identity($deptSlug, $toUser)
+                    : null;
+
+                if (!$targetUser) {
                     $errors[] = 'Assignee not found in this department.';
                 }
             }
