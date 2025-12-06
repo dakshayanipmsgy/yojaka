@@ -44,6 +44,9 @@ function yojaka_dispatch(string $route)
         'letters/view' => ['LettersController', 'view'],
         'letters/edit' => ['LettersController', 'edit'],
         'letters/print' => ['LettersController', 'print'],
+        'attachments/upload' => ['AttachmentsController', 'upload'],
+        'attachments/delete' => ['AttachmentsController', 'delete'],
+        'attachments/download' => ['AttachmentsController', 'download'],
     ];
 
     if (!isset($controllerMap[$route])) {

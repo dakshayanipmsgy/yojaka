@@ -89,6 +89,10 @@ function yojaka_dak_save_record(string $deptSlug, array $record): void
 {
     yojaka_dak_ensure_storage($deptSlug);
 
+    if (!isset($record['attachments']) || !is_array($record['attachments'])) {
+        $record['attachments'] = [];
+    }
+
     $basePath = yojaka_dak_get_base_path($deptSlug);
     $recordPath = $basePath . '/records/' . ($record['id'] ?? '');
     $recordPath = rtrim($recordPath, '/') . '.json';
