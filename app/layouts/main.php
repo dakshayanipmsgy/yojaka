@@ -27,13 +27,19 @@
                 <span class="muted">Logged in as superadmin</span>
             <?php elseif (yojaka_is_dept_admin()): ?>
                 <a href="<?php echo yojaka_url('index.php?r=deptadmin/dashboard'); ?>">Department Admin Dashboard</a>
-                <a href="<?php echo yojaka_url('index.php?r=auth/logout'); ?>">Logout</a>
                 <?php $currentUser = yojaka_current_user(); ?>
+                <?php if ($currentUser && (($currentUser['user_type'] ?? '') === 'dept_admin' || yojaka_has_permission($currentUser, 'dak.create'))): ?>
+                    <a href="<?php echo yojaka_url('index.php?r=dak/list'); ?>">Dak</a>
+                <?php endif; ?>
+                <a href="<?php echo yojaka_url('index.php?r=auth/logout'); ?>">Logout</a>
                 <span class="muted">Logged in as Admin (<?php echo yojaka_escape($currentUser['department_slug'] ?? ''); ?>)</span>
             <?php elseif (yojaka_is_dept_user()): ?>
                 <a href="<?php echo yojaka_url('index.php?r=deptuser/dashboard'); ?>">Dept User Dashboard</a>
-                <a href="<?php echo yojaka_url('index.php?r=auth/logout'); ?>">Logout</a>
                 <?php $currentUser = yojaka_current_user(); ?>
+                <?php if ($currentUser && yojaka_has_permission($currentUser, 'dak.create')): ?>
+                    <a href="<?php echo yojaka_url('index.php?r=dak/list'); ?>">Dak</a>
+                <?php endif; ?>
+                <a href="<?php echo yojaka_url('index.php?r=auth/logout'); ?>">Logout</a>
                 <span class="muted">Logged in as <?php echo yojaka_escape($currentUser['login_identity'] ?? ''); ?></span>
             <?php elseif (yojaka_is_logged_in()): ?>
                 <a href="#" class="muted">Dashboard</a>

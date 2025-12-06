@@ -28,6 +28,10 @@ function yojaka_dispatch(string $route)
         'deptadmin/users/edit' => ['DeptUsersController', 'edit'],
         'deptadmin/users/password' => ['DeptUsersController', 'password'],
         'deptuser/dashboard' => ['DeptUserController', 'dashboard'],
+        'dak/list' => ['DakController', 'list'],
+        'dak/create' => ['DakController', 'create'],
+        'dak/view' => ['DakController', 'view'],
+        'dak/edit' => ['DakController', 'edit'],
     ];
 
     if (!isset($controllerMap[$route])) {
