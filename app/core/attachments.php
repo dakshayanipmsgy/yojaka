@@ -3,7 +3,7 @@
 
 function yojaka_attachment_base_path(string $deptSlug, string $module, string $recordId): string
 {
-    $safeModule = in_array($module, ['dak', 'letters'], true) ? $module : 'unknown';
+    $safeModule = in_array($module, ['dak', 'letters', 'rti'], true) ? $module : 'unknown';
     $safeRecord = preg_replace('/[^A-Za-z0-9_\-]/', '', $recordId);
 
     return rtrim(yojaka_config('paths.data_path'), '/')

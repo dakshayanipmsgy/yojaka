@@ -25,6 +25,10 @@ class AttachmentsController
             return yojaka_letters_load_record($deptSlug, $id);
         }
 
+        if ($module === 'rti') {
+            return yojaka_rti_load_record($deptSlug, $id);
+        }
+
         return null;
     }
 
@@ -34,12 +38,19 @@ class AttachmentsController
             yojaka_dak_save_record($deptSlug, $record);
         } elseif ($module === 'letters') {
             yojaka_letters_save_record($deptSlug, $record);
+        } elseif ($module === 'rti') {
+            yojaka_rti_save_record($deptSlug, $record);
         }
     }
 
     protected function redirectToRecord(string $module, string $id): void
     {
-        $route = $module === 'letters' ? 'letters/view' : 'dak/view';
+        $route = 'dak/view';
+        if ($module === 'letters') {
+            $route = 'letters/view';
+        } elseif ($module === 'rti') {
+            $route = 'rti/view';
+        }
         header('Location: ' . yojaka_url('index.php?r=' . $route . '&id=' . urlencode($id)));
         exit;
     }
@@ -56,7 +67,7 @@ class AttachmentsController
         $module = $_POST['module'] ?? '';
         $recordId = $_POST['id'] ?? '';
 
-        if (!in_array($module, ['dak', 'letters'], true) || $recordId === '') {
+        if (!in_array($module, ['dak', 'letters', 'rti'], true) || $recordId === '') {
             http_response_code(400);
             echo yojaka_render_view('errors/500', ['message' => 'Invalid attachment request.'], 'main');
             exit;
@@ -118,7 +129,7 @@ class AttachmentsController
         $recordId = $_POST['id'] ?? '';
         $filename = $_POST['file'] ?? '';
 
-        if (!in_array($module, ['dak', 'letters'], true) || $recordId === '' || $filename === '') {
+        if (!in_array($module, ['dak', 'letters', 'rti'], true) || $recordId === '' || $filename === '') {
             http_response_code(400);
             echo yojaka_render_view('errors/500', ['message' => 'Invalid delete request.'], 'main');
             exit;
@@ -179,7 +190,7 @@ class AttachmentsController
         $recordId = $_GET['id'] ?? '';
         $filename = $_GET['file'] ?? '';
 
-        if (!in_array($module, ['dak', 'letters'], true) || $recordId === '' || $filename === '') {
+        if (!in_array($module, ['dak', 'letters', 'rti'], true) || $recordId === '' || $filename === '') {
             http_response_code(400);
             exit;
         }

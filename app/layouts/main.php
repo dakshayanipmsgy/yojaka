@@ -36,6 +36,9 @@
                 <?php if ($currentUser && (($currentUser['user_type'] ?? '') === 'dept_admin' || yojaka_has_permission($currentUser, 'letters.view'))): ?>
                     <a href="<?php echo yojaka_url('index.php?r=letters/list'); ?>">Letters</a>
                 <?php endif; ?>
+                <?php if ($currentUser && (($currentUser['user_type'] ?? '') === 'dept_admin' || yojaka_has_permission($currentUser, 'rti.create') || yojaka_has_permission($currentUser, 'rti.forward'))): ?>
+                    <a href="<?php echo yojaka_url('index.php?r=rti/list'); ?>">RTI</a>
+                <?php endif; ?>
                 <?php if ($currentUser && (($currentUser['user_type'] ?? '') === 'dept_admin' || yojaka_has_permission($currentUser, 'dept.reports.view'))): ?>
                     <a href="<?php echo yojaka_url('index.php?r=deptadmin/reports'); ?>">Reports</a>
                 <?php endif; ?>
@@ -49,6 +52,9 @@
                 <?php endif; ?>
                 <?php if ($currentUser && yojaka_has_permission($currentUser, 'letters.view')): ?>
                     <a href="<?php echo yojaka_url('index.php?r=letters/list'); ?>">Letters</a>
+                <?php endif; ?>
+                <?php if ($currentUser && (yojaka_has_permission($currentUser, 'rti.create') || yojaka_has_permission($currentUser, 'rti.forward'))): ?>
+                    <a href="<?php echo yojaka_url('index.php?r=rti/list'); ?>">RTI</a>
                 <?php endif; ?>
                 <a href="<?php echo yojaka_url('index.php?r=auth/logout'); ?>">Logout</a>
                 <span class="muted">Logged in as <?php echo yojaka_escape($currentUser['login_identity'] ?? ''); ?></span>
