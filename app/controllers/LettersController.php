@@ -49,10 +49,66 @@ class LettersController
             $templateMap[$tpl['id']] = $tpl['name'] ?? $tpl['id'];
         }
 
+        $filters = [
+            'q' => trim($_GET['q'] ?? ''),
+            'status' => trim($_GET['status'] ?? ''),
+            'template_id' => trim($_GET['template_id'] ?? ''),
+            'created_from' => trim($_GET['created_from'] ?? ''),
+            'created_to' => trim($_GET['created_to'] ?? ''),
+        ];
+
+        $records = array_values(array_filter($records, function (array $record) use ($filters) {
+            $q = strtolower($filters['q']);
+            if ($q !== '') {
+                $haystacks = [
+                    strtolower($record['fields']['subject'] ?? ''),
+                    strtolower($record['fields']['to_name'] ?? ''),
+                    strtolower($record['fields']['body'] ?? ''),
+                ];
+
+                $match = false;
+                foreach ($haystacks as $text) {
+                    if ($text !== '' && strpos($text, $q) !== false) {
+                        $match = true;
+                        break;
+                    }
+                }
+
+                if (!$match) {
+                    return false;
+                }
+            }
+
+            if ($filters['status'] !== '' && ($record['status'] ?? '') !== $filters['status']) {
+                return false;
+            }
+
+            if ($filters['template_id'] !== '' && ($record['template_id'] ?? '') !== $filters['template_id']) {
+                return false;
+            }
+
+            $createdAt = $record['created_at'] ?? '';
+            $createdDate = $createdAt ? date_create_immutable($createdAt) : null;
+            $createdDay = $createdDate ? $createdDate->format('Y-m-d') : null;
+
+            if ($filters['created_from'] !== '' && ($createdDay === null || strcmp($createdDay, $filters['created_from']) < 0)) {
+                return false;
+            }
+
+            if ($filters['created_to'] !== '' && ($createdDay === null || strcmp($createdDay, $filters['created_to']) > 0)) {
+                return false;
+            }
+
+            return true;
+        }));
+
         $data = [
             'title' => 'Letters & Notices',
             'records' => $records,
             'templateMap' => $templateMap,
+            'filters' => $filters,
+            'statusOptions' => ['draft' => 'Draft', 'finalized' => 'Finalized'],
+            'templates' => $templates,
         ];
 
         return yojaka_render_view('letters/list', $data, 'main');

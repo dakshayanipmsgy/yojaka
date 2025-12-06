@@ -111,9 +111,100 @@ class DakController
 
         $records = yojaka_dak_list_records_for_user($deptSlug, $user);
 
+        $filters = [
+            'q' => trim($_GET['q'] ?? ''),
+            'status' => trim($_GET['status'] ?? ''),
+            'current_step' => trim($_GET['current_step'] ?? ''),
+            'assignee' => trim($_GET['assignee'] ?? ''),
+            'created_from' => trim($_GET['created_from'] ?? ''),
+            'created_to' => trim($_GET['created_to'] ?? ''),
+        ];
+
+        $records = array_values(array_filter($records, function (array $record) use ($filters) {
+            $q = strtolower($filters['q']);
+            if ($q !== '') {
+                $haystacks = [
+                    strtolower($record['title'] ?? ''),
+                    strtolower($record['reference_no'] ?? ''),
+                    strtolower($record['subject'] ?? ''),
+                ];
+
+                $match = false;
+                foreach ($haystacks as $text) {
+                    if ($text !== '' && strpos($text, $q) !== false) {
+                        $match = true;
+                        break;
+                    }
+                }
+
+                if (!$match) {
+                    return false;
+                }
+            }
+
+            if ($filters['status'] !== '' && ($record['status'] ?? '') !== $filters['status']) {
+                return false;
+            }
+
+            if ($filters['current_step'] !== '') {
+                $currentStep = $record['workflow']['current_step'] ?? '';
+                if ($currentStep !== $filters['current_step']) {
+                    return false;
+                }
+            }
+
+            if ($filters['assignee'] !== '' && ($record['assignee_username'] ?? '') !== $filters['assignee']) {
+                return false;
+            }
+
+            $createdAt = $record['created_at'] ?? '';
+            $createdDate = $createdAt ? date_create_immutable($createdAt) : null;
+            $createdDay = $createdDate ? $createdDate->format('Y-m-d') : null;
+
+            if ($filters['created_from'] !== '' && ($createdDay === null || strcmp($createdDay, $filters['created_from']) < 0)) {
+                return false;
+            }
+
+            if ($filters['created_to'] !== '' && ($createdDay === null || strcmp($createdDay, $filters['created_to']) > 0)) {
+                return false;
+            }
+
+            return true;
+        }));
+
+        $workflows = yojaka_workflows_list_for_module($deptSlug, 'dak');
+        $workflowSteps = [];
+        foreach ($workflows as $workflow) {
+            foreach ($workflow['steps'] ?? [] as $step) {
+                $id = $step['id'] ?? '';
+                if ($id === '') {
+                    continue;
+                }
+                $workflowSteps[$id] = $step['label'] ?? $id;
+            }
+        }
+
+        $deptUsers = yojaka_dept_users_load($deptSlug);
+        $assignees = [];
+        foreach ($deptUsers as $deptUser) {
+            $display = $deptUser['display_name'] ?? ($deptUser['username_base'] ?? '');
+            foreach ($deptUser['login_identities'] ?? [] as $identity) {
+                $assignees[$identity] = $display . ' (' . $identity . ')';
+            }
+        }
+
+        $adminIdentity = $user['login_identity'] ?? ($user['username'] ?? '');
+        if ($adminIdentity !== '' && !isset($assignees[$adminIdentity])) {
+            $assignees[$adminIdentity] = ($user['display_name'] ?? 'Department Admin') . ' (' . $adminIdentity . ')';
+        }
+
         $data = [
             'title' => 'Dak – My Files',
             'records' => $records,
+            'filters' => $filters,
+            'statusOptions' => ['draft' => 'Draft', 'in_progress' => 'In Progress', 'closed' => 'Closed'],
+            'workflowSteps' => $workflowSteps,
+            'assignees' => $assignees,
         ];
 
         return yojaka_render_view('dak/list', $data, 'main');
