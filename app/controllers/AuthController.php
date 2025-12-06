@@ -4,13 +4,7 @@ class AuthController
     public function login()
     {
         if (yojaka_is_logged_in()) {
-            if (yojaka_is_superadmin()) {
-                header('Location: ' . yojaka_url('index.php?r=superadmin/dashboard'));
-                exit;
-            }
-
-            header('Location: ' . yojaka_url('index.php'));
-            exit;
+            $this->redirectAfterLogin(yojaka_current_user());
         }
 
         $error = null;
@@ -20,11 +14,10 @@ class AuthController
             $password = isset($_POST['password']) ? $_POST['password'] : '';
 
             if ($username !== '' && $password !== '') {
-                $user = yojaka_find_user_by_username($username);
+                $user = yojaka_users_find_by_username($username);
                 if ($user && isset($user['password_hash']) && password_verify($password, $user['password_hash']) && ($user['status'] ?? '') === 'active') {
                     yojaka_auth_login($user);
-                    header('Location: ' . yojaka_url('index.php?r=superadmin/dashboard'));
-                    exit;
+                    $this->redirectAfterLogin($user);
                 }
             }
 
@@ -43,6 +36,22 @@ class AuthController
     {
         yojaka_auth_logout();
         header('Location: ' . yojaka_url('index.php?r=auth/login'));
+        exit;
+    }
+
+    protected function redirectAfterLogin(array $user): void
+    {
+        if (($user['user_type'] ?? '') === 'superadmin') {
+            header('Location: ' . yojaka_url('index.php?r=superadmin/dashboard'));
+            exit;
+        }
+
+        if (($user['user_type'] ?? '') === 'dept_admin') {
+            header('Location: ' . yojaka_url('index.php?r=deptadmin/dashboard'));
+            exit;
+        }
+
+        header('Location: ' . yojaka_url('index.php'));
         exit;
     }
 }

@@ -7,6 +7,7 @@ class SuperadminController
 
         $message = null;
         $error = null;
+        $adminNotice = null;
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name = isset($_POST['name']) ? trim($_POST['name']) : '';
@@ -31,6 +32,17 @@ class SuperadminController
                     ];
 
                     if (yojaka_add_department($department)) {
+                        yojaka_departments_initialize_storage($slug);
+
+                        $tempPassword = 'Admin@' . random_int(10000, 99999);
+                        $createdAdmin = yojaka_users_create_department_admin($slug, $name, $tempPassword);
+
+                        if ($createdAdmin) {
+                            $adminNotice = 'Department admin username: ' . $createdAdmin['username'] . '. Temporary password: ' . $tempPassword;
+                        } else {
+                            $adminNotice = 'Department admin account already exists for this department.';
+                        }
+
                         $message = 'Department created successfully';
                     } else {
                         $error = 'Unable to create department. Please try again.';
@@ -46,6 +58,7 @@ class SuperadminController
             'departments' => $departments,
             'message' => $message,
             'error' => $error,
+            'adminNotice' => $adminNotice ?? null,
         ];
 
         return yojaka_render_view('superadmin/dashboard', $data, 'main');

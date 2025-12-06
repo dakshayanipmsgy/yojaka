@@ -101,6 +101,29 @@ function yojaka_add_department(array $data): ?array
     return null;
 }
 
+function yojaka_departments_initialize_storage(string $deptSlug): void
+{
+    $basePath = yojaka_config('paths.data_path') . '/departments/' . $deptSlug;
+    $folders = [
+        $basePath,
+        $basePath . '/config',
+        $basePath . '/roles',
+        $basePath . '/users',
+        $basePath . '/modules',
+    ];
+
+    foreach ($folders as $folder) {
+        if (!is_dir($folder)) {
+            mkdir($folder, 0777, true);
+        }
+    }
+
+    $rolesFile = $basePath . '/roles/roles.json';
+    if (!file_exists($rolesFile)) {
+        file_put_contents($rolesFile, json_encode([], JSON_PRETTY_PRINT), LOCK_EX);
+    }
+}
+
 function yojaka_update_department_status(string $id, string $status): bool
 {
     $departments = yojaka_load_departments();
