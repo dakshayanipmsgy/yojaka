@@ -14,34 +14,47 @@ class AuthController
             $password = isset($_POST['password']) ? $_POST['password'] : '';
 
             if ($username !== '' && $password !== '') {
-                $user = yojaka_users_find_by_username($username);
-                if ($user && isset($user['password_hash']) && password_verify($password, $user['password_hash']) && ($user['status'] ?? '') === 'active') {
-                    yojaka_auth_login($user);
-                    $this->redirectAfterLogin($user);
-                }
+                if ($username === 'superadmin') {
+                    $user = yojaka_users_find_by_username($username);
+                    if ($user && isset($user['password_hash']) && password_verify($password, $user['password_hash']) && ($user['status'] ?? '') === 'active') {
+                        yojaka_auth_login($user);
+                        $this->redirectAfterLogin($user);
+                    }
+                } elseif (strpos($username, 'admin.') === 0) {
+                    $user = yojaka_users_find_by_username($username);
+                    if ($user && ($user['user_type'] ?? '') === 'dept_admin' && isset($user['password_hash']) && password_verify($password, $user['password_hash']) && ($user['status'] ?? '') === 'active') {
+                        yojaka_auth_login($user);
+                        if (!empty($user['must_change_password'])) {
+                            header('Location: ' . yojaka_url('index.php?r=deptadmin/change_password'));
+                            exit;
+                        }
 
-                // Department user identity flow.
-                $identityParts = yojaka_parse_login_identity($username);
-                if ($identityParts) {
-                    $deptSlug = $identityParts['department_slug'];
-                    $roleId = $identityParts['role_id'];
-                    $deptUser = yojaka_dept_users_find_by_login_identity($username);
-                    $role = yojaka_roles_find_by_role_id($deptSlug, $roleId);
+                        $this->redirectAfterLogin($user);
+                    }
+                } else {
+                    // Department user identity flow.
+                    $identityParts = yojaka_parse_login_identity($username);
+                    if ($identityParts) {
+                        $deptSlug = $identityParts['department_slug'];
+                        $roleId = $identityParts['role_id'];
+                        $deptUser = yojaka_dept_users_find_by_login_identity($username);
+                        $role = yojaka_roles_find_by_role_id($deptSlug, $roleId);
 
-                    if ($deptUser && $role && ($deptUser['status'] ?? '') === 'active' && in_array($roleId, $deptUser['role_ids'] ?? [], true)) {
-                        if (isset($deptUser['password_hash']) && password_verify($password, $deptUser['password_hash'])) {
-                            $sessionUser = [
-                                'id' => $deptUser['id'] ?? null,
-                                'username' => $deptUser['username_base'] ?? null,
-                                'username_base' => $deptUser['username_base'] ?? null,
-                                'user_type' => 'dept_user',
-                                'department_slug' => $deptSlug,
-                                'login_identity' => $username,
-                                'role_id' => $roleId,
-                            ];
+                        if ($deptUser && $role && ($deptUser['status'] ?? '') === 'active' && in_array($roleId, $deptUser['role_ids'] ?? [], true)) {
+                            if (isset($deptUser['password_hash']) && password_verify($password, $deptUser['password_hash'])) {
+                                $sessionUser = [
+                                    'id' => $deptUser['id'] ?? null,
+                                    'username' => $deptUser['username_base'] ?? null,
+                                    'username_base' => $deptUser['username_base'] ?? null,
+                                    'user_type' => 'dept_user',
+                                    'department_slug' => $deptSlug,
+                                    'login_identity' => $username,
+                                    'role_id' => $roleId,
+                                ];
 
-                            yojaka_auth_login($sessionUser);
-                            $this->redirectAfterLogin($sessionUser);
+                                yojaka_auth_login($sessionUser);
+                                $this->redirectAfterLogin($sessionUser);
+                            }
                         }
                     }
                 }
@@ -73,6 +86,11 @@ class AuthController
         }
 
         if (($user['user_type'] ?? '') === 'dept_admin') {
+            if (!empty($user['must_change_password'])) {
+                header('Location: ' . yojaka_url('index.php?r=deptadmin/change_password'));
+                exit;
+            }
+
             header('Location: ' . yojaka_url('index.php?r=deptadmin/dashboard'));
             exit;
         }

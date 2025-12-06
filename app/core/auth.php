@@ -15,6 +15,7 @@ function yojaka_auth_login(array $user): void
         'login_identity' => $user['login_identity'] ?? null,
         'role_id' => $user['role_id'] ?? null,
         'username_base' => $user['username_base'] ?? null,
+        'must_change_password' => $user['must_change_password'] ?? null,
     ];
 }
 

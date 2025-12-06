@@ -60,6 +60,13 @@
         </nav>
     </header>
 
+    <?php $layoutCurrentUser = yojaka_current_user(); ?>
+    <?php if ($layoutCurrentUser && ($layoutCurrentUser['user_type'] ?? '') === 'dept_admin' && !empty($layoutCurrentUser['must_change_password'])): ?>
+        <div class="alert alert-warning">
+            You must change your default password before continuing. <a href="<?php echo yojaka_url('index.php?r=deptadmin/change_password'); ?>">Update password</a>.
+        </div>
+    <?php endif; ?>
+
     <main class="content">
         <?php echo $content ?? ''; ?>
     </main>

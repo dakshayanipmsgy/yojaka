@@ -52,7 +52,14 @@ function yojaka_users_normalize_user(array $user): array
 {
     // Provide backward-compatible defaults for new fields.
     if (!isset($user['user_type'])) {
-        $user['user_type'] = ($user['username'] ?? '') === 'superadmin' ? 'superadmin' : 'dept_user';
+        $username = $user['username'] ?? '';
+        if ($username === 'superadmin') {
+            $user['user_type'] = 'superadmin';
+        } elseif (strpos($username, 'admin.') === 0) {
+            $user['user_type'] = 'dept_admin';
+        } else {
+            $user['user_type'] = 'dept_user';
+        }
     }
 
     if (!array_key_exists('department_slug', $user)) {
@@ -69,6 +76,10 @@ function yojaka_users_normalize_user(array $user): array
 
     if (!isset($user['status'])) {
         $user['status'] = 'active';
+    }
+
+    if (!array_key_exists('must_change_password', $user)) {
+        $user['must_change_password'] = false;
     }
 
     return $user;
@@ -171,6 +182,7 @@ function yojaka_seed_superadmin(): void
         'department_slug' => null,
         'created_at' => date('c'),
         'status' => 'active',
+        'must_change_password' => false,
     ];
 
     $users[] = $superadmin;
@@ -192,7 +204,83 @@ function yojaka_users_create_department_admin(string $deptSlug, string $deptName
         'user_type' => 'dept_admin',
         'department_slug' => $deptSlug,
         'status' => 'active',
+        'must_change_password' => true,
     ];
 
     return yojaka_users_add($userData);
+}
+
+function yojaka_users_ensure_dept_admin(string $deptSlug, string $deptName): array
+{
+    $username = 'admin.' . $deptSlug;
+    $users = yojaka_load_users();
+    $foundIndex = null;
+
+    foreach ($users as $index => $user) {
+        if (isset($user['username']) && strtolower($user['username']) === strtolower($username)) {
+            $foundIndex = $index;
+            break;
+        }
+    }
+
+    if ($foundIndex !== null) {
+        $existingUser = $users[$foundIndex];
+        $hadMustChangePassword = array_key_exists('must_change_password', $existingUser);
+        $user = yojaka_users_normalize_user($existingUser);
+        $needsSave = false;
+
+        if (($user['user_type'] ?? '') !== 'dept_admin') {
+            $user['user_type'] = 'dept_admin';
+            $needsSave = true;
+        }
+
+        if (($user['department_slug'] ?? null) !== $deptSlug) {
+            $user['department_slug'] = $deptSlug;
+            $needsSave = true;
+        }
+
+        if (!$hadMustChangePassword) {
+            $user['must_change_password'] = true;
+            $needsSave = true;
+        }
+
+        if (!isset($user['display_name'])) {
+            $user['display_name'] = 'Admin - ' . $deptName;
+            $needsSave = true;
+        }
+
+        if (!isset($user['status'])) {
+            $user['status'] = 'active';
+            $needsSave = true;
+        }
+
+        if (!isset($user['id'])) {
+            $user['id'] = yojaka_generate_user_id($users);
+            $needsSave = true;
+        }
+
+        $users[$foundIndex] = $user;
+        if ($needsSave) {
+            yojaka_save_users($users);
+        }
+
+        return $user;
+    }
+
+    $userData = [
+        'username' => $username,
+        'display_name' => 'Admin - ' . $deptName,
+        'password_hash' => password_hash('Admin@123', PASSWORD_DEFAULT),
+        'user_type' => 'dept_admin',
+        'department_slug' => $deptSlug,
+        'status' => 'active',
+        'must_change_password' => true,
+    ];
+
+    $created = yojaka_users_add($userData);
+    if ($created) {
+        return $created;
+    }
+
+    return yojaka_users_find_by_username($username) ?? $userData;
 }
