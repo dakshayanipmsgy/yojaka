@@ -77,3 +77,11 @@
     </div>
     <p>View and manage dak entries that your account can access.</p>
 </section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h2>Audit Log</h2>
+        <a class="button" href="<?php echo yojaka_url('index.php?r=deptadmin/audit'); ?>">View Audit Log</a>
+    </div>
+    <p>Review recent administrative and dak actions recorded for this department.</p>
+</section>

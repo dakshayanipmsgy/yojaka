@@ -79,6 +79,19 @@ class DeptAdminController
 
                 $result = yojaka_roles_add($deptSlug, $roleData);
                 if ($result) {
+                    yojaka_audit_log_action(
+                        $deptSlug,
+                        'roles',
+                        $result['role_id'] ?? null,
+                        'roles.create',
+                        'Created department role',
+                        [
+                            'role_id' => $result['role_id'] ?? null,
+                            'label' => $result['label'] ?? null,
+                            'permissions' => $result['permissions'] ?? [],
+                        ]
+                    );
+
                     $_SESSION['deptadmin_success'] = 'Role created successfully';
                     header('Location: ' . yojaka_url('index.php?r=deptadmin/dashboard'));
                     exit;
@@ -115,5 +128,22 @@ class DeptAdminController
         ];
 
         return yojaka_render_view('deptadmin/workflows', $data, 'main');
+    }
+
+    public function audit()
+    {
+        yojaka_require_dept_admin();
+
+        $current = yojaka_current_user();
+        $deptSlug = $current['department_slug'] ?? '';
+
+        $entries = $deptSlug !== '' ? yojaka_audit_load_recent($deptSlug, 200) : [];
+
+        $data = [
+            'title' => 'Department Audit Log',
+            'entries' => $entries,
+        ];
+
+        return yojaka_render_view('deptadmin/audit', $data, 'main');
     }
 }

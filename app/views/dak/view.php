@@ -143,3 +143,39 @@
         </div>
     <?php endif; ?>
 </section>
+
+<section class="panel">
+    <h2>Activity Timeline</h2>
+    <?php if (empty($timeline)): ?>
+        <p>No activity recorded yet.</p>
+    <?php else: ?>
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>When</th>
+                        <th>Source</th>
+                        <th>Action</th>
+                        <th>From → To</th>
+                        <th>Actor</th>
+                        <th>Target</th>
+                        <th>Comment / Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($timeline as $event): ?>
+                        <tr>
+                            <td><?php echo yojaka_escape($event['timestamp'] ?? ''); ?></td>
+                            <td><span class="tag tag-small"><?php echo yojaka_escape($event['source'] ?? ''); ?></span></td>
+                            <td><?php echo yojaka_escape($event['label'] ?? $event['type'] ?? ''); ?></td>
+                            <td><?php echo yojaka_escape(($event['from_step'] ?? '—') . ' → ' . ($event['to_step'] ?? '—')); ?></td>
+                            <td><?php echo yojaka_escape($event['actor'] ?? ''); ?></td>
+                            <td><?php echo yojaka_escape($event['to_user'] ?? ''); ?></td>
+                            <td><?php echo nl2br(yojaka_escape($event['comment'] ?? '')); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
+</section>
