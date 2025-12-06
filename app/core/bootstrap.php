@@ -57,6 +57,8 @@ require_once __DIR__ . '/roles.php';
 require_once __DIR__ . '/department_users.php';
 require_once __DIR__ . '/rbac.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/acl.php';
+require_once __DIR__ . '/dak.php';
 
 // Ensure the default superadmin user exists for first-run setup.
 yojaka_seed_superadmin();

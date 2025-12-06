@@ -61,3 +61,11 @@
     </div>
     <p>Use the Users area to onboard officers, assign roles, and manage their login identities.</p>
 </section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h2>Dak</h2>
+        <a class="button" href="<?php echo yojaka_url('index.php?r=dak/list'); ?>">Dak (department records)</a>
+    </div>
+    <p>View and manage dak entries that your account can access.</p>
+</section>

@@ -15,5 +15,9 @@
 
 <section class="panel">
     <h2>Next steps</h2>
-    <p>Module links for your assigned role will appear here in future phases.</p>
+    <?php if (!empty($user) && yojaka_has_permission($user, 'dak.create')): ?>
+        <p><a class="button" href="<?php echo yojaka_url('index.php?r=dak/list'); ?>">Go to Dak (My Files)</a></p>
+    <?php else: ?>
+        <p>Module links for your assigned role will appear here in future phases.</p>
+    <?php endif; ?>
 </section>
