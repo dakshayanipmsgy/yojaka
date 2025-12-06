@@ -146,4 +146,61 @@ class DeptAdminController
 
         return yojaka_render_view('deptadmin/audit', $data, 'main');
     }
+
+    public function change_password()
+    {
+        yojaka_require_dept_admin();
+
+        $user = yojaka_current_user();
+        $errors = [];
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $currentPassword = $_POST['current_password'] ?? '';
+            $newPassword = $_POST['new_password'] ?? '';
+            $confirmPassword = $_POST['confirm_password'] ?? '';
+
+            if (!isset($user['password_hash']) || !password_verify($currentPassword, $user['password_hash'])) {
+                $errors[] = 'Current password is incorrect.';
+            }
+
+            if (strlen($newPassword) < 8) {
+                $errors[] = 'New password must be at least 8 characters long.';
+            }
+
+            if ($newPassword !== $confirmPassword) {
+                $errors[] = 'New password and confirmation do not match.';
+            }
+
+            if (empty($errors)) {
+                $users = yojaka_load_users();
+
+                foreach ($users as &$storedUser) {
+                    if (($storedUser['id'] ?? null) === ($user['id'] ?? null)) {
+                        $storedUser['password_hash'] = password_hash($newPassword, PASSWORD_DEFAULT);
+                        $storedUser['must_change_password'] = false;
+                        break;
+                    }
+                }
+                unset($storedUser);
+
+                yojaka_save_users($users);
+
+                $updated = yojaka_users_find_by_username($user['username'] ?? '');
+                if ($updated) {
+                    yojaka_auth_login($updated);
+                }
+
+                $_SESSION['deptadmin_success'] = 'Password updated successfully.';
+                header('Location: ' . yojaka_url('index.php?r=deptadmin/dashboard'));
+                exit;
+            }
+        }
+
+        $data = [
+            'title' => 'Change Password',
+            'errors' => $errors,
+        ];
+
+        return yojaka_render_view('deptadmin/change_password', $data, 'main');
+    }
 }

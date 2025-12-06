@@ -64,8 +64,27 @@ require_once __DIR__ . '/dak.php';
 require_once __DIR__ . '/templates.php';
 require_once __DIR__ . '/letters.php';
 
+function yojaka_migrate_dept_admin_accounts(): void
+{
+    $departments = yojaka_load_departments();
+
+    foreach ($departments as $department) {
+        $deptSlug = $department['slug'] ?? null;
+        $deptName = $department['name'] ?? '';
+
+        if ($deptSlug === null) {
+            continue;
+        }
+
+        yojaka_users_ensure_dept_admin($deptSlug, $deptName);
+    }
+}
+
 // Ensure the default superadmin user exists for first-run setup.
 yojaka_seed_superadmin();
+
+// Repair or seed department admin accounts for all departments.
+yojaka_migrate_dept_admin_accounts();
 
 // Seed system templates used across modules (idempotent).
 yojaka_templates_ensure_seeded();

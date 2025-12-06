@@ -25,6 +25,7 @@ function yojaka_dispatch(string $route)
         'deptadmin/roles/create' => ['DeptAdminController', 'roles_create'],
         'deptadmin/audit' => ['DeptAdminController', 'audit'],
         'deptadmin/workflows' => ['DeptAdminController', 'workflows'],
+        'deptadmin/change_password' => ['DeptAdminController', 'change_password'],
         'deptadmin/reports' => ['DeptReportsController', 'reports'],
         'deptadmin/users' => ['DeptUsersController', 'index'],
         'deptadmin/users/create' => ['DeptUsersController', 'create'],

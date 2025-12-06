@@ -34,14 +34,8 @@ class SuperadminController
                     if (yojaka_add_department($department)) {
                         yojaka_departments_initialize_storage($slug);
 
-                        $tempPassword = 'Admin@' . random_int(10000, 99999);
-                        $createdAdmin = yojaka_users_create_department_admin($slug, $name, $tempPassword);
-
-                        if ($createdAdmin) {
-                            $adminNotice = 'Department admin username: ' . $createdAdmin['username'] . '. Temporary password: ' . $tempPassword;
-                        } else {
-                            $adminNotice = 'Department admin account already exists for this department.';
-                        }
+                        $deptAdmin = yojaka_users_ensure_dept_admin($slug, $name);
+                        $adminNotice = 'Department admin username: ' . ($deptAdmin['username'] ?? '') . '. Default password: Admin@123';
 
                         $message = 'Department created successfully';
                     } else {
